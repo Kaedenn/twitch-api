@@ -78,7 +78,7 @@ function TwitchClient(opts) {
             }
 
             if (client.Debug) {
-                console.log('ws>', line);
+                console.log('ws>', msgData);
             }
 
             if (client.onMessage)
