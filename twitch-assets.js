@@ -44,6 +44,7 @@ function LoadCheerEmotes(callback) {
     };
     req.open('GET', TW_URL.CheerEmotes());
     req.setRequestHeader('Accept', 'application/vnd.twitchtv.v5+json');
+    req.setRequestHeader('Client-ID', 'dcirpjuzebyjmxvjyj30x6pybo8nx9');
     req.send();
 }
 
