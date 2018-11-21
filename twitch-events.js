@@ -153,6 +153,8 @@ function TwitchClient(opts) {
             }
             else if (parts[2] == 'USERNOTICE') {
                 client.onUsernotice(line);
+                if (!window.userNotices) { window.userNotices = []; }
+                window.userNotices.push(line);
                 var msgParts = parts[0].split(';');
                 var isSub = 0;
                 for (var i = 0; i < msgParts.length; i++) {
@@ -214,6 +216,10 @@ function TwitchClient(opts) {
         _ws.onmessage = OnWebsocketMessage;
         _ws.onerror = OnWebsocketError;
         _ws.onclose = OnWebsocketClose;
+        if (client.Debug) {
+            client._ws = _ws;
+        }
+
     }
 
     ///Send a message to the specified channel
