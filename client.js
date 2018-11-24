@@ -16,7 +16,6 @@
  *    USERSTATE
  *  https://dev.twitch.tv/docs/irc/commands/
  *
- *
  */
 
 /* Supported configuration opts:
@@ -31,40 +30,36 @@ function TwitchClient(opts) {
   this._channels = [];
   this._pending_channels = opts.Channels || [];
   this._rooms = {};
-  this._client_id = opts.ClientId;
+  this._client_id = opts.ClientID;
   this._ws = null;
+  this._username = null;
+  this._connected = false;
 
-  this._hooks = {
-    'PING': [],
-    'JOIN': [],
-    'PART': [],
-    'MODE': [],
-    'WSMESSAGE': [],
-    'WSMESSAGELINE': [],
-    'PRIVMSG': [],
-    'ROOMSTATE': [],
-    'USERNOTICE': [],
-    'SUB': [],
-    'RESUB': [],
-    'GIFTSUB': []
-  };
+  /* TODO: remove all references to _client_id and opts.Pass */
+  this._api = new Twitch.API({"Client-ID": opts.ClientID});
 
-  this._internal_hooks = {
-    'WSMESSAGE': 1,
-    'WSMESSAGELINE': 1
-  }
+  opts.Name = opts.Pass = undefined;
+  this._authed = !!opts.Path;
 
-  this._dispatch = function(hook, args) {
-    if (this._hooks[hook] && this._hooks[hook].length > 0) {
-      for (var func in this._hooks[hook]) {
-        func.apply(this, args);
-      }
-    } else if (this._hooks[hook] && !(hook in this._internal_hooks)) {
-      Util.Warn(`Unhandled event ${hook}:`, args);
+  if (this._authed) {
+    if (opts.Pass.indexOf("oauth:") != 0) {
+      opts.Pass = `oauth:${opts.Pass}`;
     }
   }
 
-  this.Connect = function() {
+  this._hooks = {};
+
+  /* TwitchClient.dispatch(event, args...) */
+  this._dispatch = function _TwitchClient__dispatch(hook, ...args) {
+    if (this._hooks[hook] && this._hooks[hook].length > 0) {
+      for (var func of this._hooks[hook]) {
+        func.apply(this, args);
+      }
+    }
+  }
+
+  /* TwitchClient.Connect() */
+  this.Connect = function _TwitchClient_Connect() {
     if (this._ws !== null) {
       this._ws.close();
     }
@@ -74,56 +69,75 @@ function TwitchClient(opts) {
     }
     this._channels = [];
     this._rooms = {};
+    this._connected = false;
 
-    var client = this;
-    this._ws = new WebSocket('wss://irc-ws.chat.twitch.tv');
+    this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
     this._ws.client = this;
-    this._ws.onopen = function() { client.OnWebsocketOpen(opts.Name, opts.Pass); };
-    this._ws.onmessage = function(m) { client.OnWebsocketMessage(m); };
-    this._ws.onerror = function(e) { client.OnWebsocketError(e); };
-    this._ws.onclose = function(e) { client.OnWebsocketClise(e); };
+    this._ws._send = this._ws.send;
+    this._ws.send = function(m) {
+      console.log('ws send>', m);
+      this._send(m);
+    };
+    this._ws.onopen = function(e) {
+      console.log('ws open>', e);
+      this.client._connected = false;
+      this.client.OnWebsocketOpen(opts.Name, opts.Pass);
+    };
+    this._ws.onmessage = function(m) {
+      console.log('ws recv>', m);
+      this.client.OnWebsocketMessage(m);
+    };
+    this._ws.onerror = function(e) {
+      console.log('ws error>', e);
+      this.client._connected = false;
+      this.client.OnWebsocketError(e);
+    };
+    this._ws.onclose = function(e) {
+      console.log('ws close>', e);
+      this.client._connected = false;
+      this.client.OnWebsocketClose(e);
+    };
   }
-}
 
-TwitchClient.prototype._getRooms = function(channel) {
-  console.log("_getRooms", channel);
-  var client = this;
-  function onGetRooms(json) {
-    for (var room_def of json["rooms"]) {
-      client._rooms[channel].rooms[room_def["name"]] = room_def;
+  /* TwitchClient._getRooms(channelName, channelId) */
+  this._getRooms = function _TwitchClient__getRooms(name, channelid) {
+    var client = this;
+    function onGetRooms(json) {
+      for (var room_def of json["rooms"]) {
+        if (client._rooms[name].rooms === undefined)
+          client._rooms[name].rooms = {};
+        client._rooms[name].rooms[room_def["name"]] = room_def;
+      }
     }
-  }
-  var req = new XMLHttpRequest();
-  req.onreadystatechange = function() {
-    console.log(this.readyState,  this.status);
-    if (this.readyState == 4 && this.status == 200) {
-      var json = JSON.parse(this.responseText);
-      onGetRooms(json);
+    var req = new XMLHttpRequest();
+    req.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        var json = JSON.parse(this.responseText);
+        onGetRooms(json);
+      }
     }
+    req.open("GET", Twitch.URL.GetRooms(channelid));
+    req.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
+    req.setRequestHeader("Authorization", opts.Pass.replace("oauth:", "OAuth "));
+    req.setRequestHeader("Client-ID", this._client_id);
+    req.send();
   }
-  req.open('GET', Twitch.URL.GetRooms(channel));
-  req.setRequestHeader('Client-ID', this._client_id);
-  req.setRequestHeader('Accept', 'application/vnd.twitchtv.v5+json');
-  req.send();
-  console.log(req);
 }
 
 TwitchClient.prototype.debug = function() {
-  if (!this._debug) { return; }
-  var save_stacktrim = [Util.StackTrim, Util.StackTrimEnd];
-  Util.StackTrim = 1;
-  Util.StackTrimEnd = 1;
-  Util.Log.apply(Util.Log, arguments);
-  Util.StackTrim = save_stacktrim[0];
-  Util.StackTrim = save_stacktrim[1];
+  if (this._debug) {
+    Util.LogOnly.apply(Util.LogOnly, arguments);
+  }
 }
 
 TwitchClient.prototype.on = function(action, callback) {
+  if (this._hooks[action] === undefined) {
+    this._hooks[action] = [];
+  }
   this._hooks[action].push(callback);
 }
 
 TwitchClient.prototype.JoinChannel = function(channel) {
-  this.debug('JoinChannel', channel);
   var ch = channel.trim().toLowerCase();
   if (this._ws.readyState == 1) {
     if (ch.indexOf(':') == -1) {
@@ -143,7 +157,6 @@ TwitchClient.prototype.JoinChannel = function(channel) {
 }
 
 TwitchClient.prototype.LeaveChannel = function(channel) {
-  this.debug('LeaveChannel', channel);
   var ch = channel.trim();
   if (ch.indexOf(':') == -1) {
     if (ch.indexOf('#') != 0) {
@@ -161,27 +174,41 @@ TwitchClient.prototype.LeaveChannel = function(channel) {
   }
 }
 
+TwitchClient.prototype.GetName = function() {
+  return this._username;
+}
+
+TwitchClient.prototype.GetRoomInfo = function(room) {
+  return this._rooms[room];
+}
+
+TwitchClient.prototype.GetJoinedChannels = function() {
+  return this._channels;
+}
+
 TwitchClient.prototype.SetName = function(name, pass) {
-  if (name && pass) {
+  if (name) {
     this._username = name;
-    this._ws.send(`PASS ${pass.indexOf('oauth:') == 0 ? '' : 'oauth:'} ${pass}`);
-    this._ws.send(`NICK ${name}`);
   } else {
     this._username = `justinfan${Math.floor(Math.random() * 999999)}`;
+  }
+  if (pass) {
+    this._ws.send(`PASS ${pass.indexOf("oauth:") == 0 ? "" : "oauth:"} ${pass}`);
+    this._ws.send(`NICK ${name}`);
+  } else {
     this._ws.send(`NICK ${this._username}`);
   }
-  this.debug('SetName', this._username);
 }
 
 TwitchClient.prototype.SendMessage = function(channel, message) {
   if (channel.indexOf('#') != 0) {
-    channel = "#" + channel;
+    channel = '#' + channel;
   }
   this._ws.send(`PRIVMSG ${channel} :${message}`);
 }
 
 TwitchClient.prototype.OnWebsocketOpen = function(name, pass) {
-  this._ws.send('CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership');
+  this._ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
   this.SetName(name, pass);
   var chlist = this._pending_channels;
   this._pending_channels = [];
@@ -191,18 +218,27 @@ TwitchClient.prototype.OnWebsocketOpen = function(name, pass) {
 }
 
 TwitchClient.prototype.OnWebsocketMessage = function(msg) {
-  this._dispatch('WSMESSAGE', msg);
-  var data = msg.data.split('\r\n');
-  for (var line of data) {
-    if (line.trim() == '') {
-      continue;
-    }
-    this._dispatch('WSMESSAGELINE', line);
-    var result = this.ParseWSMessage(line);
+  this._dispatch("WSMESSAGE", msg);
+  var lines = msg.data.split("\r\n");
+  for (var line of lines) {
+    if (line.trim() == '') { continue; }
+    this._dispatch("WSMESSAGELINE", line);
+    var result = Twitch.ParseIRCMessage(line);
+    this._dispatch("MESSAGE", result);
     switch (result.cmd) {
       case "PING":
         this._ws.send(`PONG ${result.arg}`);
         this._dispatch("PING", result.arg);
+        break;
+      case "ACK":
+        this._connected = true;
+        this._dispatch('CONNECT', result.flags);
+        break;
+      case "TOPIC":
+        this._dispatch('TOPIC', result.message);
+        break;
+      case "NAMES":
+        this._dispatch('NAMES', result.usernames);
         break;
       case "JOIN":
         this._dispatch("JOIN", result.user, result.channel);
@@ -211,148 +247,49 @@ TwitchClient.prototype.OnWebsocketMessage = function(msg) {
         this._dispatch("PART", result.user, result.channel);
         break;
       case "MODE":
-        this._dispatch("MODE", result.user, result.channel, result.modset);
+        this._dispatch("MODE", result.user, result.channel, result.modeset);
         break;
       case "PRIVMSG":
         this._dispatch("PRIVMSG", result.user, result.channel, result.flags, result.message);
         break;
+      case "USERSTATE":
+        this._dispatch("USERSTATE", result.username, result.channel, result.flags);
+        break;
       case "ROOMSTATE":
         this._rooms[result.channel.channel] = {
-          id: result.flags['room-id'],
+          id: result.flags["room-id"],
           channel: result.channel
         };
-        this._getRooms(result.flags['room-id']);
+        if (this._authed) {
+          this._getRooms(result.channel.channel, result.flags["room-id"]);
+        }
         this._dispatch("ROOMSTATE", result.channel, result.flags);
         break;
       case "USERNOTICE":
         this._dispatch("USERNOTICE", result.channel, result.flags, result.message);
-        if (result.sub_kind == 'SUB') {
-          this._dispatch('SUB', result.sub_user, result.channel, result.sub_tier);
-        } else if (result.sub_kind == 'RESUB') {
-          this._dispatch('RESUB', result.sub_user, result.channel, result.sub_tier, result.sub_months);
-        } else if (result.sub_kind == 'GIFTSUB') {
-          this._dispatch('GIFTSUB', result.sub_user, result.channel, result.sub_tier, result.sub_gifting_user, result.sub_months);
+        if (result.sub_kind == "SUB") {
+          this._dispatch("SUB", result.sub_user, result.channel, result.sub_tier);
+        } else if (result.sub_kind == "RESUB") {
+          this._dispatch("RESUB", result.sub_user, result.channel, result.sub_tier, result.sub_months);
+        } else if (result.sub_kind == "GIFTSUB") {
+          this._dispatch("GIFTSUB", result.sub_user, result.channel, result.sub_tier, result.sub_gifting_user, result.sub_months);
+        } else if (result.sub_kind == "ANONGIFTSUB") {
+          this._dispatch("ANONGIFTSUB", result.sub_user, result.channel, result.sub_tier, result.sub_months);
         }
+        break;
+      case "GLOBALUSERSTATE":
+        this._dispatch('GLOBALUSERSTATE', result.flags);
         break;
     }
   }
 }
 
-TwitchClient.prototype.OnWebsocketError = function(error) {
-  this.debug('OnWebsocketError', arguments);
-  Util.Error(error);
+TwitchClient.prototype.OnWebsocketError = function(event) {
+  Util.Error(event);
 }
 
-TwitchClient.prototype.OnWebsocketClose = function(e) {
-  this.debug('OnWebsocketClose', arguments);
+TwitchClient.prototype.OnWebsocketClose = function(event) {
   this._pending_channels = this._channels;
   this._channels = [];
-}
-
-TwitchClient.prototype.ParseWSMessage = function(line) {
-  this.debug(line);
-  var result = { cmd: null };
-  var parts = line.split(" ");
-  var data = {};
-  if (parts[0].startsWith('@')) {
-    data = Twitch.ParseData(parts[0]);
-    parts.shift();
-  }
-  if (parts[0] == "PING") {
-    /* "PING <server>" */
-    result.cmd = "PING";
-    result.arg = parts[1];
-  } else if (line.indexOf('CAP * ACK') > -1) {
-    /* :<server> CAP * ACK <flags...> */
-    result.cmd = 'ACK';
-    result.operation = 'CAP';
-    result.server = parts[0].replace(/^:/, "");
-    result.flags = line.substr(line.indexOf(':', 1)+1).split();
-  } else if (parts[1] == "375" || parts[1] == "376") {
-    /* 375: Start TOPIC listing
-     * 376: End TOPIC listing */
-    /* :<server> <code> <username> :<message> */
-    result.cmd = "OTHER";
-    result.code = parts[1];
-  } else if (parts[1].match(/00[1-9]/) || parts[1] == "372") {
-    /* :<server> 00[1-4] <username> :<message> */
-    result.cmd = "TOPIC";
-    result.code = parts[1];
-    result.server = parts[0].replace(/^:/, "");
-  } else if (parts[1] == "353") {
-    /* NAMES listing entry */
-    /* :<user> 353 <mode> <channel> :<username> */
-    result.cmd = "NAMES";
-    result.user = parts[0].replace(/^:/, "");
-    result.mode = parts[2];
-    result.channel = Twitch.ParseChannel(parts[3]);
-    result.username = Twitch.ParseUser(parts[4]);
-  } else if (parts[1] == "366") {
-    /* End of NAMES listing */
-    result.cmd = "OTHER";
-  } else if (parts[1] == "JOIN" || parts[1] == "PART") {
-    /* ":<user> JOIN <channel> */
-    /* ":<user> PART <channel> */
-    result.cmd = parts[1];
-    result.user = Twitch.ParseUser(parts[0]);
-    result.channel = Twitch.ParseChannel(parts[2]);
-  } else if (parts[1] == "MODE") {
-    /* ":<user> MODE <channel> <modset> " */
-    result.cmd = "MODE";
-    result.user = Twitch.ParseUser(parts[0]);
-    result.channel = Twitch.ParseChannel(parts[2]);
-    result.modeset = parts.splice(2);
-  } else if (parts[1] == "PRIVMSG") {
-    /* [@<flags>] :<user> PRIVMSG <channel> :<msg> */
-    result.cmd = "PRIVMSG";
-    result.flags = data;
-    result.user = Twitch.ParseUser(parts[0]);
-    result.channel = Twitch.ParseChannel(parts[2]);
-    result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
-  } else if (parts[1] == 'ROOMSTATE') {
-    /* [@<flags>] :<server> ROOMSTATE <channel> */
-    result.cmd = "ROOMSTATE";
-    result.flags = data;
-    result.channel = Twitch.ParseChannel(parts[2]);
-  } else if (parts[1] == 'USERNOTICE') {
-    result.cmd = "USERNOTICE";
-    /* [@<flags>] :<server> USERNOTICE <channel> */
-    /* [@<flags>] :<server> USERNOTICE <channel> :<message> */
-    result.flags = data;
-    result.channel = Twitch.ParseChannel(parts[2]);
-    result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
-    result.issub = false;
-    result.sub_kind = null;
-    result.sub_user = null;
-    result.sub_gifting_user = null;
-    result.sub_months = null;
-    if (result.flags['msg-id']) {
-      switch (result.flags['msg-id']) {
-        case 'sub':
-          result.issub = true;
-          result.sub_kind = 'SUB';
-          result.sub_user = result.flags['login'];
-          result.sub_months = result.flags['msg-param-sub-months'];
-          break;
-        case 'resub':
-          result.issub = true;
-          result.sub_kind = 'RESUB';
-          result.sub_user = result.flags['login'];
-          result.sub_months = result.flags['msg-param-sub-months'];
-          break;
-        case 'subgift':
-          result.issub = true;
-          result.sub_kind = 'GIFTSUB';
-          result.sub_gifting_user = result.flags['login'];
-          result.sub_user = result.flags['msg-param-recipient-user-name'];
-          result.sub_months = result.flags['msg-param-sub-months'];
-          break;
-      }
-    }
-    this.debug("Parsed", result);
-  } else {
-    this.debug('OnWebsocketMessage: unknown message:', parts);
-  }
-  return result;
 }
 

@@ -3,6 +3,7 @@
 <head>
     <title></title>
     <meta charset="utf-8" />
+    <script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 
     <script type="text/javascript" src="utility.js"></script>
@@ -302,7 +303,29 @@ body {
     </div>
     <img id="settings_button" src="settings_white.png" alt="Settings" />
     <script type="text/javascript">
+function add_html(html) {
+  $(".module").each(function() {
+    var $content = $(this).find('.content');
+    $content.append(`<p>${html}</p>`);
+    $content.scrollTop(2**31-1);
+  });
+}
+    </script>
+    <script type="text/javascript">
 var config = {Debug: true, Channels: ['#dwangoac']};
+if (window.location.search) {
+  for (var part of window.location.search.substr(1).split('&')) {
+    var [k, v] = part.split('=');
+    if (k == 'clientid') {
+      config.ClientID = v;
+      config.Pass = "oauth:" + v;
+    }
+    if (k == "user")
+      config.Name = v;
+    if (k == "pass")
+      config.Pass = v;
+  }
+}
 var client = new TwitchClient(config);
 $('#txtChat').on('keyup', function (e) {
     if (e.keyCode == 13) {
@@ -310,6 +333,28 @@ $('#txtChat').on('keyup', function (e) {
         txtChat.value = '';
     }
 })
+client.on('WSMESSAGE', function(msg) { });
+client.on('WSMESSAGELINE', function(line) {
+  add_html(line);
+});
+client.on('MESSAGE', function(parsed) {
+  add_html(parsed.toSource());
+});
+client.on('CONNECT', function(flags) { });
+client.on('TOPIC', function(message) { });
+client.on('NAMES', function(usernames) { });
+client.on('JOIN', function(user, channel) { });
+client.on('PART', function(user, channel) { });
+client.on('MODE', function(user, channel, modeset) { });
+client.on('PRIVMSG', function(user, channel, flags, message) { });
+client.on('USERSTATE', function(user, channel, flags) { });
+client.on('ROOMSTATE', function(channel, flags) { });
+client.on('USERNOTICE', function(channel, flags, message) { });
+client.on('SUB', function(user, channel, tier, months) { });
+client.on('RESUB', function(user, channel, tier, months) { });
+client.on('GIFTSUB', function(user, channel, tier, gifter, months) { });
+client.on('ANONGIFTSUB', function(user, channel, tier, months) { });
+client.on('GLOBALUSERSTATE', function(flags) { });
 client.Connect();
     </script>
 </body>

@@ -16,8 +16,8 @@ function LoadChannelBadges(channelId, callback) {
             callback(json);
         }
     };
-    req.open('GET', TW_URL.ChannelBadges(channelId));
-    req.setRequestHeader('Accept', 'application/vnd.twitchtv.v5+json');
+    req.open("GET", TW_URL.ChannelBadges(channelId));
+    req.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
     req.send();
 }
 
@@ -29,12 +29,12 @@ function LoadGlobalBadges(callback) {
             callback(json);
         }
     };
-    req.open('GET', TW_URL.GlobalBadges());
-    req.setRequestHeader('Accept', 'application/vnd.twitchtv.v5+json');
+    req.open("GET", TW_URL.GlobalBadges());
+    req.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
     req.send();
 }
 
-function LoadCheerEmotes(callback) {
+function LoadCheerEmotes(clientId, callback) {
     var req = new XMLHttpRequest();
     req.onreadystatechange = function() {
         if (this.readyState == 4 && this.status === 200) {
@@ -42,9 +42,9 @@ function LoadCheerEmotes(callback) {
             callback(json);
         }
     };
-    req.open('GET', TW_URL.CheerEmotes());
-    req.setRequestHeader('Accept', 'application/vnd.twitchtv.v5+json');
-    req.setRequestHeader('Client-ID', 'dcirpjuzebyjmxvjyj30x6pybo8nx9');
+    req.open("GET", TW_URL.CheerEmotes());
+    req.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
+    req.setRequestHeader("Client-ID", clientId);
     req.send();
 }
 
