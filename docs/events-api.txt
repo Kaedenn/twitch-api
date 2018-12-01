@@ -45,7 +45,9 @@ A "Channel Object" is an Object of the following format:
    roomuid: UUID uniquely identifying this room, or undefined}
 All "channel" attributes below refer to channel objects.
 
-The following events are available:
+All events are instances of "TwitchEvent" with the exception of "twitch-chat",
+which is a "TwitchChatEvent". The events provided are:
+  twitch-chat (TwitchChatEvent instance)
   twitch-ping
   twitch-ack
   twitch-topic
@@ -53,7 +55,7 @@ The following events are available:
   twitch-join
   twitch-part
   twitch-mode
-  twitch-privmsg
+  twitch-privmsg (use "twitch-chat" instead)
   twitch-userstate
   twitch-roomstate
   twitch-usernotice
@@ -63,12 +65,20 @@ The following events are available:
   twitch-anongiftsub
   twitch-globaluserstate
   twitch-clearchat
+  twitch-clearmsg
   twitch-notice
   twitch-other
 
-The following events are not (yet) available, but are planned:
-  twitch-clearchat
-  twitch-clearmsg
+twitch-chat:
+  Fired when a PRIVMSG event is handled. Please handle this event rather than
+  "twitch-privmsg".
+  Attributes:
+    "flags": the key-value flags pertaining to this particular message
+    "user": the user that sent this message
+    "channel": the channel the message was sent to
+    "message": the raw textual message the user sent
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#privmsg-twitch-tags
 
 twitch-ping:
   Fired when the Twitch servers send a PING event to the client. The client
@@ -120,7 +130,8 @@ twitch-mode:
     "modeflag": a string designating the access given to the user (e.g. "+o")
 
 twitch-privmsg:
-  Fired when a person types a message into chat.
+  Fired when a person types a message into chat. Please use the "twitch-chat"
+  event instead of this event.
   Attributes:
     "flags": the key-value flags pertaining to this particular message
     "user": the user that sent this message
@@ -217,6 +228,16 @@ twitch-clearchat:
   Flags:
     See https://dev.twitch.tv/docs/irc/tags/#clearchat-twitch-tags
 
+twitch-clearmsg:
+  Fired when a moderator clears a specific message.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "server": the server that sent the command
+    "channel": the channel the message was sent to
+    "message": the specific message being cleared
+  Flags:
+    See https://dev.twitch.tv/docs/irc/commands/#clearmsg-twitch-commands
+
 twitch-notice:
   Fired when the server sends a notice to the client. This can happen to notify
   the client of a specific error, such as trying to set the client's username
@@ -235,5 +256,6 @@ twitch-other:
   listing" messages.
   Attributes:
     "code": the 3-digit numeric code
+
 
 // vim:noai:nosi:nocindent

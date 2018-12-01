@@ -216,7 +216,9 @@ Twitch.IRCMessages = {
   GLOBALUSERSTATE: /^@([^ ]+) :([^ ]+) GLOBALUSERSTATE(?:\r\n)?$/,
   /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
   CLEARCHAT: /^@([^ ]+) :([^ ]+) CLEARCHAT (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
-  /* ":<server> NOTICE <channel> :<message>\r\n" */
+  /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
+  CLEARMSG: /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
+  /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
   NOTICE: /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/,
   /* ":<server> 421 <user> <command> :<message> */
   ERROR: /^:([^ ]+) (421) ([^ ]+) :(.*)(?:\r\n)?$/,
@@ -314,11 +316,11 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "MODE") {
-    /* ":<user> MODE <channel> <username> <modeflag>" */
+    /* ":<sender> MODE <channel> <username> <modeflag>" */
     result.cmd = "MODE";
-    result.user = Twitch.ParseUser(parts[0]);
+    result.sender = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    result.username = parts[3];
+    result.user = parts[3];
     result.modeflag = parts[4];
   } else if (parts[1] == "PRIVMSG") {
     /* [@<flags>] :<user> PRIVMSG <channel> :<msg> */
@@ -395,6 +397,13 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
       result.user = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
     }
+  } else if (parts[1] == "CLEARMSG") {
+    /* "[@<flags>] :<server> CLEARMSG <channel> :<message>\r\n" */
+    result.cmd = "CLEARMSG";
+    result.flags = data;
+    result.server = parts[0];
+    result.channel = Twitch.ParseChannel(parts[2]);
+    result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
   } else if (parts[1] == "NOTICE") {
     /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
     result.cmd = "NOTICE";

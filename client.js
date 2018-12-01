@@ -11,8 +11,8 @@
 /* TODO:
  *  Implement the following features:
  *  Implement receiving the following commands:
- *    CLEARCHAT
  *    CLEARMSG
+ *    CLEARCHAT (done)
  *    NOTICE (done)
  *  Implement sending the following commands:
  *    CLEARCHAT
