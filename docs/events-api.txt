@@ -1,0 +1,239 @@
+EVENTS API REFERENCE DOCUMENTATION
+
+TwitchClient provides DOM-level events for handling communications from the
+Twitch servers. To listen for a specific event (user joins a channel, for
+example), use something akin to the following:
+  document.addEventListener("twitch-join", function(event) {
+    /* JOIN-specific logic here */
+  });
+
+These events are instances of either the TwitchEvent or TwitchChatEvent
+classes. TwitchChatEvent inherits TwitchEvent. In addition to implementing the
+DOM-level Event API (by inheriting from Event), these classes provide the
+following extra APIs:
+
+TwitchEvent:
+  Attributes:
+    command: the uppercase command that triggered this event
+    raw_line: the raw IRC line
+    values: an Object containing the information parsed from the raw line
+  Methods:
+    value(key): this.values[key]
+
+  Per-command attributes (may not be available for all commands):
+    channel: a channel object representing the channel the command was sent to
+    message: a string with the line's message
+    user: the raw username for the user who sent/received this line
+    name: the formatted username for the user who sent/received this line
+    flags: the extra data associated with this line
+  Per-command methods (may not be available for all commands):
+    flag(key): this.flags[key]
+
+TwitchChatEvent:
+  Attributes:
+    id: a value that uniquely identifies this specific chat message
+    ismod: true if the message was sent by a moderator
+    issub: true if the message was sent by a subscriber
+    isvip: true if the message was sent by a VIP
+  Methods:
+    has_badge(badge_name, [badge_rev]): true if the message has the badge
+      specified, optionally limiting to a specific badge revision number
+
+A "Channel Object" is an Object of the following format:
+  {channel: "#channel-name",
+   room: "room name" or undefined,
+   roomuid: UUID uniquely identifying this room, or undefined}
+All "channel" attributes below refer to channel objects.
+
+The following events are available:
+  twitch-ping
+  twitch-ack
+  twitch-topic
+  twitch-names
+  twitch-join
+  twitch-part
+  twitch-mode
+  twitch-privmsg
+  twitch-userstate
+  twitch-roomstate
+  twitch-usernotice
+  twitch-sub
+  twitch-resub
+  twitch-giftsub
+  twitch-anongiftsub
+  twitch-globaluserstate
+  twitch-clearchat
+  twitch-notice
+  twitch-other
+
+The following events are not (yet) available, but are planned:
+  twitch-clearchat
+  twitch-clearmsg
+
+twitch-ping:
+  Fired when the Twitch servers send a PING event to the client. The client
+  automatically responds with a PONG, so no action is needed by the user.
+
+twitch-ack:
+  Fired when the server acknowledges the client connection and enumerates the
+  specific privileges granted to the client.
+  Attributes:
+    "operation": the operation that was acknowledged. For now the only value
+      is "CAP", for "capability request".
+    "server": the server that sent the ACK
+    "flags": a list of capabilities granted by the server
+
+twitch-topic:
+  Fired when the client receives a connect message (known as a "TOPIC") from
+  the Twitch server.
+  Attributes:
+    "code": a 3-digit numeric code designating the type of topic. Values can be
+      between 001 to 009 and 372. 001 through 009 designate connection
+      messages, while 372 designates more of a "welcome" message.
+    "server": the server that sent the message
+    "username": the user the message was sent to, typically the client's user
+    "message": the message itself
+
+twitch-names:
+  Fired when the client receives a "NAMES" listing from the server. This is to
+  inform the client of the users already present in the channel. Note that the
+  list may not be exhaustive.
+  Attributes:
+    "user": the user the command was sent to
+    "mode": the "mode" character given to the user
+    "server": the server that sent the command
+    "channel": the channel the command is referring to
+    "names": an array of user names enumerating the users in the channel
+
+twitch-join/twitch-part:
+  Fired when a user joins or parts a channel the client is in.
+  Attributes:
+    "user": the user that joined or parted the channel
+    "channel": the channel the user joined or parted
+
+twitch-mode:
+  Fired when the server grants specific elevated permissions to a user.
+  Attributes:
+    "sender": the user that issued the mode command (typically "jtv")
+    "channel": the channel the command is for
+    "user": the user ID the command is targeting
+    "modeflag": a string designating the access given to the user (e.g. "+o")
+
+twitch-privmsg:
+  Fired when a person types a message into chat.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular message
+    "user": the user that sent this message
+    "channel": the channel the message was sent to
+    "message": the raw textual message the user sent
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#privmsg-twitch-tags
+
+twitch-userstate:
+  Fired when the client or certain users either join the channel or send their
+  first message to the channel.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "username": the user's formatted name to be used for display. This is the
+      value of the "display-name" flag.
+    "channel": the channel the message was sent to
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#userstate-twitch-tags
+
+twitch-roomstate:
+  Fired to inform the client of a channel's configuration, such as if the
+  channel is limited to subscribed users, if slow mode is enabled, etc.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "channel": the channel the message was sent to
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#roomstate-twitch-tags
+
+twitch-usernotice:
+  Fired when something happens in the chat, such as a use subscribing, a raid,
+  or a ritual.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "channel": the channel the message was sent to
+    "message": the textual message for this command
+    "issub": true if the notice is for a subscribe event
+    "sub_kind": one of "SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB", or null
+    "sub_user": the user who subscribed or received the gift subscription
+    "sub_gifting_user": for gift subscriptions, the user who gave the gift
+      subscription. For anonymous gift subscriptions, the value is something
+      like "AnAnonymousUser"
+    "sub_months": for resubs, the number of months the user has been subscribed
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#usernotice-twitch-tags
+
+twitch-sub:
+  Fired when a USERNOTICE is received for a user subscribing to the channel.
+  Attributes and flags are identical to the twitch-usernotice event.
+  Attribute mapping:
+    "sub_user": the value of the "login" flag
+    "sub_months": the value of the "msg-param-sub-months" flag
+
+twitch-resub:
+  Fired when a USERNOTICE is received for a user resubscribing to the channel.
+  Attributes and flags are identical to the twitch-usernotice event.
+  Attribute mapping:
+    "sub_user": the value of the "login" flag
+    "sub_months": the value of the "msg-param-sub-months" flag
+
+twitch-giftsub:
+  Fired when a USERNOTICE is received for a user gifting a subscription to
+  another user. Attributes and flags are identical to the twitch-usernotice
+  event.
+  Attribute mapping:
+    "sub_user": the value of the "msg-param-recipient-user-name" flag
+    "sub_gifting_user" the value of the "login" flag
+    "sub_months": the value of the "msg-param-sub-months" flag
+
+twitch-anongiftsub:
+  Fired when a USERNOTICE is received for some user gifting a subscription to
+  another user anonymously. Attributes and flags are identical to the
+  twitch-usernotice event.
+  Attribute mapping:
+    "sub_user": the value of the "msg-param-recipient-user-name" flag
+    "sub_gifting_user" the value of the "login" flag
+    "sub_months": the value of the "msg-param-sub-months" flag
+
+twitch-globaluserstate:
+  Fired to inform the client of server-wide user configuration.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "server": the server that sent the command
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#globaluserstate-twitch-tags
+
+twitch-clearchat:
+  Fired when a moderator clears the chat or clears a specific user's messages.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "server": the server that sent the command
+    "channel": the channel the message was sent to
+    "user": if specified, the user whose chat to clear. Otherwise, the entire
+      chat is to be cleared
+  Flags:
+    See https://dev.twitch.tv/docs/irc/tags/#clearchat-twitch-tags
+
+twitch-notice:
+  Fired when the server sends a notice to the client. This can happen to notify
+  the client of a specific error, such as trying to set the client's username
+  after the client has connected to the server.
+  Attributes:
+    "flags": the key-value flags pertaining to this particular command
+    "server": the server that sent the command
+    "channel": the channel the message was sent to
+    "message": the content of the notice
+  Flags:
+    See https://dev.twitch.tv/docs/irc/commands/#notice-twitch-commands
+
+twitch-other:
+  Fired when some other non-informative message is received. This is used to
+  handle the "start TOPIC listing", "end TOPIC listing", and "end NAMES
+  listing" messages.
+  Attributes:
+    "code": the 3-digit numeric code
+
+// vim:noai:nosi:nocindent

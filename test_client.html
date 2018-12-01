@@ -7,8 +7,15 @@
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 
     <script type="text/javascript" src="utility.js"></script>
+    <script type="text/javascript" src="twitch-utility.js"></script>
     <script type="text/javascript" src="colors.js"></script>
     <script type="text/javascript" src="client.js"></script>
+    <script type="text/javascript">
+window.onload = function(e) { window.load_event = e; };
+window.addEventListener('load', function(e) { window.load_event = e; });
+document.addEventListener('twitchevent', function(e) { console.log('Twitch', e); });
+
+    </script>
     <style type="text/css">
 *, *:before, *:after {
     box-sizing:border-box;
@@ -156,6 +163,38 @@ body {
 .module .content a:hover {
     text-decoration:underline;
 }
+.module .content .error {
+    font-weight: bold;
+    color: red;
+    font-size: x-large;
+}
+/* Begin Chat styles */
+.module .content .line .notice {
+    font-weight: bold;
+    color: orange;
+    font-size: x-large;
+}
+.module .content .line .chat-line {
+    padding: 4px;
+    border: 1px solid;
+}
+.module .content .line .chat-line .badges .badge {
+    padding-left: 2px;
+    padding-right: 2px;
+}
+.module .content .line .chat-line .username {
+    font-weight: bold;
+    color: blue;
+    text-decoration: none;
+}
+.module .content .line .chat-line .message {
+    
+}
+span.pre {
+    font-size: smaller;
+    font-family: "Lucida Console", monospace;
+}
+/* End chat styles */
 .module.full .settings {
     max-height: 37.4%;
 }
@@ -303,44 +342,63 @@ body {
     </div>
     <img id="settings_button" src="settings_white.png" alt="Settings" />
     <script type="text/javascript">
-function add_html(html) {
-  $(".module").each(function() {
-    var $content = $(this).find('.content');
-    $content.append(`<p>${html}</p>`);
-    $content.scrollTop(2**31-1);
-  });
-}
-    </script>
-    <script type="text/javascript">
 var config = {Debug: true, Channels: ['#dwangoac']};
 if (window.location.search) {
   for (var part of window.location.search.substr(1).split('&')) {
     var [k, v] = part.split('=');
-    if (k == 'clientid') {
+    if (k == 'clientid')
       config.ClientID = v;
-      config.Pass = "oauth:" + v;
-    }
     if (k == "user")
       config.Name = v;
     if (k == "pass")
       config.Pass = v;
+    if (k == "rooms") {
+      config.Channels = [];
+      for (var ch of v.split(',')) {
+        config.Channels.push('#' + ch);
+      }
+    }
+    if (k == "debug")
+      config.Debug = (v != '0');
   }
 }
+if (config.Debug)
+  Util.DebugLevel = Util.LEVEL_TRACE;
 var client = new TwitchClient(config);
 $('#txtChat').on('keyup', function (e) {
-    if (e.keyCode == 13) {
-        client.SendMessage(txtChannel.value, txtChat.value);
-        txtChat.value = '';
-    }
+  if (e.keyCode == 13) {
+    client.SendMessage(txtChannel.value, txtChat.value);
+    txtChat.value = '';
+  }
 })
+document.addEventListener('twitch-event', function(e) {
+});
+document.addEventListener('twitch-chat', function(e) {
+  add_html(to_html(e));
+  Util.Debug(e);
+});
+document.addEventListener('twitch-notice', function(e) {
+  /* NOTICE */
+  var html = `Notice: ${Twitch.FormatChannel(e.channel)}: ${e.message.escape()}`;
+  add_html(`<span class="notice">${html}</span>`);
+  console.log(e);
+});
+client.on('ERROR', function(event) {
+  add_html(`<span class="error">Error: ${event}</span>`);
+});
 client.on('WSMESSAGE', function(msg) { });
 client.on('WSMESSAGELINE', function(line) {
-  add_html(line);
+  add_html(`<span class="pre">${line}</span>`);
 });
 client.on('MESSAGE', function(parsed) {
-  add_html(parsed.toSource());
+  add_html(`<span class="pre">${parsed.toSource()}</span>`);
 });
 client.on('CONNECT', function(flags) { });
+client.on('CLOSE', function() {
+  add_html("<hr/>");
+  add_html("Connection closed");
+  add_html("<hr/>");
+});
 client.on('TOPIC', function(message) { });
 client.on('NAMES', function(usernames) { });
 client.on('JOIN', function(user, channel) { });
@@ -355,7 +413,102 @@ client.on('RESUB', function(user, channel, tier, months) { });
 client.on('GIFTSUB', function(user, channel, tier, gifter, months) { });
 client.on('ANONGIFTSUB', function(user, channel, tier, months) { });
 client.on('GLOBALUSERSTATE', function(flags) { });
+client.on('CLEARCHAT', function(user, channel, flags) { });
+client.on('NOTICE', function(channel, message) { });
 client.Connect();
+
+/* Twitch Chat (w/ FFZ):
+<div class="chat-line__message" data-room-id="70067886" data-room="dwangoac" data-user-id="175437030" data-user="kaedenn_">
+  <span class="chat-line__message--badges">
+    <span data-provider="twitch" data-badge="subscriber" data-version="0" class="ffz-tooltip ffz-badge" data-tooltip-type="badge" data-badge-data="[{&quot;provider&quot;:&quot;twitch&quot;,&quot;badge&quot;:&quot;subscriber&quot;,&quot;version&quot;:&quot;0&quot;}]">
+    </span>
+    <span data-provider="twitch" data-badge="bits" data-version="1000" class="ffz-tooltip ffz-badge" data-tooltip-type="badge" data-badge-data="[{&quot;provider&quot;:&quot;twitch&quot;,&quot;badge&quot;:&quot;bits&quot;,&quot;version&quot;:&quot;1000&quot;}]">
+    </span>
+  </span>
+  <button class="chat-line__username notranslate" style="color: rgb(2, 98, 193);">
+    <span class="chat-author__display-name">Kaedenn_</span>
+  </button>
+  <span>: </span>
+  <span class="message">
+    <span data-a-target="chat-message-text">test2</span>
+  </span>
+</div>
+*/
+function add_html(html) {
+  $(".module").each(function() {
+    var $content = $(this).find('.content');
+    var $p = document.createElement('p');
+    $p.setAttribute('class', 'line');
+    $p.innerHTML = html;
+    $content.append($p);
+    $content.scrollTop(2**31-1);
+  });
+}
+function _to_html_badges(event) {
+  var e_badges = document.createElement('span');
+  e_badges.setAttribute('class', 'badges');
+  for (var [badge_name, badge_num] of event.flags.badges) {
+    var e_badge = document.createElement('img');
+    if (client.IsGlobalBadge(badge_name, badge_num)) {
+      var badge_info = client.GetGlobalBadge(badge_name, badge_num);
+      e_badge.setAttribute('src', badge_info.image_url_1x);
+      e_badge.setAttribute('tw-badge-scope', 'global');
+      e_badge.setAttribute('alt', badge_info.title);
+    } else if (client.IsChannelBadge(event.channel, badge_name)) {
+      var badge_info = client.GetChannelBadge(event.channel, badge_name);
+      var badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
+      e_badge.setAttribute('src', badge_src);
+      e_badge.setAttribute('tw-badge', JSON.stringify(badge_info));
+      e_badge.setAttribute('tw-badge-scope', 'channel');
+      e_badge.setAttribute('tw-badge-channel', channel.channel.lstrip('#'));
+    } else {
+      console.warn('Unknown badge', badge_name, badge_num, 'for', event);
+      continue;
+    }
+    e_badge.setAttribute('class', 'badge');
+    e_badge.setAttribute('tw-badge-cause', JSON.stringify([badge_name, badge_num]));
+    e_badges.appendChild(e_badge);
+  }
+  return e_badges;
+}
+function _to_html_name(event) {
+  var e_name = document.createElement('span');
+  e_name.setAttribute('class', 'username');
+  if (!!event.flags.color) {
+    e_name.setAttribute("style", `color: ${event.flags.color}`);
+  }
+  e_name.innerHTML = event.flags["display-name"].escape();
+  return e_name;
+}
+function _to_html_msg(event) {
+  var e_msg = document.createElement('span');
+  e_msg.setAttribute('class', 'message');
+  e_msg.innerHTML = event.message.escape();
+  return e_msg;
+}
+function to_html(event) {
+  var e_cont = document.createElement('div');
+  e_cont.setAttribute('class', 'chat-line');
+  e_cont.setAttribute("data-id", event.flags.id);
+  e_cont.setAttribute("data-user", event.user);
+  e_cont.setAttribute("data-user-id", event.flags["user-id"]);
+  e_cont.setAttribute("data-channel", event.channel.channel.lstrip('#'));
+  if (!!event.channel.room)
+    e_cont.setAttribute("data-room", event.channel.room);
+  if (!!event.channel.roomuid)
+    e_cont.setAttribute("data-roomuid", event.channel.roomuid);
+  e_cont.setAttribute("data-channelid", event.flags["room-id"]);
+  e_cont.setAttribute("data-subscriber", event.flags.subscriber);
+  e_cont.setAttribute("data-mod", event.flags.mod);
+  e_cont.setAttribute("data-vip", event.isvip ? "1" : "0");
+  e_cont.setAttribute("data-sent-ts", event.flags["tmi-sent-ts"]);
+  e_cont.appendChild(_to_html_badges(event));
+  e_cont.appendChild(_to_html_name(event));
+  e_cont.innerHTML += ":&nbsp";
+  e_cont.appendChild(_to_html_msg(event));
+  return e_cont.outerHTML;
+}
+
     </script>
 </body>
 </html>
