@@ -10,12 +10,6 @@
     <script type="text/javascript" src="twitch-utility.js"></script>
     <script type="text/javascript" src="colors.js"></script>
     <script type="text/javascript" src="client.js"></script>
-    <script type="text/javascript">
-window.onload = function(e) { window.load_event = e; };
-window.addEventListener('load', function(e) { window.load_event = e; });
-document.addEventListener('twitchevent', function(e) { console.log('Twitch', e); });
-
-    </script>
     <style type="text/css">
 *, *:before, *:after {
     box-sizing:border-box;
@@ -343,49 +337,261 @@ span.pre {
     <img id="settings_button" src="settings_white.png" alt="Settings" />
     <script type="text/javascript">
 var config = {Debug: true, Channels: ['#dwangoac']};
-if (window.location.search) {
-  for (var part of window.location.search.substr(1).split('&')) {
-    var [k, v] = part.split('=');
-    if (k == 'clientid')
-      config.ClientID = v;
-    if (k == "user")
-      config.Name = v;
-    if (k == "pass")
-      config.Pass = v;
-    if (k == "rooms") {
-      config.Channels = [];
-      for (var ch of v.split(',')) {
-        config.Channels.push('#' + ch);
-      }
-    }
-    if (k == "debug")
-      config.Debug = (v != '0');
+
+var config_str = window.localStorage.getItem("config");
+if (config_str) {
+  config = JSON.parse(config_str);
+}
+
+for (var [k, v] of Object.entries(Util.ParseQueryString())) {
+  var key = k;
+  var val = v;
+  if (k == "clientid") key = "ClientID";
+  if (k == "user") key = "Name";
+  if (k == "pass") key = "Pass";
+  if (k == "channels") {
+    key = "Channels";
+    val = v.split(',').map((e) => '#' + e);
+  }
+  if (k == "debug")
+    key = "Debug";
+  config[key] = val;
+}
+
+var client = new TwitchClient(config);
+config.Name = config.ClientID = config.Pass = undefined;
+Util.DebugLevel = config.Debug;
+
+function send_all(str, fn=null) {
+  if (fn == null)
+    fn = client.SendMessage;
+  fn = fn.bind(client);
+  for (var ch of config.Channels) {
+    fn(ch, str);
   }
 }
-if (config.Debug)
-  Util.DebugLevel = Util.LEVEL_TRACE;
-var client = new TwitchClient(config);
-$('#txtChat').on('keyup', function (e) {
-  if (e.keyCode == 13) {
-    client.SendMessage(txtChannel.value, txtChat.value);
-    txtChat.value = '';
+
+function handle_chat(str) {
+  if (str.startsWith('//')) {
+    var [cmd, args] = str.split_n(" ", 1);
+    cmd = cmd.lstrip('/');
+    switch (cmd) {
+      case "join":
+        /* Join a channel */
+        client.JoinChannel(args);
+        break;
+      case "part":
+        /* Leave a channel */
+        client.LeaveChannel(args);
+        break;
+      case "raw":
+        /* Send a raw message to Twitch */
+        client.SendRaw(args);
+        break;
+      case "debug":
+        /* Alter debugging settings */
+        break;
+      case "channels":
+        /* List the joined channels */
+        break;
+      case "get-user":
+        /* Get information about a user */
+        break;
+      case "get-channel":
+        /* Get information about a channel */
+        break;
+      case "get-room":
+        /* Get information about a room */
+        break;
+      default:
+        /* Invalid command */
+        break;
+    }
+  } else {
+    send_all(str, client.SendMessage);
   }
-})
-document.addEventListener('twitch-event', function(e) {
+}
+
+function on_command_help(args) {
+  if (typeof(args) == "string")
+    args = args.escape();
+  var help_commands = {
+    help: "//help [command]: Help message or help for a specific command",
+    config: "//config [<key> [<value>]]: Get or set a configuration value",
+    join: "//join <channel>: Join the specified channel",
+    part: "//part <channel>: Part from the specified channel",
+    debug: "//debug [<level>]: Display or change the debugging status",
+    reconnect: "//reconnect: Disconnect and reconnect to the Twitch servers",
+    badges: "//badges: Show all the known badges (quite large set)"
+  };
+  if (args === undefined || args.length == 0) {
+    for (var [cmd, line] of Object.entries(help_commands)) {
+      line = line.escape();
+      add_html(`<span class="pre">//${cmd}: ${line}</span>`);
+    }
+  } else if (args.lstrip('/') in help_commands) {
+    var line = help_commands[args.lstrip('/')].escape();
+    add_html(`<span class="pre">Help: ${line}</span>`);
+  } else {
+    add_html(`<span class="pre">Help: don't know what "${args}" is`);
+  }
+}
+
+function on_command_config(args) {
+  var cfgRaw = window.localStorage.getItem('config');
+  var cfg = JSON.parse(cfgRaw);
+  var changed = false;
+  if (args === undefined || args.length == 0) {
+    add_html(`<span class="pre">Config: ${cfgRaw}</span>`);
+  } else if (args.indexOf(' ') > -1) {
+    var [key, val] = args.split_n(' ', 1);
+    if (key in cfg) {
+      if (val) {
+        cfg[key] = val;
+        add_html(`<span class="pre">Config: Set "${key}" to "${val.escape()}"`);
+        changed = true;
+      } else {
+        add_html(`<span class="pre">Config: "${key}" = "${cfg[key].escape()}"`);
+      }
+    }
+  }
+  if (changed)
+    window.localStorage.setItem('config', JSON.stringify(cfg));
+}
+
+function on_command_join(args) {
+  client.JoinChannel(args);
+}
+function on_command_part(args) {
+  client.LeaveChannel(args);
+}
+function on_command_debug(args) { }
+function on_command_reconnect(args) {
+  client.Connect();
+}
+
+function on_command_badges(args) {
+  var badges = client.GetBadges();
+  function to_img(url, title) {
+    return `<img src="${url.escape()}" title="${title.escape()}" />`;
+  }
+  /* Display global badges */
+  for (var name of Object.keys(badges.global)) {
+    if (!badges.global[name])
+      continue;
+    for (var [ver, badge] of Object.entries(badges.global[name].versions)) {
+      if (!badges.global[name].versions)
+        continue;
+      var urls = [badge.image_url_4x, badge.image_url_2x, badge.image_url_1x];
+      var alt = `${name} [${ver}]`;
+      var line = `${name}/${ver}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      add_pre(line);
+    }
+  }
+  /* Display channel badges */
+  for (var chname of Object.keys(badges).sort()) {
+    if (chname == "global")
+      continue;
+    for (var name of Object.keys(badges[chname]).sort()) {
+      if (!badges[chname][name])
+        continue;
+      var urls = [
+        badges[chname][name].alpha,
+        badges[chname][name].image/*,
+        badges[chname][name].svg (too big)*/
+      ];
+      var alt = `${name} (${chname})`;
+      var line = `${chname}: ${name}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      add_pre(line);
+    }
+  }
+}
+
+function on_chat_command(event) {
+  var [cmd, args] = event.target.value.split_n(' ', 1);
+  cmd = cmd.lstrip('/').strip();
+  if (args !== undefined) args = args.strip();
+  switch (cmd) {
+    case "help":
+      on_command_help(args);
+      break;
+    case "config":
+      on_command_config(args);
+      break;
+    case "join":
+      on_command_join(args);
+      break;
+    case "part":
+      on_command_part(args);
+      break;
+    case "debug":
+      on_command_debug(args);
+      break;
+    case "reconnect":
+      on_command_reconnect(args);
+      break;
+    case "badges":
+      on_command_badges(args);
+      break;
+    default:
+      add_html(`<span class="pre">No such command "${cmd}"</span>`);
+      break;
+  }
+}
+
+function on_chat_enter(event) {
+  for (var ch of config.Channels) {
+    client.SendMessage(ch, event.target.value);
+  }
+}
+
+$('#txtChat').on('keyup', function(e) {
+  if (e.keyCode == KeyEvent.DOM_VK_RETURN) {
+    if (e.target.value.startsWith('//')) {
+      on_chat_command(e);
+    } else {
+      on_chat_enter(e);
+    }
+    e.target.value = "";
+    return false; /* prevent bubbling */
+  }
 });
-document.addEventListener('twitch-chat', function(e) {
-  add_html(to_html(e));
-  Util.Debug(e);
+
+client.bind('twitch-open', function(event) {
+  add_html(`<span class="pre">Connected</span>`);
 });
-document.addEventListener('twitch-notice', function(e) {
-  /* NOTICE */
-  var html = `Notice: ${Twitch.FormatChannel(e.channel)}: ${e.message.escape()}`;
+client.bind('twitch-chat', function(event) {
+  Util.Debug(event);
+  add_html(to_html(event));
+});
+client.bind('twitch-notice', function(event) {
+  Util.Warn(event);
+  var channel = Twitch.FormatChannel(event.channel);
+  var message = event.message.escape();
+  var html = `Notice: ${channel}: ${message}`;
   add_html(`<span class="notice">${html}</span>`);
-  console.log(e);
 });
-client.on('ERROR', function(event) {
-  add_html(`<span class="error">Error: ${event}</span>`);
+client.bind('twitch-error', function(event) {
+  Util.Error(event);
+  var user = event.user;
+  var command = event.values.command;
+  var message = event.message;
+  add_html(`<span class="error">Error ${user}: ${command}: ${message}</span>`);
 });
+client.bind('twitch-message', function(event) {
+  if (Util.DebugLevel > 0) {
+    add_html(`<span class="pre">${event.values.toSource()}</span>`);
+  }
+});
+/*
+for (var e of ["OPEN", "MESSAGE", "CLOSE"]) {
+  client.bind(`twitch-${e.toLowerCase()}`, function(event) {
+    Util.Debug(`twitch-${e.toLowerCase()}`, event);
+  });
+}
+*/
+
+/*
 client.on('WSMESSAGE', function(msg) { });
 client.on('WSMESSAGELINE', function(line) {
   add_html(`<span class="pre">${line}</span>`);
@@ -415,6 +621,7 @@ client.on('ANONGIFTSUB', function(user, channel, tier, months) { });
 client.on('GLOBALUSERSTATE', function(flags) { });
 client.on('CLEARCHAT', function(user, channel, flags) { });
 client.on('NOTICE', function(channel, message) { });
+*/
 client.Connect();
 
 /* Twitch Chat (w/ FFZ):
@@ -444,30 +651,37 @@ function add_html(html) {
     $content.scrollTop(2**31-1);
   });
 }
+function add_pre(msg, escape=false) {
+  if (escape)
+    msg = msg.escape();
+  add_html(`<span class="pre">${msg}</span>`);
+}
 function _to_html_badges(event) {
   var e_badges = document.createElement('span');
   e_badges.setAttribute('class', 'badges');
-  for (var [badge_name, badge_num] of event.flags.badges) {
-    var e_badge = document.createElement('img');
-    if (client.IsGlobalBadge(badge_name, badge_num)) {
-      var badge_info = client.GetGlobalBadge(badge_name, badge_num);
-      e_badge.setAttribute('src', badge_info.image_url_1x);
-      e_badge.setAttribute('tw-badge-scope', 'global');
-      e_badge.setAttribute('alt', badge_info.title);
-    } else if (client.IsChannelBadge(event.channel, badge_name)) {
-      var badge_info = client.GetChannelBadge(event.channel, badge_name);
-      var badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
-      e_badge.setAttribute('src', badge_src);
-      e_badge.setAttribute('tw-badge', JSON.stringify(badge_info));
-      e_badge.setAttribute('tw-badge-scope', 'channel');
-      e_badge.setAttribute('tw-badge-channel', channel.channel.lstrip('#'));
-    } else {
-      console.warn('Unknown badge', badge_name, badge_num, 'for', event);
-      continue;
+  if (event.flags.badges) {
+    for (var [badge_name, badge_num] of event.flags.badges) {
+      var e_badge = document.createElement('img');
+      if (client.IsGlobalBadge(badge_name, badge_num)) {
+        var badge_info = client.GetGlobalBadge(badge_name, badge_num);
+        e_badge.setAttribute('src', badge_info.image_url_1x);
+        e_badge.setAttribute('tw-badge-scope', 'global');
+        e_badge.setAttribute('alt', badge_info.title);
+      } else if (client.IsChannelBadge(event.channel, badge_name)) {
+        var badge_info = client.GetChannelBadge(event.channel, badge_name);
+        var badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
+        e_badge.setAttribute('src', badge_src);
+        e_badge.setAttribute('tw-badge', JSON.stringify(badge_info));
+        e_badge.setAttribute('tw-badge-scope', 'channel');
+        e_badge.setAttribute('tw-badge-channel', channel.channel.lstrip('#'));
+      } else {
+        console.warn('Unknown badge', badge_name, badge_num, 'for', event);
+        continue;
+      }
+      e_badge.setAttribute('class', 'badge');
+      e_badge.setAttribute('tw-badge-cause', JSON.stringify([badge_name, badge_num]));
+      e_badges.appendChild(e_badge);
     }
-    e_badge.setAttribute('class', 'badge');
-    e_badge.setAttribute('tw-badge-cause', JSON.stringify([badge_name, badge_num]));
-    e_badges.appendChild(e_badge);
   }
   return e_badges;
 }

@@ -111,12 +111,13 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   }
 }
 
+/* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   var result = undefined;
   if (value.length == 0) {
     /* Translate empty strings to null */
     result = null;
-  } else if (!isNaN(parseInt(value))) {
+  } else if (value.match(/^[0-9]+$/)) {
     /* Translate numeric values to numbers */
     result = parseInt(value);
   } else {
@@ -126,7 +127,6 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
         result = [];
         for (var badge of value.split(',')) {
           var [badge_name, badge_rev] = badge.split('/');
-          badge_rev = parseInt(badge_rev);
           result.push([badge_name, badge_rev]);
         }
         break;
@@ -144,6 +144,7 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   return result;
 }
 
+/* Parse the @<flags...> key,value pairs */
 Twitch.ParseData = function _Twitch_ParseData(dataString) {
   /* @key=value;key=value;... */
   dataString = dataString.lstrip('@');
@@ -159,6 +160,7 @@ Twitch.ParseData = function _Twitch_ParseData(dataString) {
   return data;
 }
 
+/* Parse an emote specification flag */
 Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
   var result = [];
   for (var emote_def of value.split('/')) {
@@ -220,8 +222,8 @@ Twitch.IRCMessages = {
   CLEARMSG: /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
   /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
   NOTICE: /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/,
-  /* ":<server> 421 <user> <command> :<message> */
-  ERROR: /^:([^ ]+) (421) ([^ ]+) :(.*)(?:\r\n)?$/,
+  /* ":<server> 421 <user> <command> :<message>\r\n" */
+  ERROR: /^:([^ ]+) (421) ([^ ]+) ([^ ]+) :(.*)(?:\r\n)?$/,
   /* Line patterns to ignore */
   Ignore: [
     /* Start of TOPIC listing */
@@ -244,6 +246,7 @@ var parse_counter = {
   Failed: []
 };
 
+/* Parse a line received through the Twitch websocket */
 Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   /* Try parsing with the new object */
   var ign = false;
@@ -267,7 +270,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     if (!parsed) {
       parse_counter.Fails += 1;
       parse_counter.Failed.push(line);
-      Twitch.Warning('Regexp parser failed to parse', line);
+      Util.Warn('Regexp parser failed to parse', line);
     }
   }
   var result = { cmd: null };
@@ -293,6 +296,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
      * 366: End of NAMES listing */
     /* :<server> <code> <username> :<message> */
     result.cmd = "OTHER";
+    result.server = parts[0].lstrip(':');
     result.code = parts[1];
   } else if (parts[1].match(/00[1-9]/) || parts[1] == "372") {
     /* :<server> 00[1-4] <username> :<message> */
@@ -316,12 +320,12 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "MODE") {
-    /* ":<sender> MODE <channel> <username> <modeflag>" */
+    /* ":<sender> MODE <channel> <modeflag> <username>" */
     result.cmd = "MODE";
     result.sender = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    result.user = parts[3];
-    result.modeflag = parts[4];
+    result.modeflag = parts[3];
+    result.user = parts[4];
   } else if (parts[1] == "PRIVMSG") {
     /* [@<flags>] :<user> PRIVMSG <channel> :<msg> */
     result.cmd = "PRIVMSG";
@@ -333,18 +337,21 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     /* [@<flags>] :<server> USERSTATE <channel> */
     result.cmd = "USERSTATE";
     result.flags = data;
+    result.server = parts[0].lstrip(':');
     result.username = data["display-name"];
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "ROOMSTATE") {
     /* [@<flags>] :<server> ROOMSTATE <channel> */
     result.cmd = "ROOMSTATE";
     result.flags = data;
+    result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "USERNOTICE") {
     /* [@<flags>] :<server> USERNOTICE <channel> */
     /* [@<flags>] :<server> USERNOTICE <channel> :<message> */
     result.cmd = "USERNOTICE";
     result.flags = data;
+    result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
     result.issub = false;
@@ -391,7 +398,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     /* "[@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
     result.cmd = "CLEARCHAT";
     result.flags = data;
-    result.server = parts[0];
+    result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = null;
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
@@ -401,7 +408,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     /* "[@<flags>] :<server> CLEARMSG <channel> :<message>\r\n" */
     result.cmd = "CLEARMSG";
     result.flags = data;
-    result.server = parts[0];
+    result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
   } else if (parts[1] == "NOTICE") {
@@ -411,10 +418,30 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
+  } else if (parts[1] == "421") { /* Error */
+    /* ":<server> 421 <user> <command> :<message>\r\n" */
+    result.cmd = "ERROR";
+    result.server = parts[0].lstrip(':');
+    result.user = Twitch.ParseUser(parts[2]);
+    result.command = parts[3];
+    result.message = line.substr(line.indexOf(':', line.indexOf(parts[3])) + 1);
   } else {
-    Twitch.Warning("OnWebsocketMessage: unknown message:", parts);
+    Util.Warn("OnWebsocketMessage: unknown message:", parts);
   }
   return result;
 }
 
+/* Strip private information from a string for logging */
+Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
+  var pats = [
+    ['oauth:', /oauth:[\w]+/],
+    ['OAuth ', /OAuth [\w]+/]
+  ];
+  for (var [name, pat] of pats) {
+    if (msg.search(pat)) {
+      msg = msg.replace(pat, `${name}<removed>`);
+    }
+  }
+  return msg;
+}
 
