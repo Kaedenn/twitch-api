@@ -47,7 +47,7 @@ Twitch.URL.BTTVEmotes = () => `${Twitch.BTTV}/emotes`;
 Twitch.URL.BTTVChannelEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
 Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
-Twitch.URL.Cheer = (prefix, tier) => `TODO`;
+Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
 
 /* Abstract XMLHttpRequest to a simple url -> callback system */
 Twitch.API = function _Twitch_API(global_headers, private_headers) {
