@@ -67,6 +67,10 @@ which is a "TwitchChatEvent". The events provided are:
   twitch-clearchat
   twitch-clearmsg
   twitch-notice
+  twitch-error
+  twitch-open
+  twitch-close
+  twitch-message
   twitch-other
 
 twitch-chat:
@@ -249,6 +253,28 @@ twitch-notice:
     "message": the content of the notice
   Flags:
     See https://dev.twitch.tv/docs/irc/commands/#notice-twitch-commands
+
+twitch-error:
+  Fired when the TwitchClient receives an error from Twitch.
+  Attributes:
+    "server": the server that sent the command
+    "user": the user the command is sent to
+    "command": the command triggering this error
+    "message": the content of the error message
+
+twitch-open:
+  Fired when the WebSocket connection to Twitch is established.
+  Attributes: None
+
+twitch-close:
+  Fired when the WebSocket connection to Twitch is closed.
+  Attributes: None
+
+twitch-message:
+  Fired for each line received from Twitch, in addition to any other events the
+  particular line may trigger. This event is intended for debugging use. Event
+  attributes are identical to whichever underlying command triggered this
+  event.
 
 twitch-other:
   Fired when some other non-informative message is received. This is used to

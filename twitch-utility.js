@@ -1,3 +1,4 @@
+"use strict";
 
 /* Twitch utilities */
 var Twitch = {};
@@ -26,22 +27,55 @@ class _Twitch_DebugCache {
 }
 Twitch.DebugCache = new _Twitch_DebugCache();
 
-/* Store known Twitch API URLs */
+/* Store known Twitch/FFZ/BTTV API URLs */
+Twitch.JTVNW = "http://static-cdn.jtvnw.net";
+Twitch.Kraken = "https://api.twitch.tv/kraken";
+Twitch.FFZ = "https://api.frankerfacez.com/v1";
+Twitch.BTTV = "https://api.betterttv.net/2";
 Twitch.URL = {};
-Twitch.URL.Kraken = "https://api.twitch.tv/kraken";
-Twitch.URL.GetRooms = (cid) => `${Twitch.URL.Kraken}/chat/${cid}/rooms`;
-Twitch.URL.GetChannelBadges = (cid) => `${Twitch.URL.Kraken}/chat/${cid}/badges`;
-Twitch.URL.GetAllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
-Twitch.URL.GetAllEmotes = () => `${Twitch.URL.Kraken}/chat/emoticons`; /* FIXME: CORS */
-Twitch.URL.GetAllCheermotes = () => `${Twitch.URL.Kraken}/bits/actions`;
+Twitch.URL.Rooms = (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`;
+Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
+Twitch.URL.Cheermotes = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
+Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
+Twitch.URL.AllEmotes = () => `${Twitch.Kraken}/chat/emoticons`; /* XXX: CORS */
+Twitch.URL.EmoteSet = (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`;
+Twitch.URL.AllCheermotes = () => `${Twitch.Kraken}/bits/actions`;
+Twitch.URL.AllFFZEmotes = () => `${Twitch.FFZ}/emoticons`;
+Twitch.URL.FFZEmotes = (cid) => `${Twitch.FFZ}/room/id/${cid}`;
+Twitch.URL.FFZEmote = (eid) => `${Twitch.FFZ}/emote/${eid}`;
+Twitch.URL.BTTVEmotes = () => `${Twitch.BTTV}/emotes`;
+Twitch.URL.BTTVChannelEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
+Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
+Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
+Twitch.URL.Cheer = (prefix, tier) => `TODO`;
 
-/* Create a request to the Twitch API */
+/* Abstract XMLHttpRequest to a simple url -> callback system */
 Twitch.API = function _Twitch_API(global_headers, private_headers) {
-  this.Get = function _Twitch_API_get(url, callback, headers={}, add_private=false) {
+  /* GET url, without headers */
+  this.GetSimple = function _Twitch_API_GetSimple(url, callback) {
     var req = new XMLHttpRequest();
     req.onreadystatechange = function() {
-      if (this.readyState == 4 && this.status == 200) {
-        callback(JSON.parse(this.responseText));
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          callback(JSON.parse(this.responseText));
+        } else {
+          console.warn(this);
+        }
+      }
+    }
+    req.open("GET", url);
+    req.send();
+  };
+  /* GET url, adding any given headers, optionally adding private headers */
+  this.Get = function _Twitch_API_Get(url, callback, headers={}, add_private=false) {
+    var req = new XMLHttpRequest();
+    req.onreadystatechange = function() {
+      if (this.readyState == 4) {
+        if (this.status == 200) {
+          callback(JSON.parse(this.responseText));
+        } else {
+          console.warn(this);
+        }
       }
     };
     req.open("GET", url);
@@ -84,11 +118,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   return {channel: ch, room: room, roomuid: roomuid};
 }
 
-/* Format each of the following
- *  "channel" -> "channel"
- *  "channel", "room", "roomuid" -> "channel:room:roomuid"
- *  {channel: "channel", room: "room", roomuid: "roomuid"} -> "channel:room:roomuid"
- */
+/* Format a channel name, room name, or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   if (typeof(channel) == "string") {
     if (channel == "*") {
@@ -137,14 +167,19 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
         result = value.split(',').map(e => parseInt(e));
         break;
       default:
-        result = value.replace("\\\\s", ' ');
+        result = value;
+        result = result.replace(/\\s/g, ' ');
+        result = result.replace(/\\:/g, ';');
+        result = result.replace(/\\r/g, '\r');
+        result = result.replace(/\\n/g, '\n');
+        result = result.replace(/\\\\/g, '\\');
         break;
     }
   }
   return result;
 }
 
-/* Parse the @<flags...> key,value pairs */
+/* Parse @<flags...> key,value pairs */
 Twitch.ParseData = function _Twitch_ParseData(dataString) {
   /* @key=value;key=value;... */
   dataString = dataString.lstrip('@');
@@ -168,111 +203,279 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
     var emote_id = parseInt(emote_def.substr(0, seppos));
     for (var range of emote_def.substr(seppos+1).split(',')) {
       var [start, end] = range.split('-');
-      result.push({id: emote_id, start: parseInt(start), end: parseInt(end)});
+      result.push({id: emote_id,
+                   name: null,
+                   start: parseInt(start),
+                   end: parseInt(end)});
     }
   }
   return result;
 }
 
-/* PRIVMSG:
- *   Flags:
- *     badges=subscriber/0,bits/1000
- *     color=#0262C1
- *     display-name=Kaedenn_
- *     emotes=
- *     flags=
- *     id=989a3397-f919-4e08-9c62-279e0384bd17
- *     mod=0
- *     room-id=70067886
- *     subscriber=1
- *     tmi-sent-ts=1543265934371
- *     turbo=0
- *     user-id=175437030
- *     user-type=
- */
-
-Twitch.IRCMessages = {
-  /* "PING :<server>\r\n" */ /* Verified */
-  PING: /^PING :(.*)(?:\r\n)?$/,
-  /* ":<server> CAP * ACK :<capabilities...>\r\n" */ /* Verified */
-  ACK: /^:([^ ]+) CAP \* ACK :(.*)(?:\r\n)?$/,
-  /* ":<server> <code> <username> :<message>\r\n" */ /* Verified */
-  TOPIC: /^:([^ ]+) ((?:00[1-9])|(?:372)) ([^ ]+) :(.*)(?:\r\n)?$/,
-  /* ":<server> 353 <username> <modechr> <channel> :<users...>\r\n" */ /* Verified */
-  NAMES: /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (\#[^ ]+) :(.*)(?:\r\n)?$/,
-  /* ":<name>!<user>@<user>.<host> JOIN <channel>\r\n" */ /* Verified */
-  JOIN: /^:([^ ]+) JOIN (\#[^ ]+)(?:\r\n)?$/,
-  /* ":<name>!<user>@<user>.<host> PART <channel>\r\n" */ /* Verified */
-  PART: /^:([^ ]+) PART (\#[^ ]+)(?:\r\n)?$/,
-  /* ":<user> MODE <channel> <modeop> <users...>\r\n" */ /* Verified */
-  MODE: /^:([^ ]+) MODE (\#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/,
-  /* "@<flags> :<user> PRIVMSG <channel> :<message>\r\n" */ /* Verified */
-  PRIVMSG: /^@([^ ]+) :([^ ]+) PRIVMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
-  /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
-  USERSTATE: /^@([^ ]+) :([^ ]+) USERSTATE (\#[^ ]+)(?:\r\n)?$/,
-  /* "@<flags> :<server> ROOMSTATE <channel>\r\n" */ /* Verified */
-  ROOMSTATE: /^@([^ ]+) :([^ ]+) ROOMSTATE (\#[^ ]+)(?:\r\n)?$/,
-  /* "@<flags> :<server> USERNOTICE <channel>[ :<message>]\r\n" */
-  USERNOTICE: /^@([^ ]+) :([^ ]+) USERNOTICE (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
-  /* "@<flags> :<server> GLOBALUSERSTATE \r\n" */
-  GLOBALUSERSTATE: /^@([^ ]+) :([^ ]+) GLOBALUSERSTATE(?:\r\n)?$/,
-  /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
-  CLEARCHAT: /^@([^ ]+) :([^ ]+) CLEARCHAT (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
-  /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
-  CLEARMSG: /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
-  /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
-  NOTICE: /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/,
-  /* ":<server> 421 <user> <command> :<message>\r\n" */
-  ERROR: /^:([^ ]+) (421) ([^ ]+) ([^ ]+) :(.*)(?:\r\n)?$/,
-  /* Line patterns to ignore */
-  Ignore: [
-    /* Start of TOPIC listing */
-    /^:([^ ]+) (375) ([^ ]+) :-(?:\r\n)?$/,
-    /* End of TOPIC listing */
-    /^:([^ ]+) (376) ([^ ]+) :>(?:\r\n)?$/,
-    /* Start/end of TOPIC listing, end of NAMES listing */
-    /^:[^ ]+ (?:37[56]|366) [^ ]+ \#[^ ]+ :.*(?:\r\n)?$/
-  ]
-};
-
-/* TODO
- * @ban-duration=1;room-id=70067886;target-user-id=175437030;tmi-sent-ts=1543186839092 :tmi.twitch.tv CLEARCHAT #dwangoac :kaedenn_
- * @badges=premium/1;color=#0262C1;display-name=Kaedenn_;emote-sets=0,113,120,12597,14860,14913,19194,19624,20466,22228,60369,172696;user-id=175437030;user-type= :tmi.twitch.tv GLOBALUSERSTATE
- */
-
-/* TODO: remove */
-var parse_counter = {
-  Fails: 0,
-  Failed: []
-};
-
-/* Parse a line received through the Twitch websocket */
-Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
-  /* Try parsing with the new object */
-  var ign = false;
-  for (var pat of Twitch.IRCMessages.Ignore) {
-    if (line.match(pat)) {
-      ign = true;
+/* Format an emote specification flag */
+Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
+  var specs = [];
+  for (var emote of emotes) {
+    if (emote.id !== null) {
+      specs.push(`${emote.id}:${emote.start}-${emote.end}`);
     }
   }
-  if (!ign) {
-    var parsed = false;
-    for (var cmd of Object.keys(Twitch.IRCMessages)) {
-      if (cmd == "Ignore") continue;
-      var m = line.match(Twitch.IRCMessages[cmd]);
-      if (m) {
-        if (!(cmd in parse_counter)) { parse_counter[cmd] = 0; }
-        parse_counter[cmd] += 1;
-        parsed = true;
+  return specs.join('/');
+}
+
+/* Convert an emote name to a regex */
+Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
+  var pat = RegExp.escape(emote);
+  return new RegExp("(?:\\b|[\\s])(" + pat + ")(?:\\b|[\\s])", "g");
+}
+
+/* Generate emote specifications for the given emotes [eid, ename] */
+Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
+  var results = [];
+  for (var emote_def of emotes) {
+    var [eid, emote] = emote_def;
+    var pat = Twitch.EmoteToRegex(emote);
+    var len = emote.length;
+    var arr;
+    while ((arr = pat.exec(msg)) !== null) {
+      var start = pat.lastIndex - len;
+      var end = pat.lastIndex;
+      results.push({id: eid, name: emote, start: start, end: end});
+    }
+  }
+  return results;
+}
+
+/* Object containing logic for parsing and interpreting Twitch IRC messages */
+Twitch.IRC = {
+  /* Regex for parsing incoming Twitch IRC messages; all messages should parse */
+  Messages: {
+    PING: [
+      /* "PING :<server>\r\n" */ /* Verified */
+      /^PING :(.*)(?:\r\n)?$/,
+      {server: 1}
+    ],
+    ACK: [
+      /* ":<server> CAP * ACK :<flags...>\r\n" */
+      /^:([^ ]+) CAP \* (ACK) :(.*)(?:\r\n)?$/,
+      {server: 1, operation: 2, flags: 3}
+    ],
+    TOPIC: [
+      /* ":<server> <code> <username> :<message>\r\n" */ /* Verified */
+      /^:([^ ]+) ((?:00[1-9])|(?:372)) ([^ ]+) :(.*)(?:\r\n)?$/,
+      {server: 1, code: 2, username: 3, message: 4}
+    ],
+    NAMES: [
+      /* ":<login> 353 <username> <modechr> <channel> :<users...>\r\n" */ /* Verified */
+      /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      {user: 1, modechr: 3, channel: 4, users: 5}
+    ],
+    JOIN: [
+      /* ":<name>!<user>@<user>.<host> JOIN <channel>\r\n" */ /* Verified */
+      /^:([^ ]+) JOIN (\#[^ ]+)(?:\r\n)?$/,
+      {user: 1, channel: 2}
+    ],
+    PART: [
+      /* ":<name>!<user>@<user>.<host> PART <channel>\r\n" */ /* Verified */
+      /^:([^ ]+) PART (\#[^ ]+)(?:\r\n)?$/,
+      {user: 1, channel: 2}
+    ],
+    MODE: [
+      /* ":<user> MODE <channel> <modeop> <users...>\r\n" */ /* Verified */
+      /^:([^ ]+) MODE (\#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/,
+      {sender: 1, channel: 2, modeflag: 3, user: 4},
+    ],
+    PRIVMSG: [
+      /* "@<flags> :<user> PRIVMSG <channel> :<message>\r\n" */ /* Verified */
+      /^@([^ ]+) :([^ ]+) PRIVMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      {flags: 1, user: 2, channel: 3, message: 4}
+    ],
+    USERSTATE: [
+      /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
+      /^@([^ ]+) :([^ ]+) USERSTATE (\#[^ ]+)(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3}
+    ],
+    ROOMSTATE: [
+      /* "@<flags> :<server> ROOMSTATE <channel>\r\n" */ /* Verified */
+      /^@([^ ]+) :([^ ]+) ROOMSTATE (\#[^ ]+)(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3}
+    ],
+    USERNOTICE: [
+      /* "@<flags> :<server> USERNOTICE <channel>[ :<message>]\r\n" */
+      /^@([^ ]+) :([^ ]+) USERNOTICE (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3, message: 4}
+    ],
+    GLOBALUSERSTATE: [
+      /* "@<flags> :<server> GLOBALUSERSTATE \r\n" */
+      /^@([^ ]+) :([^ ]+) GLOBALUSERSTATE(?:\r\n)?$/,
+      {flags: 1, server: 2}
+    ],
+    CLEARCHAT: [
+      /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
+      /^@([^ ]+) :([^ ]+) CLEARCHAT (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3, user: 4}
+    ],
+    CLEARMSG: [
+      /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
+      /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3, message: 4}
+    ],
+    NOTICE: [
+      /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
+      /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/,
+      {flags: 1, server: 2, channel: 3, message: 4}
+    ],
+    ERROR: [
+      /* ":<server> 421 <user> <command> :<message>\r\n" */
+      /^:([^ ]+) (421) ([^ ]+) ([^ ]+) :(.*)(?:\r\n)?$/,
+      {server: 1, user: 2, command: 3, message: 4}
+    ],
+    /* Line patterns to ignore */
+    Ignore: [
+      /* Start of TOPIC listing */
+      /^:([^ ]+) (375) ([^ ]+) :-(?:\r\n)?$/,
+      /* End of TOPIC listing */
+      /^:([^ ]+) (376) ([^ ]+) :>(?:\r\n)?$/,
+      /* Start/end of TOPIC listing, end of NAMES listing */
+      /^:[^ ]+ (?:37[56]|366) [^ ]+ \#[^ ]+ :.*(?:\r\n)?$/
+    ]
+  },
+
+  /* Return true if the line should be silently ignored */
+  ShouldIgnore: function _Twitch_IRC_ShouldIgnore(line) {
+    for (var pat of Twitch.IRC.Messages.Ignore) {
+      if (line.match(pat)) {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  /* Message-specific extra parsing */
+  ParseSpecial: {
+    /* PRIVMSG: Handle /me */
+    'PRIVMSG': function _Twitch_IRC_ParseSpecial_PRIVMSG(obj) {
+      var msg = obj.message;
+      if (msg.startsWith("\x01ACTION ") && msg.endsWith('\x01')) {
+        obj.fields.action = true;
+        obj.fields.message = msg.strip('\x01').substr("ACTION ".length);
+      } else {
+        obj.fields.action = false;
+      }
+    },
+    /* USERSTATE: Add user attribute */
+    'USERSTATE': function _Twitch_IRC_ParseSpecial_USERSTATE(obj) {
+      if (obj.fields.flags && obj.fields.flags['display-name']) {
+        obj.fields.username = obj.fields.flags['display-name'];
+      }
+    },
+    /* USERNOTICE: Handle sub notices */
+    'USERNOTICE': function _Twitch_IRC_ParseSpecial_USERNOTICE(obj) {
+      var fields = obj.fields;
+      var flags = fields.flags;
+      fields.issub = false;
+      fields.sub_kind = null;
+      fields.sub_user = null;
+      fields.sub_gifting_user = null;
+      fields.sub_months = null;
+      fields.sub_plan = null;
+      fields.sub_plan_name = null;
+      if (flags && flags["msg-id"]) {
+        switch (flags["msg-id"]) {
+          case "sub":
+            fields.issub = true;
+            fields.sub_kind = flags["msg-id"].toUpperCase();
+            fields.sub_user = flags["login"];
+            fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_plan = flags["msg-param-sub-plan"];
+            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
+            break;
+          case "resub":
+            fields.issub = true;
+            fields.sub_kind = flags["msg-id"].toUpperCase();
+            fields.sub_user = flags["login"];
+            fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_plan = flags["msg-param-sub-plan"];
+            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
+            break;
+          case "giftsub":
+            fields.issub = true;
+            fields.sub_kind = flags["msg-id"].toUpperCase();
+            fields.sub_user = flags["msg-param-recipient-user-name"];
+            fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_plan = flags["msg-param-sub-plan"];
+            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
+            break;
+          case "anonsubgift":
+            fields.issub = true;
+            fields.sub_kind = flags["msg-id"].toUpperCase();
+            fields.sub_user = flags["msg-param-recipient-user-name"];
+            fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_plan = flags["msg-param-sub-plan"];
+            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
+            break;
+        }
+      }
+    }
+  },
+
+  /* Parse the given line into an object defined by Twitch.IRC.Messages */
+  Parse: function _Twitch_IRC_Parse(line) {
+    if (Twitch.IRC.ShouldIgnore(line)) { return null; }
+    var cmd = null;
+    var pattern = null;
+    var match = null;
+    var rules = null
+    for (var [pn, pr] of Object.entries(Twitch.IRC.Messages)) {
+      var [pat, patrules] = pr;
+      if (pn == "Ignore") continue;
+      if ((match = line.match(pat)) !== null) {
+        cmd = pn;
+        pattern = pat;
+        rules = patrules;
         break;
       }
     }
-    if (!parsed) {
-      parse_counter.Fails += 1;
-      parse_counter.Failed.push(line);
-      Util.Warn('Regexp parser failed to parse', line);
+    if (cmd == null) {
+      /* Failed to parse line! */
+      Util.Error("Failed to parse IRC message", line);
+      return null;
     }
+    /* Construct a response */
+    var resp = {
+      cmd: cmd,
+      line: line,
+      patinfo: [pattern, match],
+      fields: {}
+    };
+    for (var [fn, fi] of Object.entries(rules)) {
+      /* Perform special parsing on specific items */
+      if (["username", "user", "login"].includes(fn)) {
+        /* Parse a username */
+        resp.fields[fn] = Twitch.ParseUser(match[fi]);
+      } else if (fn == "channel") {
+        resp.fields[fn] = Twitch.ParseChannel(match[fi]);
+      } else if (fn == "capabilities") {
+        resp.fields[fn] = match[fi].split(" ");
+      } else if (fn == "users") {
+        resp.fields[fn] = match[fi].split(" ");
+      } else if (fn == "flags") {
+        resp.fields[fn] = Twitch.ParseData(match[fi]);
+      } else {
+        resp.fields[fn] = match[fi];
+      }
+    }
+    /* Handle special parsing */
+    if (Twitch.IRC.ParseSpecial[cmd]) {
+      Twitch.IRC.ParseSpecial[cmd](resp);
+    }
+    return resp;
   }
+}
+
+/* (TODO: REMOVE) Parse a line received through the Twitch websocket */
+Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
+  /* Try parsing with the new object */
   var result = { cmd: null };
   var parts = line.split(' ');
   var data = {};
@@ -284,7 +487,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     /* "PING <server>" */
     result.cmd = "PING";
     result.server = parts[1].lstrip(':');
-  } else if (line.indexOf("CAP * ACK") > -1) {
+  } else if (parts[1] == "CAP" && parts[2] == "*" && parts[3] == "ACK") {
     /* :<server> CAP * ACK <flags...> */
     result.cmd = "ACK";
     result.operation = "CAP";
@@ -307,9 +510,9 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.message = parts.slice(3).join(' ').lstrip(':');
   } else if (parts[1] == "353") {
     /* NAMES listing entry */
-    /* :<user> 353 <mode> <channel> :<username> */
+    /* :<user> 353 <username> <mode> <channel> :<username> */
     result.cmd = "NAMES";
-    result.user = parts[0].lstrip(':');
+    result.user = Twitch.ParseUser(parts[0].lstrip(':'));
     result.mode = parts[3];
     result.channel = Twitch.ParseChannel(parts[4]);
     result.usernames = parts.slice(5).join(' ').lstrip(':').split(' ');
@@ -328,11 +531,18 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = parts[4];
   } else if (parts[1] == "PRIVMSG") {
     /* [@<flags>] :<user> PRIVMSG <channel> :<msg> */
+    var msg = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
     result.cmd = "PRIVMSG";
     result.flags = data;
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
+    if (msg.startsWith('\x01ACTION')) {
+      result.action = true;
+      result.message = msg.strip('\x01').substr('ACTION '.length);
+    } else {
+      result.action = false;
+      result.message = msg;
+    }
   } else if (parts[1] == "USERSTATE") {
     /* [@<flags>] :<server> USERSTATE <channel> */
     result.cmd = "USERSTATE";
@@ -434,8 +644,8 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   var pats = [
-    ['oauth:', /oauth:[\w]+/],
-    ['OAuth ', /OAuth [\w]+/]
+    ['oauth:', /oauth:[\w]+/g],
+    ['OAuth ', /OAuth [\w]+/g]
   ];
   for (var [name, pat] of pats) {
     if (msg.search(pat)) {

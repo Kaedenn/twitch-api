@@ -1,8 +1,10 @@
 
-/* Add a few things to the native classes */
+/* Standard object (String, RegExp) additions {{{0 */
+
+/* Strip characters from left (pos) or right (neg) */
 String.prototype._stripFrom = function _String__stripFrom(chrs, from) {
-  var d = (from > 0 ? 1 : -1);
-  var i = (from > 0 ? 0 : this.length - 1);
+  let d = (from > 0 ? 1 : -1);
+  let i = (from > 0 ? 0 : this.length - 1);
   if (!chrs) {
     chrs = [' ', '\r', '\n'];
   }
@@ -36,7 +38,7 @@ String.prototype.rstrip = function _String_rstrip(chrs) {
 
 /* Escape a string for proper HTML printing */
 String.prototype.escape = function _String_escape() {
-  var result = this;
+  let result = this;
   result = result.replace(/&/g, '&amp;');
   result = result.replace(/</g, '&lt;');
   result = result.replace(/>/g, '&gt;');
@@ -47,7 +49,7 @@ String.prototype.escape = function _String_escape() {
 
 /* Obtain an escaped version of the string, akin to Object.toSource() */
 String.prototype.repr = function _String_repr() {
-  var m = this.toSource().match(/^\(new String\((.*)\)\)$/);
+  let m = this.toSource().match(/^\(new String\((.*)\)\)$/);
   if (m) {
     return m[1];
   }
@@ -56,9 +58,9 @@ String.prototype.repr = function _String_repr() {
 /* Split a string at most N times, returning the tokens and the rest of the
  * string, such that STR.split_n(sep, n).join(sep) === STR */
 String.prototype.split_n = function _String_split_n(sep, num) {
-  var cnt = 0;
-  var results = [];
-  var temp = this;
+  let cnt = 0;
+  let results = [];
+  let temp = this;
   while (temp.indexOf(sep) > -1 && cnt < num) {
     cnt += 1;
     results.push(temp.substr(0, temp.indexOf(sep)));
@@ -70,15 +72,23 @@ String.prototype.split_n = function _String_split_n(sep, num) {
   return results;
 }
 
+/* Escape a string for use in regex */
+RegExp.escape = function _RegExp_escape(string) {
+  string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/* End standard object additions 0}}} */
+
 /* General Utilities */
-var Util = {
-  LEVEL_TRACE: 2,
-  LEVEL_DEBUG: 1,
-  LEVEL_OFF: 0,
-  DebugLevel: 0,
-  _stack_trim_begin_level: [0],
-  _stack_trim_end_level: [0]
-};
+let Util = {};
+
+/* Logging {{{0 */
+Util.LEVEL_TRACE = 2;
+Util.LEVEL_DEBUG = 1;
+Util.LEVEL_OFF = 0;
+Util.DebugLevel = 0;
+Util._stack_trim_begin_level = [0];
+Util._stack_trim_end_level = [0];
 
 /* Save the current top-stack trim level and push a new value to use */
 Util.PushStackTrimBegin = function _Util_PushStackTrimBegin(level) {
@@ -116,7 +126,7 @@ Util.GetStackTrimEnd = function _Util_GetStackTrimEnd() {
 
 /* Obtain a stacktrace, applying the current stack trim levels */
 Util.GetStack = function _Util_GetStack() {
-  var lines = [];
+  let lines = [];
   try { throw new Error(); } catch (e) { lines = e.stack.trim().split("\n"); }
   lines.shift(); /* Discard _Util_GetStack */
   for (var i = 0; i < Util.GetStackTrimBegin(); ++i) {
@@ -130,10 +140,10 @@ Util.GetStack = function _Util_GetStack() {
 
 /* Parse a given stacktrace */
 Util.ParseStack = function _Util_ParseStack(lines) {
-  var frames = [];
+  let frames = [];
   for (var line of lines) {
-    var m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
-    var frame = {};
+    let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
+    let frame = {};
     frame.name = m[1];
     frame.file = m[2];
     frame.line = parseInt(m[3]);
@@ -164,11 +174,11 @@ Util.JoinPath = function _Util_JoinPath(dir, file) {
 
 /* Strip a common prefix from an array of paths */
 Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
-  var pieces = [];
+  let pieces = [];
   try {
     for (var path of paths) {
-      var path = (new URL(path)).pathname;
-      var [dir, file] = Util.SplitPath(path);
+      path = (new URL(path)).pathname;
+      let [dir, file] = Util.SplitPath(path);
       pieces.push([dir.split('/'), file]);
     }
   }
@@ -182,8 +192,8 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
     }
   }
   /* Find the longest item */
-  var ref_path = null;
-  var len = 0;
+  let ref_path = null;
+  let len = 0;
   for (var piece of pieces) {
     if (piece[0].length > len) {
       len = piece[0].length;
@@ -206,13 +216,13 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
 /* Format stack frames for output */
 Util.FormatStack = function _Util_FormatStack(stack) {
   /* Strip out the common prefix directory */
-  var paths = [];
+  let paths = [];
   for (var frame of stack) {
     paths.push(frame.file);
   }
   paths = Util.StripCommonPrefix(paths);
   console.assert(stack.length == paths.length);
-  var result = [];
+  let result = [];
   for (var i = 0; i < paths.length; ++i) {
     result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
   }
@@ -221,7 +231,7 @@ Util.FormatStack = function _Util_FormatStack(stack) {
 
 /* (internal) Output args to a console using the given func  */
 Util._toConsole = function _Util__toConsole(func, args) {
-  var stack = Util.ParseStack(Util.GetStack());
+  let stack = Util.ParseStack(Util.GetStack());
   stack.shift(); /* Discard Util._toConsole */
   stack.shift(); /* Discard Util._toConsole caller */
   console.group("From " + Util.FormatStack(stack));
@@ -229,39 +239,583 @@ Util._toConsole = function _Util__toConsole(func, args) {
   console.groupEnd();
 }
 
-/* Log debugging information, messages, warnings, and errors to the console */
-Util.Trace = function _Util_Trace(...args) {
-  if (Util.DebugLevel >= Util.LEVEL_TRACE) {
-    Util.LogOnly.apply(Util.LogOnly, args);
+/* Logger object */
+class LoggerUtility {
+  constructor() {
+    this._hooks = {};
+    for (var v of Object.values(LoggerUtility.SEVERITIES)) {
+      this._hooks[v] = [];
+    }
+  }
+  static get SEVERITIES() {
+    return {ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1};
+  }
+  _sev_value(sev) {
+    return LoggerUtility.SEVERITIES[sev];
+  }
+  _assert_sev(sev) {
+    if (this._hooks[this._sev_value(sev)] === undefined) {
+      console.exception(`LoggerUtility.add_hook: severity ${sev} not known`);
+      return false;
+    }
+    return true;
+  }
+  /* Hook function(sev, stacktrace, ...args) for the given severity */
+  add_hook(fn, sev="ALL") {
+    if (!this._assert_sev(sev)) { return false; }
+    this._hooks[this._sev_value(sev)].push(fn);
+    return true;
+  }
+  can_log(sev) {
+    if (!this._assert_sev(sev)) { return false; }
+    let val = this._sev_value(sev);
+    if (Util.DebugLevel == Util.LEVEL_TRACE) return true;
+    if (Util.DebugLevel == Util.LEVEL_DEBUG) {
+      return val >= LoggerUtility.SEVERITIES.DEBUG;
+    }
+    if (Util.DebugLevel == Util.LEVEL_OFF) {
+      return val >= LoggerUtility.SEVERITIES.INFO;
+    }
+    return val >= LoggerUtility.SEVERITIES.WARN;
+  }
+  do_log(sev, argobj, stacktrace=false) {
+    if (!this.can_log(sev)) { return }
+    let val = this._sev_value(sev);
+    for (var hook of this._hooks[val]) {
+      let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
+      hook.apply(hook, args);
+    }
+    if (stacktrace) {
+      Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
+      switch (val) {
+        case LoggerUtility.SEVERITIES.TRACE:
+          Util._toConsole(console.log, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.DEBUG:
+          Util._toConsole(console.log, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.INFO:
+          Util._toConsole(console.log, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.WARN:
+          Util._toConsole(console.warn, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.ERROR:
+          Util._toConsole(console.error, argobj);
+          break;
+      }
+      Util.PopStackTrimBegin();
+    } else {
+      switch (val) {
+        case LoggerUtility.SEVERITIES.TRACE:
+          console.log.apply(console, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.DEBUG:
+          console.log.apply(console, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.INFO:
+          console.log.apply(console, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.WARN:
+          console.warn.apply(console, argobj);
+          break;
+        case LoggerUtility.SEVERITIES.ERROR:
+          console.error.apply(console, argobj);
+          break;
+      }
+    }
+  }
+  Trace(...args) { this.do_log("TRACE", args, true); }
+  Debug(...args) { this.do_log("DEBUG", args, true); }
+  Info(...args) { this.do_log("INFO", args, true); }
+  Warn(...args) { this.do_log("WARN", args, true); }
+  Error(...args) { this.do_log("ERROR", args, true); }
+  TraceOnly(...args) { this.do_log("TRACE", args, false); }
+  DebugOnly(...args) { this.do_log("DEBUG", args, false); }
+  InfoOnly(...args) { this.do_log("INFO", args, false); }
+  WarnOnly(...args) { this.do_log("WARN", args, false); }
+  ErrorOnly(...args) { this.do_log("ERROR", args, false); }
+}
+
+/* Logger instance */
+Util.Logger = new LoggerUtility();
+Util.Trace = Util.Logger.Trace.bind(Util.Logger);
+Util.Debug = Util.Logger.Debug.bind(Util.Logger);
+Util.Log = Util.Logger.Info.bind(Util.Logger);
+Util.Warn = Util.Logger.Warn.bind(Util.Logger);
+Util.Error = Util.Logger.Error.bind(Util.Logger);
+Util.TraceOnly = Util.Logger.TraceOnly.bind(Util.Logger);
+Util.DebugOnly = Util.Logger.DebugOnly.bind(Util.Logger);
+Util.LogOnly = Util.Logger.InfoOnly.bind(Util.Logger);
+Util.WarnOnly = Util.Logger.WarnOnly.bind(Util.Logger);
+Util.ErrorOnly = Util.Logger.ErrorOnly.bind(Util.Logger);
+
+/* End logging 0}}} */
+
+/* Color handling {{{0 */
+
+/* Store instance to active color parser */
+Util._ColorParser = null;
+
+/* Create a class for parsing colors */
+class ColorParser {
+  constructor() {
+    this._canvas = document.createElement('canvas');
+    this._canvas.width = this._canvas.height = 1;
+    this._ctx = this._canvas.getContext('2d');
+    this._cache = {};
+  }
+  do_parse(color) {
+    if (this._cache[color]) return this._cache[color];
+    this._ctx.clearRect(0, 0, 1, 1);
+    this._ctx.fillStyle = color;
+    this._ctx.fillRect(0, 0, 1, 1);
+    this._cache[color] = this._ctx.getImageData(0, 0, 1, 1).data;
+    return this._cache[color];
+  }
+  static parse(color) {
+    if (Util._ColorParser == null) {
+      Util._ColorParser = new ColorParser();
+    }
+    return Util._ColorParser.do_parse(color);
   }
 }
 
-/* Print the given arguments to the console.
- * If DebugLevel >= TRACE, output with a stacktrace */
-Util.Debug = function _Util_Debug(...args) {
-  var func = null;
-  Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
-  if (Util.DebugLevel >= Util.LEVEL_TRACE) {
-    func = Util.Log;
-  } else if (Util.DebugLevel >= Util.LEVEL_DEBUG) {
-    func = Util.LogOnly;
+/* Class for handling colors and color arithmetic */
+class Color {
+
+  /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
+  static RGBToHSL(r, g, b) {
+    /* https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786 */
+    r /= 255; g /= 255; b /= 255;
+    let max = Math.max(r, g, b);
+    let min = Math.min(r, g, b);
+    let d = max - min;
+    let h;
+    if (d === 0) h = 0;
+    else if (max === r) h = (g - b) / d % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else if (max === b) h = (r - g) / d + 4;
+    let l = (min + max) / 2;
+    let s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    return [h * 60, s, l];
   }
-  if (func)
-    func.apply(func, args);
-  Util.PopStackTrimBegin();
+
+  /* Convert (h, s, l) (deg, 0~100, 0~100) to (r, g, b) (0~255) */
+  static HSLToRGB(h, s, l) {
+    /* https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786 */
+    let c = (1 - Math.abs(2 * l - 1)) * s;
+    let hp = h / 60.0;
+    let x = c * (1 - Math.abs((hp % 2) - 1));
+    let rgb1;
+    if (isNaN(h)) rgb1 = [0, 0, 0];
+    else if (hp <= 1) rgb1 = [c, x, 0];
+    else if (hp <= 2) rgb1 = [x, c, 0];
+    else if (hp <= 3) rgb1 = [0, c, x];
+    else if (hp <= 4) rgb1 = [0, x, c];
+    else if (hp <= 5) rgb1 = [x, 0, c];
+    else if (hp <= 6) rgb1 = [c, 0, x];
+    let m = l - c * 0.5;
+    let r = Math.round(255 * (rgb1[0] + m));
+    let g = Math.round(255 * (rgb1[1] + m));
+    let b = Math.round(255 * (rgb1[2] + m));
+    return [r, g, b];
+  }
+
+  /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
+  static Renorm1(...args) {
+    var [r, g, b, a] = args;
+    if (a === undefined) {
+      return [r / 255, g / 255, b / 255];
+    } else {
+      return [r / 255, g / 255, b / 255, a / 255];
+    }
+  }
+
+  /* Renormalize (r, g, b[, a]) from 0~255 to 0~1 */
+  static Renorm255(...args) {
+    var [r, g, b, a] = args;
+    if (a === undefined) {
+      return [r * 255, g * 255, b * 255];
+    } else {
+      return [r * 255, g * 255, b * 255, a * 255];
+    }
+  }
+
+  /* Create a Color object from the hue, saturation, and luminance given */
+  static FromHSL(h, s, l) {
+    let [r, g, b] = Color.HSLToRGB(h, s, l);
+    return new Color(r, g, b);
+  }
+
+  /* Create a Color object from the hue, saturation, luminance, and alpha given */
+  static FromHSLA(h, s, l, a) {
+    let [r, g, b] = Color.HSLToRGB(h, s, l);
+    return new Color(r, g, b, a);
+  }
+
+  /* Overloads
+   *  Color()
+   *  Color(Color)
+   *  Color(int, int, int)
+   *  Color(int, int, int, int)
+   *  Color(array)
+   *  Color(string)
+   */
+  constructor(...args) {
+    this.r = 0;
+    this.g = 0;
+    this.b = 0;
+    this.a = 255;
+    /* Handle Color([...]) -> Color(...) */
+    if (args.length == 1 && args[0] instanceof Array) {
+      args = args[0];
+    }
+    if (args.length == 1) {
+      /* Handle Color(Color) and Color("string") */
+      let arg = args[0];
+      if (arg instanceof Color) {
+        [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
+        this.scale = arg.scale;
+      } else if (typeof(arg) == "string" || arg instanceof String) {
+        let [r, g, b, a] = ColorParser.parse(arg);
+        [this.r, this.g, this.b, this.a] = [r, g, b, a];
+      } else {
+        throw new TypeError(`Invalid argument "${arg}" to Color()`);
+      }
+    } else if (args.length >= 3 && args.length <= 4) {
+      /* Handle Color(r, g, b) and Color(r, g, b, a) */
+      [this.r, this.g, this.b] = args;
+      if (args.length == 4) this.a = args[3];
+    } else if (args.length > 0) {
+      throw new TypeError(`Invalid arguments "${args}" to Color()`);
+    }
+  }
+
+  /* Attribute: [r, g, b] */
+  get rgb() { return [this.r, this.g, this.b]; }
+
+  /* Attribute: [r, g, b, a] */
+  get rgba() { return [this.r, this.g, this.b, this.a]; }
+  
+  /* Attribute: [r, g, b] scaled to [0,1] */
+  get rgb_1() {
+    let c = new Color(this.r, this.g, this.b);
+    return [c.r / 255, c.g / 255, c.b / 255];
+  }
+  
+  /* Attribute: [r, g, b, a] scaled to [0,1] */
+  get rgba_1() {
+    let c = new Color(this.r, this.g, this.b, this.a);
+    return [c.r / 255, c.g / 255, c.b / 255, c.a / 255];
+  }
+  
+  /* Attribute: [h, s, l] */
+  get hsl() { return Color.RGBToHSL(this.r, this.g, this.b); }
+  set hsl(hsl) {
+    let [h, s, l] = hsl;
+    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+  }
+  
+  /* Attribute: [h, s, l, a] */
+  get hsla() {
+    let [r, g, b] = Color.RGBToHSL(this.r, this.g, this.b);
+    return [r, g, b, a];
+  }
+  set hsla(hsla) {
+    let [h, s, l, a] = hsla;
+    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    this.a = a;
+  }
+
+  /* Attribute: hue of [h, s, l] */
+  get hue() { return this.hsl[0]; }
+  set hue(new_h) {
+    let [h, s, l] = this.hsl;
+    h = new_h;
+    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+  }
+
+  /* Attribute: saturation of [h, s, l] */
+  get saturation() { return this.hsl[1]; }
+  set saturation(new_s) {
+    let [h, s, l] = this.hsl;
+    s = new_s;
+    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+  }
+
+  /* Attribute: luminance of [h, s, l] */
+  get luminance() { return this.hsl[2]; }
+  set luminance(new_l) {
+    let [h, s, l] = this.hsl;
+    l = new_l;
+    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+  }
+
+  /* Calculate the Relative Luminance */
+  getRelativeLuminance() {
+    /* https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef */
+    let [r, g, b] = this.rgb_1;
+    function c_to_cx(c) {
+      if (c < 0.03928) {
+        return c / 12.92;
+      } else {
+        return Math.pow((c+0.055)/1.055, 2.4);
+      }
+    }
+    return 0.2126 * c_to_cx(r) + 0.7152 * c_to_cx(g) + 0.0722 * c_to_cx(b);
+  }
+
+  /* Calculate the contrast ratio against the given color */
+  getConstrastRatioWith(c2) {
+    /* https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef */
+    let l1 = this.getRelativeLuminance();
+    let l2 = (new Color(c2)).getRelativeLuminance();
+    return (l1 + 0.05) / (l2 + 0.05);
+  }
+
+  /* Testcases:
+   *  Color classes:
+   *    Pure: 000, F00, 0F0, 00F, FF0, F0F, 0FF, FFF
+   *    Named CSS1:
+   *      maroon, red, purple, fuchsia, green, lime
+   *      olive, yellow, navy, blue, teal, aqua
+   *    Named CSS2:
+   *      orange
+   *    Named CSS3:
+   *    Named CSS4:
+   *      rebeccapurple
+   *  Case 1:
+   *    rgb1 -> hsl -> rgb2 => rgb1 == rgb2
+   *  Case 2:
+   *    rgba1 -> hsla -> rgba2 => rgba1 == rgba2
+   *  "#ff0000" -> hsl -> "#ff0000"
+   */
 }
 
-/* Output the given arguments to the console, without a stacktrace */
-Util.LogOnly = function _Util_LogOnly() { console.log.apply(console, arguments); }
+Util.COLORS = {
+  "indigo": "#4b0082",
+  "gold": "#ffd700",
+  "firebrick": "#b22222",
+  "indianred": "#cd5c5c",
+  "yellow": "#ffff00",
+  "darkolivegreen": "#556b2f",
+  "darkseagreen": "#8fbc8f",
+  "slategrey": "#708090",
+  "darkslategrey": "#2f4f4f",
+  "mediumvioletred": "#c71585",
+  "mediumorchid": "#ba55d3",
+  "chartreuse": "#7fff00",
+  "mediumslateblue": "#7b68ee",
+  "black": "#000000",
+  "springgreen": "#00ff7f",
+  "crimson": "#dc143c",
+  "lightsalmon": "#ffa07a",
+  "brown": "#a52a2a",
+  "turquoise": "#40e0d0",
+  "olivedrab": "#6b8e23",
+  "cyan": "#00ffff",
+  "silver": "#c0c0c0",
+  "skyblue": "#87ceeb",
+  "gray": "#808080",
+  "darkturquoise": "#00ced1",
+  "goldenrod": "#daa520",
+  "darkgreen": "#006400",
+  "darkviolet": "#9400d3",
+  "darkgray": "#a9a9a9",
+  "lightpink": "#ffb6c1",
+  "teal": "#008080",
+  "darkmagenta": "#8b008b",
+  "lightgoldenrodyellow": "#fafad2",
+  "lavender": "#e6e6fa",
+  "yellowgreen": "#9acd32",
+  "thistle": "#d8bfd8",
+  "violet": "#ee82ee",
+  "navy": "#000080",
+  "dimgrey": "#696969",
+  "orchid": "#da70d6",
+  "blue": "#0000ff",
+  "ghostwhite": "#f8f8ff",
+  "honeydew": "#f0fff0",
+  "cornflowerblue": "#6495ed",
+  "darkblue": "#00008b",
+  "darkkhaki": "#bdb76b",
+  "mediumpurple": "#9370db",
+  "cornsilk": "#fff8dc",
+  "red": "#ff0000",
+  "bisque": "#ffe4c4",
+  "slategray": "#708090",
+  "darkcyan": "#008b8b",
+  "khaki": "#f0e68c",
+  "wheat": "#f5deb3",
+  "deepskyblue": "#00bfff",
+  "rebeccapurple": "#663399",
+  "darkred": "#8b0000",
+  "steelblue": "#4682b4",
+  "aliceblue": "#f0f8ff",
+  "lightslategrey": "#778899",
+  "gainsboro": "#dcdcdc",
+  "mediumturquoise": "#48d1cc",
+  "floralwhite": "#fffaf0",
+  "coral": "#ff7f50",
+  "lightgrey": "#d3d3d3",
+  "burlywood": "#deb887",
+  "darksalmon": "#e9967a",
+  "beige": "#f5f5dc",
+  "azure": "#f0ffff",
+  "lightsteelblue": "#b0c4de",
+  "oldlace": "#fdf5e6",
+  "greenyellow": "#adff2f",
+  "royalblue": "#4169e1",
+  "lightseagreen": "#20b2aa",
+  "mistyrose": "#ffe4e1",
+  "sienna": "#a0522d",
+  "lightcoral": "#f08080",
+  "orangered": "#ff4500",
+  "navajowhite": "#ffdead",
+  "lime": "#00ff00",
+  "palegreen": "#98fb98",
+  "lightcyan": "#e0ffff",
+  "seashell": "#fff5ee",
+  "mediumspringgreen": "#00fa9a",
+  "fuchsia": "#ff00ff",
+  "papayawhip": "#ffefd5",
+  "blanchedalmond": "#ffebcd",
+  "peru": "#cd853f",
+  "aquamarine": "#7fffd4",
+  "white": "#ffffff",
+  "darkslategray": "#2f4f4f",
+  "tomato": "#ff6347",
+  "ivory": "#fffff0",
+  "dodgerblue": "#1e90ff",
+  "lemonchiffon": "#fffacd",
+  "chocolate": "#d2691e",
+  "orange": "#ffa500",
+  "forestgreen": "#228b22",
+  "darkgrey": "#a9a9a9",
+  "olive": "#808000",
+  "mintcream": "#f5fffa",
+  "antiquewhite": "#faebd7",
+  "darkorange": "#ff8c00",
+  "cadetblue": "#5f9ea0",
+  "moccasin": "#ffe4b5",
+  "limegreen": "#32cd32",
+  "saddlebrown": "#8b4513",
+  "grey": "#808080",
+  "darkslateblue": "#483d8b",
+  "lightskyblue": "#87cefa",
+  "deeppink": "#ff1493",
+  "plum": "#dda0dd",
+  "aqua": "#00ffff",
+  "darkgoldenrod": "#b8860b",
+  "maroon": "#800000",
+  "sandybrown": "#f4a460",
+  "magenta": "#ff00ff",
+  "tan": "#d2b48c",
+  "rosybrown": "#bc8f8f",
+  "pink": "#ffc0cb",
+  "lightblue": "#add8e6",
+  "palevioletred": "#db7093",
+  "mediumseagreen": "#3cb371",
+  "slateblue": "#6a5acd",
+  "linen": "#faf0e6",
+  "dimgray": "#696969",
+  "powderblue": "#b0e0e6",
+  "seagreen": "#2e8b57",
+  "snow": "#fffafa",
+  "mediumblue": "#0000cd",
+  "midnightblue": "#191970",
+  "paleturquoise": "#afeeee",
+  "palegoldenrod": "#eee8aa",
+  "whitesmoke": "#f5f5f5",
+  "darkorchid": "#9932cc",
+  "salmon": "#fa8072",
+  "lightslategray": "#778899",
+  "lawngreen": "#7cfc00",
+  "lightgreen": "#90ee90",
+  "lightgray": "#d3d3d3",
+  "hotpink": "#ff69b4",
+  "lightyellow": "#ffffe0",
+  "lavenderblush": "#fff0f5",
+  "purple": "#800080",
+  "mediumaquamarine": "#66cdaa",
+  "green": "#008000",
+  "blueviolet": "#8a2be2",
+  "peachpuff": "#ffdab9"
+};
 
-/* Output the given arguments to the console */
-Util.Log = function _Util_Log() { Util._toConsole(console.log, arguments); }
+/* Parse a CSS color.
+ * Overloads
+ *  Util.ParseColor('css color spec')
+ *  Util.ParseColor([r, g, b])
+ *  Util.ParseColor([r, g, b, a])
+ *  Util.ParseColor(r, g, b[, a]) */
+Util.ParseCSSColor = function _Util_ParseColor(color) {
+  let r = 0, g = 0, b = 0, a = 0;
+  if (color.length == 1) { color = color[0]; }
+  if (typeof(color) == "string") {
+    [r, g, b, a] = ColorParser.parse(color);
+  } else if (typeof(color) == "object") {
+    if (color.length == 3 || color.length == 4) {
+      r = color[0];
+      g = color[1];
+      b = color[2];
+      if (color.length == 4) {
+        a = color[4];
+      }
+    }
+  }
+  return [r, g, b, a];
+}
 
-/* Output the given arguments as a warning to the console */
-Util.Warn = function _Util_Warn() { Util._toConsole(console.warn, arguments); }
+/* Calculate the Relative Luminance of a color.
+ * Overloads:
+ *  Util.RelativeLuminance('css color spec')
+ *  Util.RelativeLuminance([r, g, b])
+ *  Util.RelativeLuminance([r, g, b, a])
+ *  Util.RelativeLuminance(r, g, b[, a]) */
+Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
+  let color = Util.ParseCSSColor(args);
+  let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
+  function c_to_cx(c) {
+    if (c < 0.03928) {
+      return c / 12.92;
+    } else {
+      return Math.pow((c+0.055)/1.055, 2.4);
+    }
+  }
+  let l_red = 0.2126 * c_to_cx(color_rgb[0]);
+  let l_green = 0.7152 * c_to_cx(color_rgb[1]);
+  let l_blue = 0.0722 * c_to_cx(color_rgb[2]);
+  return l_red + l_green + l_blue;
+}
 
-/* Output the given arguments as an error to the console */
-Util.Error = function _Util_Error() { Util._toConsole(console.error, arguments); }
+/* Calculate the Contrast Ratio between two colors */
+Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
+  let l1 = Util.RelativeLuminance(c1);
+  let l2 = Util.RelativeLuminance(c2);
+  return (l1 + 0.05) / (l2 + 0.05);
+}
+
+/* Determine which color contrasts the best with the given color */
+Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
+  /* Inspired by https://ux.stackexchange.com/a/107319 */
+  let best_color = null;
+  let best_contast = null;
+  for (var c of colors) {
+    let contrast = Util.ContrastRatio(c1, c);
+    if (best_color === null) {
+      best_color = c;
+      best_contrast = contrast;
+    } else if (contrast > best_contrast) {
+      best_color = c;
+      best_contrast = contrast;
+    }
+  }
+  return best_color;
+}
+
+/* End color handling 0}}} */
 
 /* Convert an arguments object to an Array instance */
 Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
@@ -284,11 +838,11 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* Zip two (or more) sequences together */
 Util.Zip = function _Util_Zip(...sequences) {
-  var curr = [];
-  var max_len = 0;
+  let curr = [];
+  let max_len = 0;
   /* Make sure everything's an array, calculate the max length */
   for (var seq of sequences) {
-    var seq_array = Array.from(seq);
+    let seq_array = Array.from(seq);
     max_len = Math.max(seq_array.length, max_len);
     curr.push(seq_array);
   }
@@ -301,7 +855,7 @@ Util.Zip = function _Util_Zip(...sequences) {
   result = [];
   /* Perform the zip operation */
   for (var i = 0; i < max_len; ++i) {
-    var row = Array.from(curr, () => undefined);
+    let row = Array.from(curr, () => undefined);
     for (var j = 0; j < curr.length; ++j) {
       row[j] = curr[j][i];
     }
@@ -313,7 +867,7 @@ Util.Zip = function _Util_Zip(...sequences) {
 
 /* Convert a string to an array of character codes */
 Util.StringToCodes = function _Util_StringToCodes(str) {
-  var result = [];
+  let result = [];
   for (var i = 0; i < str.length; ++i) {
     result.push(str.charCodeAt(i));
   }
@@ -323,8 +877,8 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
 /* Build a character escape sequence for the code given */
 Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
   // Handle certain special escape sequences
-  var special_chrs = "bfnrtv";
-  var special = Util.StringToCodes("\b\f\n\r\t\v");
+  let special_chrs = "bfnrtv";
+  let special = Util.StringToCodes("\b\f\n\r\t\v");
   if (special.indexOf(code) > -1) {
     return `\\${special_chrs.charAt(special.indexOf(code))}`;
   } else {
@@ -336,7 +890,7 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   is_slash = (c) => c == "\\";
   is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
-  var result = "";
+  let result = "";
   for (var [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20)
       result = result.concat(Util.EscapeCharCode(cn));
@@ -359,13 +913,13 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
  */
 Util.ParseQueryString = function _Util_ParseQueryString(query) {
   if (!query) query = document.location.search.substr('1');
-  var obj = {};
+  let obj = {};
   for (var part of query.split('&')) {
     if (part.indexOf('=') == -1) {
       obj[part] = true;
     } else {
-      var key = part.substr(0, part.indexOf('='));
-      var val = part.substr(part.indexOf('=')+1);
+      let key = part.substr(0, part.indexOf('='));
+      let val = part.substr(part.indexOf('=')+1);
       if (val.length == 0)
         val = false;
       else if (val.match(/true|false/))

@@ -1,0 +1,36 @@
+ TwitchEvent: Primary Event object for TwitchClient events
+ Constructor:
+ + TwitchEvent(event-type, raw-line, parsed-line)
+     event-type: the specific Twitch action that triggered this event
+     raw-line: the raw, un-parsed line that generated this event
+     parsed-line: the content of the line, parsed into an object
+ Methods:
+ + get command
+     returns "event-type"
+ + get raw_line
+     returns "raw-line"
+ + get values
+     returns "parsed-line"
+ + value(key)
+     alias to `values()[key]`
+ Static methods:
+ + get COMMANDS
+     Returns an object of "event-type": "event-name" enumerating the possible
+     values for "event-type".
+ Command-specific methods:
+   These methods only make sense for certain commands but are presented here
+   for convenience. Be aware that calling these methods for commands that
+   don't implement the requisite API may raise an exception.
+ + get channel
+     Returns `values()["channel"]`
+ + get message
+     Returns `values()["message"]`
+ + get user
+     Returns `values()["user"]`
+ + get flags
+     Returns `values()["flags"]`
+ + flag(key)
+     Returns `flags()[key]`
+ + repr
+     Returns a string that can be eval()ed to get an exact copy of the event
+

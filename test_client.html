@@ -138,11 +138,25 @@ body {
     line-height:1.3em;
     padding:4px;
 }
+.module .content p .username {
+    font-weight: bold;
+}
 .module .content p:nth-child(2n) {
     background-color:#303030;
 }
-.module .content p .username {
-    font-weight:bold;
+.module .content p:nth-child(2n) .username {
+    text-shadow:
+    -1px -1px 0 #000,
+    1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000;
+}
+.module .content p:nth-child(2n+1) .username {
+    text-shadow:
+    -1px -1px 0 #999,
+    1px -1px 0 #999,
+    -1px 1px 0 #999,
+    1px 1px 0 #999;
 }
 .module .content p img {
     vertical-align:middle;
@@ -160,13 +174,13 @@ body {
 .module .content .error {
     font-weight: bold;
     color: red;
-    font-size: x-large;
+    font-size: large;
 }
 /* Begin Chat styles */
 .module .content .line .notice {
     font-weight: bold;
     color: orange;
-    font-size: x-large;
+    font-size: large;
 }
 .module .content .line .chat-line {
     padding: 4px;
@@ -336,86 +350,76 @@ span.pre {
     </div>
     <img id="settings_button" src="settings_white.png" alt="Settings" />
     <script type="text/javascript">
-var config = {Debug: true, Channels: ['#dwangoac']};
+/* Parse configuration object: via QueryString or window.localStorage
+Configuration items:
+  ClientID: A 30-character alphanumeric ID provided by Twitch
+  Channels: An array of channel names, including leading #
+  Name: (optional) Custom username to use
+  Pass: (optional) OAuth token to use
+  Debug: (optional) Number indicating debugging level (0, 1, 2)
 
-var config_str = window.localStorage.getItem("config");
-if (config_str) {
-  config = JSON.parse(config_str);
-}
+QueryString mapping:
+  clientid => ClientID
+  user => Name
+  pass => Pass
+  channels => Channels
+    "channels=ch1,ch2,ch3" => ["#ch1", "#ch2", "#ch3"]
+  debug => Debug
+    "" => 0
+    "true" => 1
+    "false" => 0
+    "debug" => 1
+    "trace" => 2
+ */
 
-for (var [k, v] of Object.entries(Util.ParseQueryString())) {
-  var key = k;
-  var val = v;
-  if (k == "clientid") key = "ClientID";
-  if (k == "user") key = "Name";
-  if (k == "pass") key = "Pass";
-  if (k == "channels") {
-    key = "Channels";
-    val = v.split(',').map((e) => '#' + e);
+/* Obtain the configuration object */
+/* TODO: FIXME: AUTH TOKEN VULNERABILITY */
+function get_config_object() {
+  let config = {Debug: true, Channels: ['#dwangoac']};
+  let config_str = window.localStorage.getItem("config");
+  if (config_str) {
+    config = JSON.parse(config_str);
+    config_str = null;
   }
-  if (k == "debug")
-    key = "Debug";
-  config[key] = val;
+
+  for (let [k, v] of Object.entries(Util.ParseQueryString())) {
+    let key = k;
+    let val = v;
+    if (k == "clientid") key = "ClientID";
+    if (k == "user") key = "Name";
+    if (k == "pass") key = "Pass";
+    if (k == "channels") {
+      key = "Channels";
+      val = v.split(',').map((e) => '#' + e);
+    }
+    if (k == "debug") {
+      key = "Debug";
+      if (!val) val = 0;
+      else if (val == "true") val = 1;
+      else if (val == "false") val = 0;
+      else if (val == "debug") val = 1;
+      else if (val == "trace") val = 2;
+    }
+    config[key] = val;
+  }
+  return config;
 }
 
-var client = new TwitchClient(config);
-config.Name = config.ClientID = config.Pass = undefined;
-Util.DebugLevel = config.Debug;
-
+/* Call a function for all channels; used to send messages */
 function send_all(str, fn=null) {
   if (fn == null)
     fn = client.SendMessage;
   fn = fn.bind(client);
-  for (var ch of config.Channels) {
+  for (let ch of config.Channels) {
     fn(ch, str);
   }
 }
 
-function handle_chat(str) {
-  if (str.startsWith('//')) {
-    var [cmd, args] = str.split_n(" ", 1);
-    cmd = cmd.lstrip('/');
-    switch (cmd) {
-      case "join":
-        /* Join a channel */
-        client.JoinChannel(args);
-        break;
-      case "part":
-        /* Leave a channel */
-        client.LeaveChannel(args);
-        break;
-      case "raw":
-        /* Send a raw message to Twitch */
-        client.SendRaw(args);
-        break;
-      case "debug":
-        /* Alter debugging settings */
-        break;
-      case "channels":
-        /* List the joined channels */
-        break;
-      case "get-user":
-        /* Get information about a user */
-        break;
-      case "get-channel":
-        /* Get information about a channel */
-        break;
-      case "get-room":
-        /* Get information about a room */
-        break;
-      default:
-        /* Invalid command */
-        break;
-    }
-  } else {
-    send_all(str, client.SendMessage);
-  }
-}
-
+/* Handle //help */
 function on_command_help(args) {
   if (typeof(args) == "string")
     args = args.escape();
-  var help_commands = {
+  let help_commands = {
     help: "//help [command]: Help message or help for a specific command",
     config: "//config [<key> [<value>]]: Get or set a configuration value",
     join: "//join <channel>: Join the specified channel",
@@ -425,33 +429,35 @@ function on_command_help(args) {
     badges: "//badges: Show all the known badges (quite large set)"
   };
   if (args === undefined || args.length == 0) {
-    for (var [cmd, line] of Object.entries(help_commands)) {
+    for (let [cmd, line] of Object.entries(help_commands)) {
       line = line.escape();
-      add_html(`<span class="pre">//${cmd}: ${line}</span>`);
+      add_pre(`//${cmd}: ${line}`);
     }
   } else if (args.lstrip('/') in help_commands) {
-    var line = help_commands[args.lstrip('/')].escape();
-    add_html(`<span class="pre">Help: ${line}</span>`);
+    let line = help_commands[args.lstrip('/')].escape();
+    add_pre(`Help: ${line}`);
   } else {
-    add_html(`<span class="pre">Help: don't know what "${args}" is`);
+    add_pre(`Help: don't know what "${args}" is`);
   }
 }
 
+/* Handle //config */
 function on_command_config(args) {
-  var cfgRaw = window.localStorage.getItem('config');
-  var cfg = JSON.parse(cfgRaw);
-  var changed = false;
+  let cfgRaw = window.localStorage.getItem('config');
+  let cfg = JSON.parse(cfgRaw);
+  let changed = false;
   if (args === undefined || args.length == 0) {
-    add_html(`<span class="pre">Config: ${cfgRaw}</span>`);
-  } else if (args.indexOf(' ') > -1) {
-    var [key, val] = args.split_n(' ', 1);
+    add_pre(`Config: ${cfgRaw}`);
+  } else {
+    let [key, val] = args.split_n(' ', 1);
     if (key in cfg) {
       if (val) {
         cfg[key] = val;
-        add_html(`<span class="pre">Config: Set "${key}" to "${val.escape()}"`);
+        add_pre(`Config: Set "${key}" to "${String(val).escape()}"`);
         changed = true;
       } else {
-        add_html(`<span class="pre">Config: "${key}" = "${cfg[key].escape()}"`);
+        val = cfg[key];
+        add_pre(`Config: "${key}" = "${String(val).escape()}" (${typeof(val)})`);
       }
     }
   }
@@ -459,56 +465,67 @@ function on_command_config(args) {
     window.localStorage.setItem('config', JSON.stringify(cfg));
 }
 
+/* Handle //join */
 function on_command_join(args) {
   client.JoinChannel(args);
 }
+
+/* Handle //part */
 function on_command_part(args) {
   client.LeaveChannel(args);
 }
-function on_command_debug(args) { }
+
+/* Handle //debug */
+function on_command_debug(args) {
+  /* TODO */
+}
+
+/* Handle //reconnect */
 function on_command_reconnect(args) {
   client.Connect();
 }
 
+/* Handle //badges */
 function on_command_badges(args) {
-  var badges = client.GetBadges();
+  let badges = client.GetBadges();
   function to_img(url, title) {
     return `<img src="${url.escape()}" title="${title.escape()}" />`;
   }
   /* Display global badges */
-  for (var name of Object.keys(badges.global)) {
+  for (let name of Object.keys(badges.global)) {
     if (!badges.global[name])
       continue;
-    for (var [ver, badge] of Object.entries(badges.global[name].versions)) {
+    for (let [ver, badge] of Object.entries(badges.global[name].versions)) {
       if (!badges.global[name].versions)
         continue;
-      var urls = [badge.image_url_4x, badge.image_url_2x, badge.image_url_1x];
-      var alt = `${name} [${ver}]`;
-      var line = `${name}/${ver}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      let urls = [badge.image_url_4x, badge.image_url_2x, badge.image_url_1x];
+      let alt = `${name} [${ver}]`;
+      let line = `${name}/${ver}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
       add_pre(line);
     }
   }
   /* Display channel badges */
-  for (var chname of Object.keys(badges).sort()) {
+  for (let chname of Object.keys(badges).sort()) {
     if (chname == "global")
       continue;
-    for (var name of Object.keys(badges[chname]).sort()) {
+    for (let name of Object.keys(badges[chname]).sort()) {
       if (!badges[chname][name])
         continue;
-      var urls = [
+      let urls = [
         badges[chname][name].alpha,
         badges[chname][name].image/*,
         badges[chname][name].svg (too big)*/
       ];
-      var alt = `${name} (${chname})`;
-      var line = `${chname}: ${name}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      let alt = `${name} (${chname})`;
+      let line = `${chname}: ${name}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
       add_pre(line);
     }
   }
 }
 
+/* Handle chat commands */
 function on_chat_command(event) {
-  var [cmd, args] = event.target.value.split_n(' ', 1);
+  let [cmd, args] = event.target.value.split_n(' ', 1);
   cmd = cmd.lstrip('/').strip();
   if (args !== undefined) args = args.strip();
   switch (cmd) {
@@ -534,77 +551,100 @@ function on_chat_command(event) {
       on_command_badges(args);
       break;
     default:
-      add_html(`<span class="pre">No such command "${cmd}"</span>`);
+      add_pre(`No such command "${cmd}"`, true);
       break;
   }
 }
 
+/* Handle chat submission */
 function on_chat_enter(event) {
-  for (var ch of config.Channels) {
+  for (let ch of config.Channels) {
     client.SendMessage(ch, event.target.value);
   }
 }
 
-$('#txtChat').on('keyup', function(e) {
-  if (e.keyCode == KeyEvent.DOM_VK_RETURN) {
-    if (e.target.value.startsWith('//')) {
-      on_chat_command(e);
-    } else {
-      on_chat_enter(e);
+/* Construct the client */
+$(document).ready(function() {
+  let config = get_config_object();
+  let client = new TwitchClient(config);
+  config.Name = config.ClientID = config.Pass = undefined;
+  Util.DebugLevel = config.Debug;
+
+  /* Grant window access to the config and client objects */
+  window.config = config;
+  window.client = client;
+
+  /* Bind on_chat_enter to pressing Enter/Return on #txtChat */
+  $('#txtChat').on('keyup', function(e) {
+    if (e.keyCode == KeyEvent.DOM_VK_RETURN) {
+      if (e.target.value.startsWith('//')) {
+        on_chat_command(e);
+      } else {
+        on_chat_enter(e);
+      }
+      e.target.value = "";
+      return false; /* prevent bubbling */
     }
-    e.target.value = "";
-    return false; /* prevent bubbling */
-  }
-});
-
-client.bind('twitch-open', function(event) {
-  add_html(`<span class="pre">Connected</span>`);
-});
-client.bind('twitch-chat', function(event) {
-  Util.Debug(event);
-  add_html(to_html(event));
-});
-client.bind('twitch-notice', function(event) {
-  Util.Warn(event);
-  var channel = Twitch.FormatChannel(event.channel);
-  var message = event.message.escape();
-  var html = `Notice: ${channel}: ${message}`;
-  add_html(`<span class="notice">${html}</span>`);
-});
-client.bind('twitch-error', function(event) {
-  Util.Error(event);
-  var user = event.user;
-  var command = event.values.command;
-  var message = event.message;
-  add_html(`<span class="error">Error ${user}: ${command}: ${message}</span>`);
-});
-client.bind('twitch-message', function(event) {
-  if (Util.DebugLevel > 0) {
-    add_html(`<span class="pre">${event.values.toSource()}</span>`);
-  }
-});
-/*
-for (var e of ["OPEN", "MESSAGE", "CLOSE"]) {
-  client.bind(`twitch-${e.toLowerCase()}`, function(event) {
-    Util.Debug(`twitch-${e.toLowerCase()}`, event);
   });
-}
-*/
 
-/*
+  /* Intercept warnings and errors and display them */
+  Util.Logger.add_hook(function(sev, stacktrace, ...args) {
+    let msg = args.join(" ").escape();
+    add_html(`<span class="notice">Util.Warn: ${msg}</span>`);
+  }, "WARN");
+  Util.Logger.add_hook(function(sev, stacktrace, ...args) {
+    let msg = args.join(" ").escape();
+    add_html(`<span class="error">Util.Error: ${msg}</span>`);
+  }, "ERROR");
+
+  /* Handle twitch-open events */
+  client.bind('twitch-open', function(event) {
+    add_pre('Connected');
+  });
+
+  /* Handle twitch-chat events */
+  client.bind('twitch-chat', function(event) {
+    if (event.values.synthesized) {
+      add_pre(event.values.toSource(), true);
+    }
+    add_html(to_html(event));
+  });
+
+  /* Handle twitch-notice events */
+  client.bind('twitch-notice', function(event) {
+    Util.Warn(event);
+    let channel = Twitch.FormatChannel(event.channel);
+    let message = event.message.escape();
+    let html = `Notice: ${channel}: ${message}`;
+    add_html(`<span class="notice">${html}</span>`);
+  });
+
+  /* Handle twitch-error events */
+  client.bind('twitch-error', function(event) {
+    Util.Error(event);
+    let user = event.user;
+    let command = event.values.command;
+    let message = event.message;
+    add_html(`<span class="error">Error ${user}: ${command}: ${message}</span>`);
+  });
+
+  /* Handle twitch-message events */
+  client.bind('twitch-message', function(event) {
+    if (Util.DebugLevel > 0) {
+      add_pre(event.values.toSource(), true);
+    }
+  });
+
+  /* Finally connect to Twitch */
+  client.Connect();
+});
+
+/* Old API; kept here for reference
 client.on('WSMESSAGE', function(msg) { });
-client.on('WSMESSAGELINE', function(line) {
-  add_html(`<span class="pre">${line}</span>`);
-});
-client.on('MESSAGE', function(parsed) {
-  add_html(`<span class="pre">${parsed.toSource()}</span>`);
-});
+client.on('WSMESSAGELINE', function(line) { add_pre(line, true); });
+client.on('MESSAGE', function(parsed) { add_pre(parsed.toSource(), true); });
 client.on('CONNECT', function(flags) { });
-client.on('CLOSE', function() {
-  add_html("<hr/>");
-  add_html("Connection closed");
-  add_html("<hr/>");
-});
+client.on('CLOSE', function() { add_html("<hr/>Connection closed</hr>"); });
 client.on('TOPIC', function(message) { });
 client.on('NAMES', function(usernames) { });
 client.on('JOIN', function(user, channel) { });
@@ -622,54 +662,40 @@ client.on('GLOBALUSERSTATE', function(flags) { });
 client.on('CLEARCHAT', function(user, channel, flags) { });
 client.on('NOTICE', function(channel, message) { });
 */
-client.Connect();
 
-/* Twitch Chat (w/ FFZ):
-<div class="chat-line__message" data-room-id="70067886" data-room="dwangoac" data-user-id="175437030" data-user="kaedenn_">
-  <span class="chat-line__message--badges">
-    <span data-provider="twitch" data-badge="subscriber" data-version="0" class="ffz-tooltip ffz-badge" data-tooltip-type="badge" data-badge-data="[{&quot;provider&quot;:&quot;twitch&quot;,&quot;badge&quot;:&quot;subscriber&quot;,&quot;version&quot;:&quot;0&quot;}]">
-    </span>
-    <span data-provider="twitch" data-badge="bits" data-version="1000" class="ffz-tooltip ffz-badge" data-tooltip-type="badge" data-badge-data="[{&quot;provider&quot;:&quot;twitch&quot;,&quot;badge&quot;:&quot;bits&quot;,&quot;version&quot;:&quot;1000&quot;}]">
-    </span>
-  </span>
-  <button class="chat-line__username notranslate" style="color: rgb(2, 98, 193);">
-    <span class="chat-author__display-name">Kaedenn_</span>
-  </button>
-  <span>: </span>
-  <span class="message">
-    <span data-a-target="chat-message-text">test2</span>
-  </span>
-</div>
-*/
+/* Functions for adding content to the main content window */
+
 function add_html(html) {
   $(".module").each(function() {
-    var $content = $(this).find('.content');
-    var $p = document.createElement('p');
+    let $content = $(this).find('.content');
+    let $p = document.createElement('p');
     $p.setAttribute('class', 'line');
     $p.innerHTML = html;
     $content.append($p);
     $content.scrollTop(2**31-1);
   });
 }
+
 function add_pre(msg, escape=false) {
   if (escape)
     msg = msg.escape();
   add_html(`<span class="pre">${msg}</span>`);
 }
+
 function _to_html_badges(event) {
-  var e_badges = document.createElement('span');
+  let e_badges = document.createElement('span');
   e_badges.setAttribute('class', 'badges');
   if (event.flags.badges) {
-    for (var [badge_name, badge_num] of event.flags.badges) {
-      var e_badge = document.createElement('img');
+    for (let [badge_name, badge_num] of event.flags.badges) {
+      let e_badge = document.createElement('img');
       if (client.IsGlobalBadge(badge_name, badge_num)) {
-        var badge_info = client.GetGlobalBadge(badge_name, badge_num);
+        let badge_info = client.GetGlobalBadge(badge_name, badge_num);
         e_badge.setAttribute('src', badge_info.image_url_1x);
         e_badge.setAttribute('tw-badge-scope', 'global');
         e_badge.setAttribute('alt', badge_info.title);
       } else if (client.IsChannelBadge(event.channel, badge_name)) {
-        var badge_info = client.GetChannelBadge(event.channel, badge_name);
-        var badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
+        let badge_info = client.GetChannelBadge(event.channel, badge_name);
+        let badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
         e_badge.setAttribute('src', badge_src);
         e_badge.setAttribute('tw-badge', JSON.stringify(badge_info));
         e_badge.setAttribute('tw-badge-scope', 'channel');
@@ -685,8 +711,9 @@ function _to_html_badges(event) {
   }
   return e_badges;
 }
+
 function _to_html_name(event) {
-  var e_name = document.createElement('span');
+  let e_name = document.createElement('span');
   e_name.setAttribute('class', 'username');
   if (!!event.flags.color) {
     e_name.setAttribute("style", `color: ${event.flags.color}`);
@@ -694,14 +721,16 @@ function _to_html_name(event) {
   e_name.innerHTML = event.flags["display-name"].escape();
   return e_name;
 }
+
 function _to_html_msg(event) {
-  var e_msg = document.createElement('span');
+  let e_msg = document.createElement('span');
   e_msg.setAttribute('class', 'message');
   e_msg.innerHTML = event.message.escape();
   return e_msg;
 }
+
 function to_html(event) {
-  var e_cont = document.createElement('div');
+  let e_cont = document.createElement('div');
   e_cont.setAttribute('class', 'chat-line');
   e_cont.setAttribute("data-id", event.flags.id);
   e_cont.setAttribute("data-user", event.user);
