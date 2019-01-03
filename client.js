@@ -712,8 +712,8 @@ function _TwitchClient_GetEmote(emote_id) {
 
 /* Return the URL to the image for the cheermote specified */
 TwitchClient.prototype.GetCheer =
-function _TwitchClient_GetCheer(prefix, tier) {
-  return `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/dark/animated/${tier}/1.gif`;
+function _TwitchClient_GetCheer(prefix, tier, scheme="dark", size="1") {
+  return Twitch.URL.Cheer(prefix, tier, scheme, size);
 }
 
 /* Callback: called when the websocket opens */
