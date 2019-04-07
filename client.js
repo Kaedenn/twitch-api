@@ -14,7 +14,6 @@
  *    error seems to be lost somewhere
  */
 
-
 /* TODO:
  *  Fix the following:
  *    Generate a UUID for the faux PRIVMSG
@@ -42,7 +41,7 @@ class TwitchEvent extends Event {
     this._cmd = type;
     this._raw = !!raw_line ? raw_line : "";
     this._parsed = !!parsed ? parsed : {};
-    if (TwitchEvent.COMMANDS[this._cmd] === undefined) {
+    if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
       Util.Error(`Command ${this._cmd} not enumerated in this.COMMANDS`);
     }
   }
@@ -162,7 +161,6 @@ function TwitchClient(opts) {
   let cfg_name = opts.Name;
   let cfg_clientid = opts.ClientID;
   let cfg_pass = opts.Pass;
-  console.debug(`opts: ${opts.toSource()}`);
 
   this._ws = null;
   this._is_open = false;
