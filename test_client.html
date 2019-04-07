@@ -443,8 +443,10 @@ $(document).ready(function() {
 
   /* Handle twitch-chat events */
   client.bind('twitch-chat', function(event) {
-    if (event.values.synthesized) {
-      add_pre(event.values.toSource(), true);
+    if (Util.DebugLevel > 0) {
+      if (event.values.synthesized) {
+        add_pre(event.values.toSource(), true);
+      }
     }
     add_html(to_html(event));
   });
@@ -537,8 +539,10 @@ function _to_html_badges(event) {
         let badge_src = !!badge_info.alpha ? badge_info.alpha : badge_info.image;
         e_badge.setAttribute('src', badge_src);
         e_badge.setAttribute('tw-badge', JSON.stringify(badge_info));
-        e_badge.setAttribute('tw-badge-scope', 'channel');
-        e_badge.setAttribute('tw-badge-channel', channel.channel.lstrip('#'));
+        if (!!event.channel) {
+          e_badge.setAttribute('tw-badge-scope', 'channel');
+          e_badge.setAttribute('tw-badge-channel', event.channel.channel.lstrip('#'));
+        }
       } else {
         console.warn('Unknown badge', badge_name, badge_num, 'for', event);
         continue;
