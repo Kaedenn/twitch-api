@@ -159,6 +159,11 @@ class TwitchEmote {
 
 /* TwitchClient constructor definition */
 function TwitchClient(opts) {
+  let cfg_name = opts.Name;
+  let cfg_clientid = opts.ClientID;
+  let cfg_pass = opts.Pass;
+  console.debug(`opts: ${opts.toSource()}`);
+
   this._ws = null;
   this._is_open = false;
   this._connected = false;
@@ -190,26 +195,24 @@ function TwitchClient(opts) {
   this._cheers = {};
 
   /* Handle authentication and password management */
-  this._authed = !!opts.Pass;
+  this._authed = !!cfg_pass;
   let oauth, oauth_header;
   if (this._authed) {
-    if (opts.Pass.indexOf("oauth:") != 0) {
-      oauth = `oauth:${opts.Pass}`;
-      oauth_header = `OAuth ${opts.Pass}`;
+    if (cfg_pass.indexOf("oauth:") != 0) {
+      oauth = `oauth:${cfg_pass}`;
+      oauth_header = `OAuth ${cfg_pass}`;
     } else {
-      oauth = opts.Pass;
-      oauth_header = opts.Pass.replace(/^oauth:/, 'OAuth ');
+      oauth = cfg_pass;
+      oauth_header = cfg_pass.replace(/^oauth:/, 'OAuth ');
     }
   }
 
   /* Construct the Twitch API object */
-  let pub_headers = {"Client-Id": opts.ClientID};
+  let pub_headers = {"Client-Id": cfg_clientid};
   let priv_headers = {}
   if (this._authed)
     priv_headers["Authorization"] = oauth_header;
   this._api = new Twitch.API(pub_headers, priv_headers);
-
-  Util.DebugOnly("Configured with", Twitch.StripCredentials(opts.toSource()));
 
   /* TwitchClient.Connect() */
   this.Connect = function _TwitchClient_Connect() {
@@ -239,7 +242,7 @@ function TwitchClient(opts) {
       Util.DebugOnly('ws open>', e);
       this.client._connected = false;
       this.client._is_open = true;
-      this.client.OnWebsocketOpen(opts.Name, oauth);
+      this.client.OnWebsocketOpen(cfg_name, oauth);
     };
     this._ws.onmessage = function(e) {
       Util.DebugOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
@@ -625,13 +628,13 @@ TwitchClient.prototype.SendMessage =
 function _TwitchClient_SendMessage(channel, message) {
   channel = this._ensureChannel(channel);
   message = Util.EscapeSlashes(message.trim());
-  if (this._connected) {
+  if (this._connected && this._authed) {
     this._ws.send(`PRIVMSG ${channel.channel} :${message}`);
     /* Dispatch a faux "Message Received" event */
     Util.FireEvent(this._build_privmsg(channel, message));
   } else {
     let chname = Twitch.FormatChannel(channel);
-    Util.Warn(`Unable to send "${message}" to ${chname}: not connected`);
+    Util.Warn(`Unable to send "${message}" to ${chname}: not connected or not authed`);
   }
 }
 
