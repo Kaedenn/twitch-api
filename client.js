@@ -9,6 +9,12 @@
  *  https://www.frankerfacez.com/developers
  */
 
+/* FIXME:
+ *  OnWebsocketError:
+ *    error seems to be lost somewhere
+ */
+
+
 /* TODO:
  *  Fix the following:
  *    Generate a UUID for the faux PRIVMSG
@@ -34,8 +40,8 @@ class TwitchEvent extends Event {
   constructor(type, raw_line, parsed) {
     super("twitch-" + type.toLowerCase());
     this._cmd = type;
-    this._raw = raw_line;
-    this._parsed = parsed;
+    this._raw = !!raw_line ? raw_line : "";
+    this._parsed = !!parsed ? parsed : {};
     if (TwitchEvent.COMMANDS[this._cmd] === undefined) {
       Util.Error(`Command ${this._cmd} not enumerated in this.COMMANDS`);
     }
@@ -79,7 +85,7 @@ class TwitchEvent extends Event {
   get user() { return this._parsed.user; }
   get name() { return this._parsed.flags["display-name"]; }
   get flags() { return this._parsed.flags; }
-  flag(flag) { return this._parsed.flags[flag]; }
+  flag(flag) { return !!this._parsed.flags ? this._parsed.flags[flag] : undefined; }
 
   /* Extra attributes */
   repr() {
@@ -87,7 +93,7 @@ class TwitchEvent extends Event {
     let cls = Object.getPrototypeOf(this).constructor.name;
     let args = [
       this._cmd.repr(),
-      this._raw.repr(),
+      this._raw.toSource(),
       this._parsed.toSource()
     ].join(",");
     return `new ${cls}(${args})`;
@@ -221,6 +227,7 @@ function TwitchClient(opts) {
     this._is_open = false;
     this._connected = false;
 
+    /* TRIGGER: To trigger an error, add .bad to the URI */
     this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
     this._ws.client = this;
     this._ws._send = this._ws.send;

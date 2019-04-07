@@ -3,7 +3,7 @@
 <head>
     <title></title>
     <meta charset="utf-8" />
-    <script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!--<script type="text/javascript" src="https://unpkg.com/axios/dist/axios.min.js"></script>-->
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
 
     <script type="text/javascript" src="utility.js"></script>
@@ -593,7 +593,17 @@ $(document).ready(function() {
     add_html(`<span class="notice">Util.Warn: ${msg}</span>`);
   }, "WARN");
   Util.Logger.add_hook(function(sev, stacktrace, ...args) {
-    let msg = args.join(" ").escape();
+    console.log(`on Util.Logger.ERROR ${sev.toSource()} ${stacktrace.toSource()} ${args.toSource().replace(/\n/g, '\\n')}`);
+    let msg;
+    if (args.length == 1) {
+      if (args[0] instanceof Error) {
+        msg = args[0].toString();
+      } else if (args[0] instanceof TwitchEvent) {
+        msg = args[0].repr();
+      }
+    } else {
+      msg = args.join(" ").escape();
+    }
     add_html(`<span class="error">Util.Error: ${msg}</span>`);
   }, "ERROR");
 

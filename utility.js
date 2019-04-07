@@ -266,6 +266,7 @@ class LoggerUtility {
     this._hooks[this._sev_value(sev)].push(fn);
     return true;
   }
+  /* Return whether or not the given severity is enabled */
   can_log(sev) {
     if (!this._assert_sev(sev)) { return false; }
     let val = this._sev_value(sev);
@@ -278,11 +279,14 @@ class LoggerUtility {
     }
     return val >= LoggerUtility.SEVERITIES.WARN;
   }
+  /* Log `argobj` with severity `sev`, optionally including a stacktrace */
   do_log(sev, argobj, stacktrace=false) {
     if (!this.can_log(sev)) { return }
     let val = this._sev_value(sev);
     for (var hook of this._hooks[val]) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
+      console.log(`Calling "${hook}" with ${args.length} args (${args.toSource()})`);
+      console.log(`argobj = ${argobj.toSource()}`);
       hook.apply(hook, args);
     }
     if (stacktrace) {

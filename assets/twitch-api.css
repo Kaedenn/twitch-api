@@ -1,0 +1,41 @@
+/* Twitch API - Global CSS Rules
+ *
+ * Generated HTML will have the following structure:
+<div class="twitch-api_container">
+  <div class="chat-line">
+    <span class="chat-badges">
+      <img class="chat-badge" ... />
+    </div>
+    <span class="chat-username">
+      <!-- Username -->
+    </div>
+    <span class="chat-message">
+      <!-- Message with embedded emotes, cheermotes, etc -->
+    </div>
+  </div>
+</div>
+ */
+
+.twitch-api_container {
+
+}
+
+.twitch-api_container .chat-line {
+
+}
+
+.twitch-api_container .chat-line .chat-badges {
+
+}
+
+.twitch-api_container .chat-line .chat-badges .chat-badge {
+
+}
+
+.twitch-api_container .chat-line .chat-username {
+
+}
+
+.twitch-api_container .chat-line .chat-message {
+
+}
