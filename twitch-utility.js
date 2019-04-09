@@ -320,6 +320,11 @@ Twitch.IRC = {
       /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3, message: 4}
     ],
+    HOSTTARGET: [
+      /* ":<server> HOSTTARGET <channel> :<hosting-user> -\r\n" */
+      /^([^ ]+) HOSTTARGET (\#[^ ]\+) :([^ ]+).*(?:\r\n)$/,
+      {server: 1, channel: 3, user: 4}
+    ],
     NOTICE: [
       /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
       /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/,
@@ -621,6 +626,12 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
+  } else if (parts[1] == "HOSTTARGET") {
+    /* ":<server> HOSTTARGET <channel> :<user> -\r\n" */
+    result.cmd = "HOSTTARGET";
+    result.server = parts[0];
+    result.channel = parts[1];
+    result.user = parts[2];
   } else if (parts[1] == "NOTICE") {
     /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
     result.cmd = "NOTICE";
