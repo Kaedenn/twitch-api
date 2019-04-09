@@ -61,6 +61,7 @@ class TwitchEvent extends Event {
       USERNOTICE: "USERNOTICE",
       GLOBALUSERSTATE: "GLOBALUSERSTATE",
       CLEARCHAT: "CLEARCHAT",
+      HOSTTARGET: "HOSTTARGET",
       NOTICE: "NOTICE",
       SUB: "SUB",
       RESUB: "RESUB",
