@@ -183,6 +183,9 @@ function TwitchClient(opts) {
   /* Emotes the TwitchClient is allowed to use */
   this._self_emotes = {}; /* {eid: ename} */
 
+  /* Don't load assets (for small testing) */
+  this._no_assets = !!opts.NoAssets;
+
   /* (OBSOLETE) Hooked callbacks */
   this._hooks = {};
 
@@ -414,6 +417,7 @@ function _TwitchClient__onDeOp(channel, user) {
 /* Private: Load in the extra chatrooms a streamer may or may not have */
 TwitchClient.prototype._getRooms =
 function _TwitchClient__getRooms(cname, cid) {
+  if (this._no_assets) return;
   this._api.Get(Twitch.URL.Rooms(cid), (function(json) {
     for (var room_def of json["rooms"]) {
       if (this._rooms[cname].rooms === undefined)
@@ -427,6 +431,7 @@ function _TwitchClient__getRooms(cname, cid) {
 TwitchClient.prototype._getChannelBadges =
 function _TwitchClient__getChannelBadges(cname, cid) {
   this._channel_badges[cname] = {};
+  if (this._no_assets) return;
   this._api.Get(Twitch.URL.Badges(cid), (function(json) {
     for (var badge_name of Object.keys(json)) {
       this._channel_badges[cname][badge_name] = json[badge_name];
@@ -438,6 +443,7 @@ function _TwitchClient__getChannelBadges(cname, cid) {
 TwitchClient.prototype._getGlobalBadges =
 function _TwitchClient__getGlobalBadges() {
   this._global_badges = {};
+  if (this._no_assets) return;
   this._api.Get(Twitch.URL.AllBadges(), (function(json) {
     for (var badge_name of Object.keys(json["badge_sets"])) {
       this._global_badges[badge_name] = json["badge_sets"][badge_name];
