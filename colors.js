@@ -251,6 +251,5 @@ var colors = {
     "blue": "#0343df",
     "green": "#15b01a",
     "purple": "#7e1e9c"
-
 };
 

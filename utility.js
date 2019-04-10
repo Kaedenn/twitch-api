@@ -916,7 +916,8 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
  *  `key=null` gives {key: null}
  */
 Util.ParseQueryString = function _Util_ParseQueryString(query) {
-  if (!query) query = document.location.search.substr('1');
+  if (!query) query = window.location.search;
+  if (query.startsWith('?')) query = query.substr(1);
   let obj = {};
   for (var part of query.split('&')) {
     if (part.indexOf('=') == -1) {
@@ -924,10 +925,13 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
     } else {
       let key = part.substr(0, part.indexOf('='));
       let val = part.substr(part.indexOf('=')+1);
+      val = decodeURIComponent(val);
       if (val.length == 0)
         val = false;
-      else if (val.match(/true|false/))
-        val = Boolean(val);
+      else if (val == "true")
+        val = true;
+      else if (val == "false")
+        val = false;
       else if (val.match(/^[0-9]+$/))
         val = parseInt(val);
       else if (val.match(/^[0-9]+\.[0-9]+$/))
@@ -940,3 +944,13 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
   return obj;
 }
 
+/* Format a query string (including leading "?") */
+Util.FormatQueryString = function _Util_FormatQueryString(query) {
+  var parts = [];
+  for (var [k, v] of Object.entries(query)) {
+    var key = encodeURIComponent(k);
+    var val = encodeURIComponent(v);
+    parts.push(`${key}=${val}`);
+  }
+  return "?" + parts.join("&");
+}

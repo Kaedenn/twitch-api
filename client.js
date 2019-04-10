@@ -273,6 +273,26 @@ function _TwitchClient_debug() {
   }
 }
 
+/* Obtain the current client debug level (*not* logger debug level) */
+TwitchClient.prototype.GetDebug =
+function _TwitchClient_GetDebug() {
+  return this._debug;
+}
+
+/* Update both client and logger debug level */
+TwitchClient.prototype.SetDebug =
+function _TwitchClient_SetDebug(val) {
+  if (val === false || val === 0) this._debug = 0;
+  else if (val === true || val === 1) this._debug = 1;
+  else if (val === 2) this._debug = 2;
+  else if (!!val) {
+    this._debug = 1;
+  } else {
+    this._debug = 0;
+  }
+  Util.DebugLevel = this._debug;
+}
+
 /* Hook a callback function to a specific action */
 TwitchClient.prototype.on =
 function _TwitchClient_on(action, callback) {
