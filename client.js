@@ -857,6 +857,9 @@ function _TwitchClient_OnWebsocketMessage(event) {
       case "CLEARCHAT":
         this._dispatch("CLEARCHAT", result.user, result.channel, result.flags);
         break;
+      case "HOSTTARGET":
+        this._dispatch("HOSTTARGET", result.channel, result.user);
+        break;
       case "NOTICE":
         this._dispatch("NOTICE", result.channel, result.message);
         break;
