@@ -126,7 +126,10 @@ body {
   text-decoration: none;
 }
 .module .content .line .chat-line .message {
-  
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
 }
 span.pre {
   font-size: smaller;
@@ -504,6 +507,25 @@ client.on('CLEARCHAT', function(user, channel, flags) { });
 client.on('NOTICE', function(channel, message) { });
 */
 
+function format_urls(message) {
+  let m = message + ' ';
+  var start = 0, end = 0;
+  while (start > -1 && start < (m.length-1)) {
+    end = m.indexOf(' ', start+1);
+    var word = m.substring(start, end).trim();
+    var word_l = word.toLowerCase();
+    if (word_l.indexOf('www') == 0 || word_l.indexOf('http://') == 0 || word_l.indexOf('https://') == 0) {
+      var scheme = word_l.indexOf('http') != 0 ? 'https://' : '';
+      var href = scheme + word;
+      var s = `<a target="_blank" href="${href}">${word}</a>`;
+      m = m.substring(0, start) + ' ' + s + m.substring(end);
+    }
+    start = m.indexOf(' ', start+1);
+  }
+  m = m.trim();
+  return m;
+}
+
 /* Functions for adding content to the main content window */
 
 function add_html(html) {
@@ -568,7 +590,7 @@ function _to_html_name(event) {
 function _to_html_msg(event) {
   let e_msg = document.createElement('span');
   e_msg.setAttribute('class', 'message');
-  e_msg.innerHTML = event.message.escape();
+  e_msg.innerHTML = format_urls(event.message.escape());
   return e_msg;
 }
 
