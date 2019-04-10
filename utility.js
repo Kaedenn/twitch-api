@@ -74,7 +74,7 @@ String.prototype.split_n = function _String_split_n(sep, num) {
 
 /* Escape a string for use in regex */
 RegExp.escape = function _RegExp_escape(string) {
-  string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /* End standard object additions 0}}} */
