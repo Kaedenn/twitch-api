@@ -82,6 +82,8 @@ RegExp.escape = function _RegExp_escape(string) {
 /* General Utilities */
 let Util = {};
 
+Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+
 /* Logging {{{0 */
 Util.LEVEL_TRACE = 2;
 Util.LEVEL_DEBUG = 1;
@@ -954,3 +956,4 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
   }
   return "?" + parts.join("&");
 }
+
