@@ -1,3 +1,5 @@
+"use strict";
+
 var colors = {
     "dust": "#b2996e",
     "tea": "#65ab7c",

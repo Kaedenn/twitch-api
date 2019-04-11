@@ -1,4 +1,5 @@
 "use strict";
+
 /* Collapse all:
  * %g/^\([^ ][^(]*\)\?\(\<Twitch\|class\|function\|let\|let\>\)[^{]\+{$/norm $zf%
  */
@@ -572,6 +573,22 @@ function _TwitchClient_LeaveChannel(channel) {
     } else {
       Util.Warn(`LeaveChannel: Not in channel ${ch}`);
     }
+  }
+}
+
+/* Return whether or not the client is in the channel specified */
+TwitchClient.prototype.IsInChannel =
+function _TwitchClient_IsInChannel(channel) {
+  channel = this._ensureChannel(channel);
+  let ch = channel.channel;
+  if (this._is_open) {
+    if (this._channels.indexOf(ch) > -1) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
   }
 }
 

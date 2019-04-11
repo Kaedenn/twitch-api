@@ -1,3 +1,4 @@
+"use strict";
 
 /* Standard object (String, RegExp) additions {{{0 */
 
@@ -82,6 +83,7 @@ RegExp.escape = function _RegExp_escape(string) {
 /* General Utilities */
 let Util = {};
 
+/* Regular expression matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
 
 /* Logging {{{0 */
@@ -823,6 +825,49 @@ Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
 
 /* End color handling 0}}} */
 
+/* Notification APIs */
+class _Util_Notification {
+  constructor() {
+    this._enabled = false;
+    this._max = 2; /* max simultaneous notifications */
+    this._active = {}; /* currently-active notifications */
+    if (this.available) {
+      if (Notification.permission === "granted") {
+        this._enabled = true;
+      } else if (Notification.permission !== "denied") {
+        this.acquire();
+      } else {
+        /* denied outright */
+        console.log("Notifications disabled by user");
+      }
+    }
+  }
+  get available() { return window.hasOwnProperty("Notification"); }
+
+  acquire() {
+    if (this.available) {
+      this._req_promise = window.Notification.requestPermission();
+      this._req_promise.then(function(s) {
+        if (s === "granted") {
+          this._enabled = true;
+        } else {
+          this._enabled = false;
+        }
+      });
+    }
+  }
+
+  set max(m) { this._max = m; }
+  get max() { return this._max; }
+  closeAll() { /* TODO */ }
+  notify(msg) { /* TODO */ }
+
+}
+Util.Notify = new _Util_Notification();
+Util.Notify.Available = window.hasOwnProperty("Notification");
+Util.Notify.Enabled = Util.Notify.Available ? Notification.permission === "granted" : false;
+
+
 /* Convert an arguments object to an Array instance */
 Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
   return Array.of.apply(Array, argobj);
@@ -957,3 +1002,17 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
   return "?" + parts.join("&");
 }
 
+/* Add the javascript file to the document's <head> */
+Util.AddScript = function _Util_AddScript(src) {
+  var s = document.createElement("script");
+  s.setAttribute("type", "text/javascript");
+  s.setAttribute("src", src);
+  document.head.appendChild(s);
+};
+
+/* Add all of the javascript files to the document's <head> */
+Util.AddScripts = function _Util_AddScripts(scripts) {
+  for (var s of scripts) {
+    Util.AddScript(s);
+  }
+};
