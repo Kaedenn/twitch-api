@@ -845,13 +845,14 @@ class _Util_Notification {
   get available() { return window.hasOwnProperty("Notification"); }
 
   acquire() {
+    var self = this;
     if (this.available) {
       this._req_promise = window.Notification.requestPermission();
       this._req_promise.then(function(s) {
         if (s === "granted") {
-          this._enabled = true;
+          self._enabled = true;
         } else {
-          this._enabled = false;
+          self._enabled = false;
         }
       });
     }
