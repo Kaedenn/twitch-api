@@ -477,6 +477,7 @@ TwitchClient.prototype._build_privmsg =
 function _TwitchClient__build_privmsg(chobj, message) {
   /* Construct the parsed flags object */
   let flag_obj = {};
+  let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
   flag_obj["badges"] = this._self_userstate["badges"];
   if (!flag_obj["badges"])
     flag_obj["badges"] = [];
@@ -486,7 +487,7 @@ function _TwitchClient__build_privmsg(chobj, message) {
   flag_obj["subscriber"] = this._self_userstate["subscriber"];
   flag_obj["mod"] = this._self_userstate["mod"];
   flag_obj["display-name"] = this._self_userstate["display-name"];
-  flag_obj["emotes"] = Twitch.FormatEmoteFlag(Twitch.ScanEmotes(message, Object.entries(this._self_emotes)));
+  flag_obj["emotes"] = emote_obj;
   /* TODO: generate unique ID */
   flag_obj["id"] = "00000000-0000-0000-0000-000000000000";
   flag_obj["user-id"] = this._self_userid;
@@ -509,7 +510,7 @@ function _TwitchClient__build_privmsg(chobj, message) {
   flag_str += `;display-name=${flag_obj["display-name"]}`;
   flag_str += `;subscriber=${flag_obj["subscriber"]}`;
   flag_str += `;mod=${flag_obj["mod"]}`;
-  flag_str += `;emotes=${flag_obj["emotes"]}`;
+  flag_str += `;emotes=${Twitch.FormatEmoteFlag(flag_obj["emotes"])}`;
   flag_str += `;id=${flag_obj["id"]}`;
   flag_str += `;user-id=${flag_obj["user-id"]}`;
   flag_str += `;room-id=${flag_obj["room-id"]}`;
