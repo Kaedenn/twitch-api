@@ -1,6 +1,36 @@
 "use strict";
 
-/* Standard object (String, RegExp) additions {{{0 */
+/* Standard object (Array, String, RegExp) additions {{{0 */
+
+/* Obtain the maximal element from an array */
+Array.prototype.max = function(func) {
+  if (this.length == 0) { return undefined; }
+  if (this.length == 1) { return this[0]; }
+  let values = [];
+  for (var e of this) {
+    if (func !== undefined) {
+      values.push(func(e));
+    } else {
+      values.push(e);
+    }
+  }
+  return Math.max.apply(Math, values);
+}
+
+/* Obtain the minimal element from an array */
+Array.prototype.min = function(func) {
+  if (this.length == 0) { return undefined; }
+  if (this.length == 1) { return this[0]; }
+  let values = [];
+  for (var e of this) {
+    if (func !== undefined) {
+      values.push(func(e));
+    } else {
+      values.push(e);
+    }
+  }
+  return Math.min.apply(Math, values);
+}
 
 /* Strip characters from left (pos) or right (neg) */
 String.prototype._stripFrom = function _String__stripFrom(chrs, from) {
