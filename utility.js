@@ -939,8 +939,8 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
 
 /* Strip escape characters from a string */
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
-  is_slash = (c) => c == "\\";
-  is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
+  let is_slash = (c) => c == "\\";
+  let is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
   let result = "";
   for (var [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20)
