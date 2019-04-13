@@ -903,7 +903,7 @@ Util.Zip = function _Util_Zip(...sequences) {
       seq.push(undefined);
     }
   }
-  result = [];
+  let result = [];
   /* Perform the zip operation */
   for (var i = 0; i < max_len; ++i) {
     let row = Array.from(curr, () => undefined);
