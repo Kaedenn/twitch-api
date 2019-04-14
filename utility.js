@@ -1047,3 +1047,33 @@ Util.AddScripts = function _Util_AddScripts(scripts) {
     Util.AddScript(s);
   }
 };
+
+/* Return whether or not the position is inside the box */
+Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
+  if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
+    return true;
+  } else {
+    return false;
+  }
+};
+
+/* Return whether or not the position is inside the given DOMRect */
+Util.RectContains = function _Util_RectContains(x, y, rect) {
+  if (x >= rect.left && x <= rect.right) {
+    if (y >= rect.top && y <= rect.bottom) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Return whether or not the position is over the HTML element */
+Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
+  let rects = elem.getClientRects();
+  for (let rect of rects) {
+    if (Util.RectContains(x, y, rect)) {
+      return true;
+    }
+  }
+  return false;
+};
