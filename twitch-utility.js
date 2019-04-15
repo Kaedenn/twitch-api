@@ -1,7 +1,29 @@
 "use strict";
 
+/* Reference information {{{0
+ *
+ * PRIVMSG flags:
+ * 'badge-info': "subscriber/12"
+ * 'badges': [["moderator", "1"], ["subscriber", "12"], ["bits", "1000"]]
+ * 'color': "#0262C1"
+ * 'display-name': "Kaedenn_"
+ * 'emotes': null
+ * 'flags': null
+ * 'id': "6d7a2b5e-284d-44a7-8f99-0b910ca11b2b"
+ * 'mod': 1
+ * 'room-id': 70067886
+ * 'subscriber': 1
+ * 'tmi-sent-ts': 1555203525573
+ * 'turbo': 0
+ * 'user-id': 175437030
+ * 'user-type': "mod"
+ *
+ * 0}}}
+ */
+
+
 /* Twitch utilities */
-var Twitch = {};
+let Twitch = {};
 
 /* Storage of values used for debugging */
 class _Twitch_DebugCache {
@@ -53,7 +75,7 @@ Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8
 Twitch.API = function _Twitch_API(global_headers, private_headers) {
   /* GET url, without headers */
   this.GetSimple = function _Twitch_API_GetSimple(url, callback) {
-    var req = new XMLHttpRequest();
+    let req = new XMLHttpRequest();
     req.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
@@ -68,7 +90,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
   };
   /* GET url, adding any given headers, optionally adding private headers */
   this.Get = function _Twitch_API_Get(url, callback, headers={}, add_private=false) {
-    var req = new XMLHttpRequest();
+    let req = new XMLHttpRequest();
     req.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
@@ -80,14 +102,14 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
     };
     req.open("GET", url);
     req.setRequestHeader("Accept", "application/vnd.twitchtv.v5+json");
-    for (var key of Object.keys(global_headers)) {
+    for (let key of Object.keys(global_headers)) {
       req.setRequestHeader(key, global_headers[key]);
     }
-    for (var key of Object.keys(headers)) {
+    for (let key of Object.keys(headers)) {
       req.setRequestHeader(key, headers[key]);
     }
     if (add_private) {
-      for (var key of Object.keys(private_headers)) {
+      for (let key of Object.keys(private_headers)) {
         req.setRequestHeader(key, private_headers[key]);
       }
     }
@@ -103,10 +125,10 @@ Twitch.ParseUser = function _Twitch_ParseUser(user) {
 
 /* Parse channel to {channel, room, roomuid} */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
-  var ch = channel;
-  var room = null;
-  var roomuid = null;
-  var parts = ch.split(':');
+  let ch = channel;
+  let room = null;
+  let roomuid = null;
+  let parts = ch.split(':');
   if (parts.length == 1) {
     ch = parts[0];
   } else if (parts.length == 3) {
@@ -143,7 +165,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
 
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
-  var result = undefined;
+  let result = undefined;
   if (value.length == 0) {
     /* Translate empty strings to null */
     result = null;
@@ -155,8 +177,8 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
     switch (key) {
       case "badges":
         result = [];
-        for (var badge of value.split(',')) {
-          var [badge_name, badge_rev] = badge.split('/');
+        for (let badge of value.split(',')) {
+          let [badge_name, badge_rev] = badge.split('/');
           result.push([badge_name, badge_rev]);
         }
         break;
@@ -183,10 +205,10 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 Twitch.ParseData = function _Twitch_ParseData(dataString) {
   /* @key=value;key=value;... */
   dataString = dataString.lstrip('@');
-  var parts = dataString.split(';');
-  var data = {};
-  for (var item of dataString.split(';')) {
-    var [key, val] = item.split('=');
+  let parts = dataString.split(';');
+  let data = {};
+  for (let item of dataString.split(';')) {
+    let [key, val] = item.split('=');
     val = Twitch.ParseFlag(key, val);
     Twitch.DebugCache.add('flags', key);
     Twitch.DebugCache.add('flag-' + key, val);
@@ -197,12 +219,12 @@ Twitch.ParseData = function _Twitch_ParseData(dataString) {
 
 /* Parse an emote specification flag */
 Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
-  var result = [];
-  for (var emote_def of value.split('/')) {
-    var seppos = emote_def.indexOf(':');
-    var emote_id = parseInt(emote_def.substr(0, seppos));
-    for (var range of emote_def.substr(seppos+1).split(',')) {
-      var [start, end] = range.split('-');
+  let result = [];
+  for (let emote_def of value.split('/')) {
+    let seppos = emote_def.indexOf(':');
+    let emote_id = parseInt(emote_def.substr(0, seppos));
+    for (let range of emote_def.substr(seppos+1).split(',')) {
+      let [start, end] = range.split('-');
       result.push({id: emote_id,
                    name: null,
                    start: parseInt(start),
@@ -214,8 +236,8 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
 
 /* Format an emote specification flag */
 Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
-  var specs = [];
-  for (var emote of emotes) {
+  let specs = [];
+  for (let emote of emotes) {
     if (emote.id !== null) {
       specs.push(`${emote.id}:${emote.start}-${emote.end}`);
     }
@@ -225,21 +247,22 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
 
 /* Convert an emote name to a regex */
 Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
-  var pat = RegExp.escape(emote);
-  return new RegExp("(?:\\b|[\\s])(" + pat + ")(?:\\b|[\\s])", "g");
+  /* NOTE: Emotes from Twitch are already regexes; dont escape them */
+  return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
 }
 
 /* Generate emote specifications for the given emotes [eid, ename] */
 Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
-  var results = [];
-  for (var emote_def of emotes) {
-    var [eid, emote] = emote_def;
-    var pat = Twitch.EmoteToRegex(emote);
-    var len = emote.length;
-    var arr;
+  let results = [];
+  for (let emote_def of emotes) {
+    let [eid, emote] = emote_def;
+    let pat = Twitch.EmoteToRegex(emote);
+    let arr;
     while ((arr = pat.exec(msg)) !== null) {
-      var start = pat.lastIndex - len;
-      var end = pat.lastIndex;
+      /* arr = [wholeMatch, matchPart] */
+      let start = arr.index + arr[0].indexOf(arr[1]);
+      /* -1 to keep consistent with Twitch's off-by-one */
+      let end = start + arr[1].length - 1;
       results.push({id: eid, name: emote, start: start, end: end});
     }
   }
@@ -348,7 +371,7 @@ Twitch.IRC = {
 
   /* Return true if the line should be silently ignored */
   ShouldIgnore: function _Twitch_IRC_ShouldIgnore(line) {
-    for (var pat of Twitch.IRC.Messages.Ignore) {
+    for (let pat of Twitch.IRC.Messages.Ignore) {
       if (line.match(pat)) {
         return true;
       }
@@ -360,7 +383,7 @@ Twitch.IRC = {
   ParseSpecial: {
     /* PRIVMSG: Handle /me */
     'PRIVMSG': function _Twitch_IRC_ParseSpecial_PRIVMSG(obj) {
-      var msg = obj.message;
+      let msg = obj.message;
       if (msg.startsWith("\x01ACTION ") && msg.endsWith('\x01')) {
         obj.fields.action = true;
         obj.fields.message = msg.strip('\x01').substr("ACTION ".length);
@@ -376,8 +399,8 @@ Twitch.IRC = {
     },
     /* USERNOTICE: Handle sub notices */
     'USERNOTICE': function _Twitch_IRC_ParseSpecial_USERNOTICE(obj) {
-      var fields = obj.fields;
-      var flags = fields.flags;
+      let fields = obj.fields;
+      let flags = fields.flags;
       fields.issub = false;
       fields.sub_kind = null;
       fields.sub_user = null;
@@ -427,12 +450,12 @@ Twitch.IRC = {
   /* Parse the given line into an object defined by Twitch.IRC.Messages */
   Parse: function _Twitch_IRC_Parse(line) {
     if (Twitch.IRC.ShouldIgnore(line)) { return null; }
-    var cmd = null;
-    var pattern = null;
-    var match = null;
-    var rules = null
-    for (var [pn, pr] of Object.entries(Twitch.IRC.Messages)) {
-      var [pat, patrules] = pr;
+    let cmd = null;
+    let pattern = null;
+    let match = null;
+    let rules = null
+    for (let [pn, pr] of Object.entries(Twitch.IRC.Messages)) {
+      let [pat, patrules] = pr;
       if (pn == "Ignore") continue;
       if ((match = line.match(pat)) !== null) {
         cmd = pn;
@@ -447,13 +470,13 @@ Twitch.IRC = {
       return null;
     }
     /* Construct a response */
-    var resp = {
+    let resp = {
       cmd: cmd,
       line: line,
       patinfo: [pattern, match],
       fields: {}
     };
-    for (var [fn, fi] of Object.entries(rules)) {
+    for (let [fn, fi] of Object.entries(rules)) {
       /* Perform special parsing on specific items */
       if (["username", "user", "login"].includes(fn)) {
         /* Parse a username */
@@ -481,9 +504,9 @@ Twitch.IRC = {
 /* (TODO: REMOVE) Parse a line received through the Twitch websocket */
 Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   /* Try parsing with the new object */
-  var result = { cmd: null };
-  var parts = line.split(' ');
-  var data = {};
+  let result = { cmd: null };
+  let parts = line.split(' ');
+  let data = {};
   if (parts[0].startsWith('@')) {
     data = Twitch.ParseData(parts[0]);
     parts.shift();
@@ -536,7 +559,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = parts[4];
   } else if (parts[1] == "PRIVMSG") {
     /* [@<flags>] :<user> PRIVMSG <channel> :<msg> */
-    var msg = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
+    let msg = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
     result.cmd = "PRIVMSG";
     result.flags = data;
     result.user = Twitch.ParseUser(parts[0]);
@@ -654,11 +677,11 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
 
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
-  var pats = [
+  let pats = [
     ['oauth:', /oauth:[\w]+/g],
     ['OAuth ', /OAuth [\w]+/g]
   ];
-  for (var [name, pat] of pats) {
+  for (let [name, pat] of pats) {
     if (msg.search(pat)) {
       msg = msg.replace(pat, `${name}<removed>`);
     }

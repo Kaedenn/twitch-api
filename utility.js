@@ -112,6 +112,8 @@ RegExp.escape = function _RegExp_escape(string) {
 
 /* General Utilities */
 let Util = {};
+Util.__wskey = null;
+Util.__wscfg = "twitch-api-web-storage-key";
 
 /* Regular expression matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
@@ -855,7 +857,7 @@ Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
 
 /* End color handling 0}}} */
 
-/* Notification APIs */
+/* Notification APIs {{{0 */
 class _Util_Notification {
   constructor() {
     this._enabled = false;
@@ -897,7 +899,25 @@ class _Util_Notification {
 Util.Notify = new _Util_Notification();
 Util.Notify.Available = window.hasOwnProperty("Notification");
 Util.Notify.Enabled = Util.Notify.Available ? Notification.permission === "granted" : false;
+/* End notification APIs 0}}} */
 
+/* Escape characters */
+Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
+
+/* Escape the string and return a map of character movements */
+Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
+  let result = "";
+  let map = [];
+  let i = 0, j = 0;
+  while (i < s.length) {
+    map.push(j);
+    var r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
+    result = result + r;
+    i += 1;
+    j += r.length;
+  }
+  return [result, map];
+}
 
 /* Convert an arguments object to an Array instance */
 Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
@@ -947,6 +967,14 @@ Util.Zip = function _Util_Zip(...sequences) {
   return result;
 }
 
+/* Number formatting */
+Util.Pad = function _Util_Pad(n, digits, padChr) {
+  if (padChr === undefined) {
+    padChr = '0';
+  }
+  return (new String(n)).padStart(digits, padChr);
+}
+
 /* Convert a string to an array of character codes */
 Util.StringToCodes = function _Util_StringToCodes(str) {
   let result = [];
@@ -955,6 +983,51 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
   }
   return result;
 }
+
+/* localStorage functions {{{0 */
+
+/* Obtain the configured localStorage key */
+Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
+  if (Util.__wskey !== null) {
+    return Util.__wskey;
+  }
+  let key = JSON.parse(window.localStorage.getItem(Util.__wscfg));
+  return key; /* may be null */
+}
+
+/* Select the localStorage key to use */
+Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
+  Util.__wskey = key;
+  window.localStorage.setItem(Util.__wscfg, JSON.stringify(key));
+}
+
+/* Get storage value, using either the configured key or the one given */
+Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
+  if (key === null) {
+    key = Util.GetWebStorageKey();
+  }
+  if (key === null) {
+    Util.Error("Util.GetWebStorage called without a key configured");
+  } else {
+    return JSON.parse(window.localStorage.getItem(key));
+  }
+}
+
+/* Store a localStorage value */
+Util.SetWebStorage = function _Util_SetWebStorage(value, key=null) {
+  if (key === null) {
+    key = Util.GetWebStorageKey();
+  }
+  if (key === null) {
+    Util.Error("Util.SetWebStorage called without a key configured");
+  } else {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }
+}
+
+/* End localStorage functions 0}}} */
+
+/* Special escaping {{{0 */
 
 /* Build a character escape sequence for the code given */
 Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
@@ -983,6 +1056,10 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   }
   return result;
 }
+
+/* End special escaping 0}}} */
+
+/* Query String handling {{{0 */
 
 /* Parse a query string (with leading ? omitted) with the following rules:
  *  `key` gives {key: true}
@@ -1033,6 +1110,10 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
   return "?" + parts.join("&");
 }
 
+/* End query string handling 0}}} */
+
+/* Loading scripts {{{0 */
+
 /* Add the javascript file to the document's <head> */
 Util.AddScript = function _Util_AddScript(src) {
   var s = document.createElement("script");
@@ -1047,6 +1128,10 @@ Util.AddScripts = function _Util_AddScripts(scripts) {
     Util.AddScript(s);
   }
 };
+
+/* End loading scripts 0}}} */
+
+/* Point-box functions {{{0 */
 
 /* Return whether or not the position is inside the box */
 Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
@@ -1077,3 +1162,6 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
   }
   return false;
 };
+
+/* End point-box functions 0}}} */
+
