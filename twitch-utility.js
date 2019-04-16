@@ -713,3 +713,6 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   return msg;
 }
 
+/* Mark the Twitch Utility API as loaded */
+Twitch.API_Loaded = true;
+

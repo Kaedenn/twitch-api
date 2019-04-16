@@ -1087,3 +1087,6 @@ function _TwitchClient_OnWebsocketClose(event) {
   Util.FireEvent(new TwitchEvent("CLOSE", event));
 }
 
+/* Mark the Twitch Client API as loaded */
+TwitchClient.API_Loaded = true;
+

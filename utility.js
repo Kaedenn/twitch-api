@@ -1318,3 +1318,6 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
 
 /* End point-box functions 0}}} */
 
+/* Mark the Utility API as loaded */
+Util.API_Loaded = true;
+

@@ -1,6 +1,6 @@
 "use strict";
 
-var colors = {
+var AllColors = {
     "dust": "#b2996e",
     "tea": "#65ab7c",
     "cement": "#a5a391",
@@ -254,4 +254,7 @@ var colors = {
     "green": "#15b01a",
     "purple": "#7e1e9c"
 };
+
+/* Mark the Colors API as loaded */
+AllColors.API_Loaded = true;
 
