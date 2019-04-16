@@ -331,7 +331,7 @@ function _TwitchClient__ensureChannel(channel) {
 TwitchClient.prototype._ensureRoom =
 function _TwitchClient__ensureRoom(channel) {
   channel = this._ensureChannel(channel);
-  let cname = channel.channel.toLowerCase();
+  let cname = channel.channel;
   if (!(cname in this._rooms)) {
     this._rooms[cname] = {
       users: [],
