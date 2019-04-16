@@ -1,6 +1,6 @@
 "use strict";
 
-/* Reference information {{{0
+/* Reference information
  *
  * PRIVMSG flags:
  * 'badge-info': "subscriber/12"
@@ -17,10 +17,7 @@
  * 'turbo': 0
  * 'user-id': 175437030
  * 'user-type': "mod"
- *
- * 0}}}
  */
-
 
 /* Twitch utilities */
 let Twitch = {};
@@ -49,54 +46,81 @@ class _Twitch_DebugCache {
 }
 Twitch.DebugCache = new _Twitch_DebugCache();
 
-/* Store known Twitch/FFZ/BTTV API URLs */
+/* API hosts */
 Twitch.JTVNW = "http://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
+/* Store URLs to specific asset APIs */
 Twitch.URL = {};
+/* Twitch rooms */
 Twitch.URL.Rooms = (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`;
+/* Twitch badges */
 Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
-Twitch.URL.Cheermotes = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
-Twitch.URL.AllEmotes = () => `${Twitch.Kraken}/chat/emoticons`; /* XXX: CORS */
+/* Twitch cheers */
+Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
+Twitch.URL.Cheers = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
+Twitch.URL.AllCheers = () => `${Twitch.Kraken}/bits/actions`;
+/* Twitch emotes */
+Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
 Twitch.URL.EmoteSet = (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`;
-Twitch.URL.AllCheermotes = () => `${Twitch.Kraken}/bits/actions`;
-Twitch.URL.AllFFZEmotes = () => `${Twitch.FFZ}/emoticons`;
+/* FFZ emotes */
+Twitch.URL.FFZAllEmotes = () => `${Twitch.FFZ}/emoticons`;
 Twitch.URL.FFZEmotes = (cid) => `${Twitch.FFZ}/room/id/${cid}`;
 Twitch.URL.FFZEmote = (eid) => `${Twitch.FFZ}/emote/${eid}`;
-Twitch.URL.BTTVEmotes = () => `${Twitch.BTTV}/emotes`;
-Twitch.URL.BTTVChannelEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
+Twitch.URL.FFZBadges = () => `${Twitch.FFZ}/_badges`;
+Twitch.URL.FFZBadgeUsers = () => `${Twitch.FFZ}/badges`;
+/* BTTV emotes */
+Twitch.URL.BTTVAllEmotes = () => `${Twitch.BTTV}/emotes`;
+Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
-Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
-Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
 
 /* Abstract XMLHttpRequest to a simple url -> callback system */
-Twitch.API = function _Twitch_API(global_headers, private_headers) {
+Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {
+  this._onerror = onerror;
+
   /* GET url, without headers */
-  this.GetSimple = function _Twitch_API_GetSimple(url, callback) {
+  this.GetSimple =
+  function _Twitch_API_GetSimple(url, callback, errorcb=null) {
     let req = new XMLHttpRequest();
     req.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
           callback(JSON.parse(this.responseText));
         } else {
-          console.warn(this);
+          if (errorcb !== null) {
+            errorcb(this);
+          } else if (this._onerror) {
+            this._onerror(this);
+          } else {
+            console.warn(this);
+          }
         }
       }
     }
     req.open("GET", url);
     req.send();
   };
+
   /* GET url, adding any given headers, optionally adding private headers */
-  this.Get = function _Twitch_API_Get(url, callback, headers={}, add_private=false) {
+  this.Get =
+  function _Twitch_API_Get(url, callback, headers={}, add_private=false, errorcb=null) {
     let req = new XMLHttpRequest();
+    let callerStack = Util.GetStack();
     req.onreadystatechange = function() {
       if (this.readyState == 4) {
         if (this.status == 200) {
           callback(JSON.parse(this.responseText));
         } else {
-          console.warn(this);
+          if (errorcb !== null) {
+            errorcb(this);
+          } else if (this._onerror) {
+            this._onerror(this);
+          } else {
+            Util.WarnOnly(`Failed to get "${url}" stack=`, callerStack);
+            Util.WarnOnly(url, this);
+          }
         }
       }
     };

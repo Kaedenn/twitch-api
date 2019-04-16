@@ -87,7 +87,12 @@ class TwitchEvent extends Event {
   get user() { return this._parsed.user; }
   get name() { return this._parsed.flags["display-name"]; }
   get flags() { return this._parsed.flags; }
-  flag(flag) { return !!this._parsed.flags ? this._parsed.flags[flag] : undefined; }
+  flag(flag) {
+    if (!!this._parsed.flags) {
+      return this._parsed.flags[flag];
+    }
+    return undefined;
+  }
 
   /* Extra attributes */
   repr() {
@@ -182,6 +187,8 @@ function TwitchClient(opts) {
   /* Extension emotes */
   this._ffz_emotes = {};
   this._ffz_channel_emotes = {};
+  this._ffz_badges = {};
+  this._ffz_badge_users = {};
   this._bttv_emotes = {};
   this._bttv_channel_emotes = {};
 
@@ -429,7 +436,11 @@ TwitchClient.prototype._getChannelCheers =
 function _TwitchClient__getChannelCheers(cname, cid) {
   this._channel_cheers[cname] = {};
   if (this._no_assets) return;
-  this._api.Get(Twitch.URL.Cheermotes(cid), (function(json) {
+  if (!this._has_clientid) {
+    Util.Warn("Unable to get channel cheers; no clientid");
+    return;
+  }
+  this._api.Get(Twitch.URL.Cheers(cid), (function(json) {
     for (let badge_def of json.actions) {
       /* Simplify things later by adding the regexp here */
       badge_def.word_pattern = new RegExp('^(' + RegExp.escape(badge_def.prefix) + ')([1-9][0-9]*)$', 'i');
@@ -446,12 +457,19 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
   if (this._no_assets) return;
   this._api.GetSimple(Twitch.URL.FFZEmotes(cid), (function(json) {
     /* TODO: store */
-    console.log(`Received FFZ emotes for ${cname}:${cid}:`, json);
-  }).bind(this));
-  this._api.GetSimple(Twitch.URL.AllFFZEmotes(), (function(json) {
+    /* NOTE: gives 404 when channel has no emotes */
+    //console.log(`Received FFZ emotes for ${cname}:${cid}:`, json);
+  }).bind(this), (function _ffze_onerror(resp) {
+    if (resp.status == 404) {
+      Util.Log(`Channel ${cname}:${cid} has no FFZ emotes`);
+    }
+  }));
+  this._api.GetSimple(Twitch.URL.FFZAllEmotes(), (function(json) {
     /* TODO: store */
-    console.log("Received global FFZ emotes:", json);
-  }).bind(this));
+    //console.log("Received global FFZ emotes:", json);
+  }).bind(this), (function _ffzae_onerror(resp) {
+    
+  }));
 }
 
 /* Private: Load in the global and per-channel BTTV emotes */
@@ -459,6 +477,21 @@ TwitchClient.prototype._getBTTVEmotes =
 function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
   if (this._no_assets) return;
+  this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
+    /* TODO: store */
+    /* NOTE: gives 404 when channel has no emotes */
+    //console.log("Received BTTV emotes for", cname, json);
+  }).bind(this), (function _bttve_onerror(resp) {
+    if (resp.status == 404) {
+      Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
+    }
+  }));
+  this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), (function(json) {
+    /* TODO: store */
+    //console.log("Received global BTTV emotes", json);
+  }).bind(this), (function _bttvae_onerror(resp) {
+    
+  }));
 }
 
 /* Private: Load in the global badges  */
@@ -471,6 +504,16 @@ function _TwitchClient__getGlobalBadges() {
       this._global_badges[badge_name] = json["badge_sets"][badge_name];
     }
   }).bind(this), {}, false);
+  if (this._enable_ffz) {
+    this._api.GetSimple(Twitch.URL.FFZBadgeUsers(), (function(resp) {
+      for (let badge of Object.values(resp.badges)) {
+        this._ffz_badges[badge.id] = badge;
+      }
+      for (let [badge_nr, users] of Object.entries(resp.users)) {
+        this._ffz_badge_users[badge_nr] = users;
+      }
+    }).bind(this));
+  }
 }
 
 /* Private: Build a faux PRIVMSG event from the chat message given */
@@ -593,10 +636,11 @@ function _TwitchClient_LeaveChannel(channel) {
   channel = this._ensureChannel(channel);
   let ch = channel.channel;
   if (this._is_open) {
-    if (this._channels.indexOf(ch) > -1) {
+    let idx = this._channels.indexOf(ch);
+    if (idx > -1) {
       this._ws.send(`PART ${ch}`);
-      let idx = this._channels.indexOf(ch);
-      this._channels.splice(i, 1);
+      this._channels.splice(idx, 1);
+      delete this._rooms[ch]; /* harmless if fails */
     } else {
       Util.Warn(`LeaveChannel: Not in channel ${ch}`);
     }
@@ -670,8 +714,8 @@ function _TwitchClient_FindCheers(cname, message) {
 }
 
 /* Obtain information about a given cheermote */
-TwitchClient.prototype.GetCheermote =
-function _TwitchClient_GetCheermote(cname, name) {
+TwitchClient.prototype.GetCheer =
+function _TwitchClient_GetCheer(cname, name) {
   let cheer = null
   if (this._channel_cheers.hasOwnProperty(cname)) {
     if (this._channel_cheers[cname].hasOwnProperty(name)) {
@@ -940,6 +984,18 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         if (!this._rooms[cname].userInfo.hasOwnProperty(result.user)) {
           this._rooms[cname].userInfo[result.user] = {};
         }
+        if (!event.flag('badges')) event.flags.badges = [];
+        if (this._enable_ffz) {
+          for (let [badge_nr, users] of Object.entries(this._ffz_badge_users)) {
+            if (users.indexOf(result.user) > -1 || result.user === "kaedenn_") {
+              let ffz_badges = event.flag('ffz-badges');
+              if (ffz_badges === undefined) ffz_badges = [];
+              ffz_badges.push(this._ffz_badges[badge_nr]);
+              event.flags['ffz-badges'] = ffz_badges;
+            }
+          }
+        }
+        /* TODO: add BTTV badges */
         let ui = this._rooms[cname].userInfo[result.user];
         ui.ismod = event.ismod;
         ui.issub = event.issub;

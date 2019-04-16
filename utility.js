@@ -1,3 +1,37 @@
+/** Generic Utility-ish Functions for the TASToys' JS Twitch API
+ *
+ * Provides the following APIs, among others:
+ *
+ * Extensions to the standard JavaScript classes (String, Array)
+ * Logging functions including stack-trace handling
+ * Functions for color arithmetic
+ * An "improved" random number generator
+ * Shortcut functions for a number of trivial tasks (fireEvent, formatting)
+ * Functions for localStorage management
+ * Functions for point-in-box calculation
+ * Functions for handling location.search (query string) management
+ * Functions for generating version 4 (random) UUIDs
+ *
+ * Credits, citations:
+ *  PRNG and UUID generation
+ *    https://github.com/kelektiv/node-uuid.git
+ *  Color calculations (RGBtoHSL, HSLtoRGB)
+ *    https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786
+ *  Calculating relative luminance
+ *    https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef
+ *  Calculating contrast ratio
+ *    https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef
+ *  Maximizing contrast
+ *    Inspired by https://ux.stackexchange.com/a/107319
+ */
+
+/** vim folding
+ * Blocks:
+%g/{{{[0-9]/norm ^3t{zf%
+ * Functions:
+%g/^}/norm zf%
+ */
+
 "use strict";
 
 /* Standard object (Array, String, RegExp) additions {{{0 */
@@ -86,6 +120,29 @@ String.prototype.repr = function _String_repr() {
   }
 }
 
+/* Implement Array-line functions for String (map, forEach, withCharAt) */
+String.prototype.map = function _String_map(func) {
+  let result = "";
+  for (let ch of this) {
+    result += func(ch);
+  }
+  return result;
+};
+
+String.prototype.forEach = function _String_forEach(func) {
+  for (let ch of this) {
+    func(ch);
+  }
+};
+
+String.prototype.withCharAt = function _String_withCharAt(chr, pos) {
+  var result = this;
+  if (pos >= 0 && pos < this.length) {
+    result = this.substr(0, pos) + chr + this.substr(pos);
+  }
+  return result;
+};
+
 /* Split a string at most N times, returning the tokens and the rest of the
  * string, such that STR.split_n(sep, n).join(sep) === STR */
 String.prototype.split_n = function _String_split_n(sep, num) {
@@ -117,6 +174,21 @@ Util.__wscfg = "twitch-api-web-storage-key";
 
 /* Regular expression matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+
+/* Ensure a URL is formatted properly */
+Util.URL = function _Util_URL(url) {
+  if (url.startsWith('//')) {
+    let p = 'http:';
+    if (window.location.protocol == "https:") {
+      p = 'https:';
+    }
+    return p + url;
+  }
+  return url;
+}
+
+/* Escape characters */
+Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
 
 /* Logging {{{0 */
 Util.LEVEL_TRACE = 2;
@@ -426,7 +498,6 @@ class Color {
 
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
-    /* https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786 */
     r /= 255; g /= 255; b /= 255;
     let max = Math.max(r, g, b);
     let min = Math.min(r, g, b);
@@ -443,7 +514,6 @@ class Color {
 
   /* Convert (h, s, l) (deg, 0~100, 0~100) to (r, g, b) (0~255) */
   static HSLToRGB(h, s, l) {
-    /* https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786 */
     let c = (1 - Math.abs(2 * l - 1)) * s;
     let hp = h / 60.0;
     let x = c * (1 - Math.abs((hp % 2) - 1));
@@ -594,7 +664,6 @@ class Color {
 
   /* Calculate the Relative Luminance */
   getRelativeLuminance() {
-    /* https://www.w3.org/TR/2008/REC-WCAG20-20081211/#relativeluminancedef */
     let [r, g, b] = this.rgb_1;
     function c_to_cx(c) {
       if (c < 0.03928) {
@@ -608,7 +677,6 @@ class Color {
 
   /* Calculate the contrast ratio against the given color */
   getConstrastRatioWith(c2) {
-    /* https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef */
     let l1 = this.getRelativeLuminance();
     let l2 = (new Color(c2)).getRelativeLuminance();
     return (l1 + 0.05) / (l2 + 0.05);
@@ -839,7 +907,6 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
 
 /* Determine which color contrasts the best with the given color */
 Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
-  /* Inspired by https://ux.stackexchange.com/a/107319 */
   let best_color = null;
   let best_contast = null;
   for (var c of colors) {
@@ -894,15 +961,101 @@ class _Util_Notification {
   get max() { return this._max; }
   closeAll() { /* TODO */ }
   notify(msg) { /* TODO */ }
-
 }
+
 Util.Notify = new _Util_Notification();
 Util.Notify.Available = window.hasOwnProperty("Notification");
 Util.Notify.Enabled = Util.Notify.Available ? Notification.permission === "granted" : false;
 /* End notification APIs 0}}} */
 
-/* Escape characters */
-Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
+/* Return true if the given object inherits from the given typename */
+Util.IsInstanceOf = function _Object_isInstanceOf(obj, typename) {
+  for (let p = obj; p; p = p.__proto__) {
+    if (p.constructor.name == typename) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* PRNG (Pseudo-Random Number Generator) {{{0 */
+class _Util_Random {
+  constructor(disable_crypto) {
+    this._crypto = null;
+    if (disable_crypto) {
+      Util.Warn("Forcibly disabling crypto");
+    }
+    if (typeof(crypto) !== 'undefined' && crypto.getRandomValues) {
+      this._crypto = crypto;
+    } else if (typeof(msCrypto) !== "undefined"
+               && typeof window.msCrypto.getRandomValues == 'function') {
+      this._crypto = msCrypto;
+    } else {
+      console.error("Failed to get secure PRNG; falling back to Math.random");
+    }
+  }
+  
+  /* Obtain Uint8Array of random values using crypto */
+  _genRandCrypto(num_bytes) {
+    let a = new Uint8Array(num_bytes);
+    this._crypto.getRandomValues(a);
+    return a;
+  }
+
+  /* Obtain Uint8Array of random values using Math.random */
+  _genRandMath(num_bytes) {
+    let a = new Uint8Array(num_bytes);
+    let r = 0;
+    for (let i = 0; i < num_bytes; ++i) {
+      if ((i & 0x03) === 0) r = Math.random() * 0x100000000;
+      a[i] = r >>> ((i & 0x03) << 3) & 0xff;
+    }
+    return a;
+  }
+
+  numToHex(num, pad=2) {
+    return num.toString("16").padStart(pad, "0");
+  }
+
+  bytesToHex(bytes) {
+    let h = "";
+    for (var byte of bytes) { h += this.numToHex(byte); }
+    return h;
+  }
+
+  randBytes(num_bytes, encoding=null) {
+    let values;
+    if (this._crypto !== null) {
+      values = this._genRandCrypto(num_bytes);
+    } else {
+      values = this._genRandMath(num_bytes);
+    }
+    if (encoding === "hex") {
+      return this.bytesToHex(values);
+    } else {
+      return values;
+    }
+  }
+
+  hex8() { return this.randBytes(1, 'hex'); }
+  hex16() { return this.randBytes(2, 'hex'); }
+  hex32() { return this.randBytes(4, 'hex'); }
+  hex64() { return this.randBytes(8, 'hex'); }
+
+  uuid() {
+    let a = this.randBytes(16);
+    a[6] = (a[6] & 0x0f) | 0x40;
+    a[8] = (a[8] & 0x3f) | 0x80;
+    let h = this.bytesToHex(a);
+    let parts = [[0, 8], [8, 4], [12, 4], [16, 4], [20, 12]];
+    let result = [];
+    parts.forEach(([s, l]) => result.push(h.substr(s, l)));
+    return result.join("-");
+  }
+};
+
+Util.Random = new _Util_Random();
+/* End PRNG 0}}} */
 
 /* Escape the string and return a map of character movements */
 Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
