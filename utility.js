@@ -36,12 +36,34 @@
 
 /* Standard object (Array, String, RegExp) additions {{{0 */
 
+/* Return true if any of the values satisfy the function given */
+Array.prototype.any = function _Array_any(func) {
+  if (!func) func = (function(x) { !!x; });
+  for (let e of this) {
+    if (func(e)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Return true if all of the values satisfy the function given */
+Array.prototype.all = function _Array_all(func) {
+  if (!func) func = (function(x) { !!x; });
+  for (let e of this) {
+    if (!func(e)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 /* Obtain the maximal element from an array */
 Array.prototype.max = function(func) {
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
   let values = [];
-  for (var e of this) {
+  for (let e of this) {
     if (func !== undefined) {
       values.push(func(e));
     } else {
@@ -56,7 +78,7 @@ Array.prototype.min = function(func) {
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
   let values = [];
-  for (var e of this) {
+  for (let e of this) {
     if (func !== undefined) {
       values.push(func(e));
     } else {
@@ -136,7 +158,7 @@ String.prototype.forEach = function _String_forEach(func) {
 };
 
 String.prototype.withCharAt = function _String_withCharAt(chr, pos) {
-  var result = this;
+  let result = this;
   if (pos >= 0 && pos < this.length) {
     result = this.substr(0, pos) + chr + this.substr(pos);
   }
@@ -237,10 +259,10 @@ Util.GetStack = function _Util_GetStack() {
   let lines = [];
   try { throw new Error(); } catch (e) { lines = e.stack.trim().split("\n"); }
   lines.shift(); /* Discard _Util_GetStack */
-  for (var i = 0; i < Util.GetStackTrimBegin(); ++i) {
+  for (let i = 0; i < Util.GetStackTrimBegin(); ++i) {
     lines.shift();
   }
-  for (var i = 0; i < Util.GetStackTrimEnd(); ++i) {
+  for (let i = 0; i < Util.GetStackTrimEnd(); ++i) {
     lines.pop();
   }
   return lines;
@@ -249,7 +271,7 @@ Util.GetStack = function _Util_GetStack() {
 /* Parse a given stacktrace */
 Util.ParseStack = function _Util_ParseStack(lines) {
   let frames = [];
-  for (var line of lines) {
+  for (let line of lines) {
     let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
     let frame = {};
     frame.name = m[1];
@@ -284,7 +306,7 @@ Util.JoinPath = function _Util_JoinPath(dir, file) {
 Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   let pieces = [];
   try {
-    for (var path of paths) {
+    for (let path of paths) {
       path = (new URL(path)).pathname;
       let [dir, file] = Util.SplitPath(path);
       pieces.push([dir.split('/'), file]);
@@ -302,7 +324,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   /* Find the longest item */
   let ref_path = null;
   let len = 0;
-  for (var piece of pieces) {
+  for (let piece of pieces) {
     if (piece[0].length > len) {
       len = piece[0].length;
       /* Copy to protect from modification below */
@@ -311,9 +333,9 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   }
   /* Strip the common prefix */
   if (ref_path !== null) {
-    for (var i = 0; i < ref_path.length; ++i) {
+    for (let i = 0; i < ref_path.length; ++i) {
       if (pieces.every((p) => (p[0][0] == ref_path[i]))) {
-        for (var piece of pieces) { piece[0] = piece[0].slice(1); }
+        for (let piece of pieces) { piece[0] = piece[0].slice(1); }
       }
     }
   }
@@ -325,13 +347,13 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
 Util.FormatStack = function _Util_FormatStack(stack) {
   /* Strip out the common prefix directory */
   let paths = [];
-  for (var frame of stack) {
+  for (let frame of stack) {
     paths.push(frame.file);
   }
   paths = Util.StripCommonPrefix(paths);
   console.assert(stack.length == paths.length);
   let result = [];
-  for (var i = 0; i < paths.length; ++i) {
+  for (let i = 0; i < paths.length; ++i) {
     result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
   }
   return result.join("\n");
@@ -351,31 +373,61 @@ Util._toConsole = function _Util__toConsole(func, args) {
 class LoggerUtility {
   constructor() {
     this._hooks = {};
-    for (var v of Object.values(LoggerUtility.SEVERITIES)) {
+    this._filters = {};
+    for (let v of Object.values(LoggerUtility.SEVERITIES)) {
       this._hooks[v] = [];
+      this._filters[v] = [];
     }
   }
+
   static get SEVERITIES() {
     return {ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1};
   }
+
   _sev_value(sev) {
     return LoggerUtility.SEVERITIES[sev];
   }
+
   _assert_sev(sev) {
     if (this._hooks[this._sev_value(sev)] === undefined) {
-      console.exception(`LoggerUtility.add_hook: severity ${sev} not known`);
+      console.exception(`Logger: invalid severity ${sev}`);
       return false;
     }
     return true;
   }
+
   /* Hook function(sev, stacktrace, ...args) for the given severity */
   add_hook(fn, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
     this._hooks[this._sev_value(sev)].push(fn);
     return true;
   }
+
+  /* Add a filter function for the given severity
+   * (NOTE: will be called with an array of arguments) */
+  add_filter(func, sev="ALL") {
+    if (!this._assert_sev(sev)) { return false; }
+    console.log('Adding filter', func, 'for', sev);
+    this._filters[this._sev_value(sev)].push(func);
+  }
+
+  /* Test whether the message is filtered */
+  should_filter(message_args, severity) {
+    let sev = this._sev_value(severity);
+    for (let [key, filters] of Object.entries(this._filters)) {
+      if (key >= sev) {
+        for (let filter of filters) {
+          if (filter(message_args)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
   /* Return whether or not the given severity is enabled */
-  can_log(sev) {
+  severity_enabled(sev) {
     if (!this._assert_sev(sev)) { return false; }
     let val = this._sev_value(sev);
     if (Util.DebugLevel == Util.LEVEL_TRACE) return true;
@@ -387,11 +439,13 @@ class LoggerUtility {
     }
     return val >= LoggerUtility.SEVERITIES.WARN;
   }
+
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
   do_log(sev, argobj, stacktrace=false) {
-    if (!this.can_log(sev)) { return }
+    if (!this.severity_enabled(sev)) { return }
+    if (this.should_filter(argobj, sev)) { return; }
     let val = this._sev_value(sev);
-    for (var hook of this._hooks[val]) {
+    for (let hook of this._hooks[val]) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
       console.log(`Calling "${hook}" with ${args.length} args (${args.toSource()})`);
       console.log(`argobj = ${argobj.toSource()}`);
@@ -437,11 +491,15 @@ class LoggerUtility {
       }
     }
   }
+
+  /* Log the arguments given with a stacktrace */
   Trace(...args) { this.do_log("TRACE", args, true); }
   Debug(...args) { this.do_log("DEBUG", args, true); }
   Info(...args) { this.do_log("INFO", args, true); }
   Warn(...args) { this.do_log("WARN", args, true); }
   Error(...args) { this.do_log("ERROR", args, true); }
+
+  /* Log the arguments given without a stacktrace */
   TraceOnly(...args) { this.do_log("TRACE", args, false); }
   DebugOnly(...args) { this.do_log("DEBUG", args, false); }
   InfoOnly(...args) { this.do_log("INFO", args, false); }
@@ -534,7 +592,7 @@ class Color {
 
   /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
   static Renorm1(...args) {
-    var [r, g, b, a] = args;
+    let [r, g, b, a] = args;
     if (a === undefined) {
       return [r / 255, g / 255, b / 255];
     } else {
@@ -544,7 +602,7 @@ class Color {
 
   /* Renormalize (r, g, b[, a]) from 0~255 to 0~1 */
   static Renorm255(...args) {
-    var [r, g, b, a] = args;
+    let [r, g, b, a] = args;
     if (a === undefined) {
       return [r * 255, g * 255, b * 255];
     } else {
@@ -607,26 +665,26 @@ class Color {
 
   /* Attribute: [r, g, b, a] */
   get rgba() { return [this.r, this.g, this.b, this.a]; }
-  
+
   /* Attribute: [r, g, b] scaled to [0,1] */
   get rgb_1() {
     let c = new Color(this.r, this.g, this.b);
     return [c.r / 255, c.g / 255, c.b / 255];
   }
-  
+
   /* Attribute: [r, g, b, a] scaled to [0,1] */
   get rgba_1() {
     let c = new Color(this.r, this.g, this.b, this.a);
     return [c.r / 255, c.g / 255, c.b / 255, c.a / 255];
   }
-  
+
   /* Attribute: [h, s, l] */
   get hsl() { return Color.RGBToHSL(this.r, this.g, this.b); }
   set hsl(hsl) {
     let [h, s, l] = hsl;
     [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
   }
-  
+
   /* Attribute: [h, s, l, a] */
   get hsla() {
     let [r, g, b] = Color.RGBToHSL(this.r, this.g, this.b);
@@ -909,7 +967,7 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
 Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
   let best_color = null;
   let best_contast = null;
-  for (var c of colors) {
+  for (let c of colors) {
     let contrast = Util.ContrastRatio(c1, c);
     if (best_color === null) {
       best_color = c;
@@ -944,7 +1002,7 @@ class _Util_Notification {
   get available() { return window.hasOwnProperty("Notification"); }
 
   acquire() {
-    var self = this;
+    let self = this;
     if (this.available) {
       this._req_promise = window.Notification.requestPermission();
       this._req_promise.then(function(s) {
@@ -994,7 +1052,7 @@ class _Util_Random {
       console.error("Failed to get secure PRNG; falling back to Math.random");
     }
   }
-  
+
   /* Obtain Uint8Array of random values using crypto */
   _genRandCrypto(num_bytes) {
     let a = new Uint8Array(num_bytes);
@@ -1019,7 +1077,7 @@ class _Util_Random {
 
   bytesToHex(bytes) {
     let h = "";
-    for (var byte of bytes) { h += this.numToHex(byte); }
+    for (let byte of bytes) { h += this.numToHex(byte); }
     return h;
   }
 
@@ -1064,7 +1122,7 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
   let i = 0, j = 0;
   while (i < s.length) {
     map.push(j);
-    var r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
+    let r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
     result = result + r;
     i += 1;
     j += r.length;
@@ -1079,7 +1137,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 
 /* Apply a set of attributes to an HTMLElement */
 Util.ApplyAttributes = function _Util_ApplyAttributes(node, attrs, escape=true) {
-  for (var [k,v] of Object.entries(attrs)) {
+  for (let [k,v] of Object.entries(attrs)) {
     node.setAttribute(k, escape ? (new String(v)).escape() : v);
   }
 }
@@ -1096,22 +1154,22 @@ Util.Zip = function _Util_Zip(...sequences) {
   let curr = [];
   let max_len = 0;
   /* Make sure everything's an array, calculate the max length */
-  for (var seq of sequences) {
+  for (let seq of sequences) {
     let seq_array = Array.from(seq);
     max_len = Math.max(seq_array.length, max_len);
     curr.push(seq_array);
   }
   /* Ensure all arrays have the same size */
-  for (var seq of curr) {
+  for (let seq of curr) {
     while (seq.length < max_len) {
       seq.push(undefined);
     }
   }
   let result = [];
   /* Perform the zip operation */
-  for (var i = 0; i < max_len; ++i) {
+  for (let i = 0; i < max_len; ++i) {
     let row = Array.from(curr, () => undefined);
-    for (var j = 0; j < curr.length; ++j) {
+    for (let j = 0; j < curr.length; ++j) {
       row[j] = curr[j][i];
     }
     result.push(row);
@@ -1131,7 +1189,7 @@ Util.Pad = function _Util_Pad(n, digits, padChr) {
 /* Convert a string to an array of character codes */
 Util.StringToCodes = function _Util_StringToCodes(str) {
   let result = [];
-  for (var i = 0; i < str.length; ++i) {
+  for (let i = 0; i < str.length; ++i) {
     result.push(str.charCodeAt(i));
   }
   return result;
@@ -1199,7 +1257,7 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   let is_slash = (c) => c == "\\";
   let is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
   let result = "";
-  for (var [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
+  for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20)
       result = result.concat(Util.EscapeCharCode(cn));
     else if (ch == '\\')
@@ -1227,7 +1285,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
   if (!query) query = window.location.search;
   if (query.startsWith('?')) query = query.substr(1);
   let obj = {};
-  for (var part of query.split('&')) {
+  for (let part of query.split('&')) {
     if (part.indexOf('=') == -1) {
       obj[part] = true;
     } else {
@@ -1254,10 +1312,10 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
 
 /* Format a query string (including leading "?") */
 Util.FormatQueryString = function _Util_FormatQueryString(query) {
-  var parts = [];
-  for (var [k, v] of Object.entries(query)) {
-    var key = encodeURIComponent(k);
-    var val = encodeURIComponent(v);
+  let parts = [];
+  for (let [k, v] of Object.entries(query)) {
+    let key = encodeURIComponent(k);
+    let val = encodeURIComponent(v);
     parts.push(`${key}=${val}`);
   }
   return "?" + parts.join("&");
@@ -1269,7 +1327,7 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
 /* Add the javascript file to the document's <head> */
 Util.AddScript = function _Util_AddScript(src) {
-  var s = document.createElement("script");
+  let s = document.createElement("script");
   s.setAttribute("type", "text/javascript");
   s.setAttribute("src", src);
   document.head.appendChild(s);
@@ -1277,7 +1335,7 @@ Util.AddScript = function _Util_AddScript(src) {
 
 /* Add all of the javascript files to the document's <head> */
 Util.AddScripts = function _Util_AddScripts(scripts) {
-  for (var s of scripts) {
+  for (let s of scripts) {
     Util.AddScript(s);
   }
 };
