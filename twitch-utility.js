@@ -337,6 +337,11 @@ Twitch.IRC = {
       /^@([^ ]+) :([^ ]+) PRIVMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
       {flags: 1, user: 2, channel: 3, message: 4}
     ],
+    WHISPER: [
+      /* @<flags> :<name>!<user>@<user>.<host> WHISPER <recipient> :<message>\r\n */
+      /^@([^ ]+) :([^!]+)!([^@]+)@([^ ]+) WHISPER ([^ ]+) :(.*)(?:\r\n)?$/,
+      {flags: 1, sender: 2, recipient: 6, message: 7}
+    ],
     USERSTATE: [
       /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
       /^@([^ ]+) :([^ ]+) USERSTATE (\#[^ ]+)(?:\r\n)?$/,
@@ -595,6 +600,13 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
       result.action = false;
       result.message = msg;
     }
+  } else if (parts[1] == "WHISPER") {
+    result.cmd = "WHISPER";
+    result.flags = data;
+    result.user = data["display-name"];
+    result.sender = Twitch.ParseUser(parts[0]);
+    result.recipient = Twitch.ParseUser(parts[2]);
+    result.message = line.substr(line.indexOf(':', line.indexOf('WHISPER')) + 1);
   } else if (parts[1] == "USERSTATE") {
     /* [@<flags>] :<server> USERSTATE <channel> */
     result.cmd = "USERSTATE";

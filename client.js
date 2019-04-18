@@ -57,6 +57,7 @@ class TwitchEvent extends Event {
       PART: "PART",
       MODE: "MODE",
       PRIVMSG: "PRIVMSG",
+      WHISPER: "WHISPER",
       USERSTATE: "USERSTATE",
       ROOMSTATE: "ROOMSTATE",
       USERNOTICE: "USERNOTICE",
@@ -1004,6 +1005,8 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         ui.uuid = event.flag('id');
         ui.badges = event.flag('badges');
         Util.FireEvent(event);
+        break;
+      case "WHISPER":
         break;
       case "USERSTATE":
         for (let [key, val] of Object.entries(result.flags)) {

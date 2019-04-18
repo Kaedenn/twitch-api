@@ -1376,6 +1376,41 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
 
 /* End point-box functions 0}}} */
 
+/* CSS functions {{{0 */
+
+Util.CSS = {};
+
+/* Get a stylesheet by filename */
+Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
+  for (let ss of document.styleSheets) {
+    if (ss.href.endsWith(`/${filename.trimStart('/')}`)) {
+      return ss;
+    }
+  }
+  return null;
+};
+
+/* Given a stylesheet, obtain a rule definition by name */
+Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
+  for (let rule of css.cssRules) {
+    if (rule.selectorText == rule_name) {
+      return rule;
+    }
+  }
+  return null;
+}
+
+/* Given a rule, enumerate the defined properties' names */
+Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
+  let styles = [];
+  for (let i = 0; rule.style[i]; ++i) {
+    styles.push(rule.style[i]);
+  }
+  return styles;
+}
+
+/* End CSS functions 0}}} */
+
 /* Mark the Utility API as loaded */
 Util.API_Loaded = true;
 
