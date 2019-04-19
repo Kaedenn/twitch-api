@@ -46,7 +46,7 @@ class _Twitch_DebugCache {
 }
 Twitch.DebugCache = new _Twitch_DebugCache();
 
-/* API hosts */
+/* API hosts {{{0 */
 Twitch.JTVNW = "http://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
@@ -75,6 +75,7 @@ Twitch.URL.FFZBadgeUsers = () => `${Twitch.FFZ}/badges`;
 Twitch.URL.BTTVAllEmotes = () => `${Twitch.BTTV}/emotes`;
 Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
+/* End of API hosts 0}}} */
 
 /* Abstract XMLHttpRequest to a simple url -> callback system */
 Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {
@@ -240,7 +241,11 @@ Twitch.ParseData = function _Twitch_ParseData(dataString) {
   let parts = dataString.split(';');
   let data = {};
   for (let item of dataString.split(';')) {
-    let [key, val] = item.split('=');
+    let key = item;
+    let val = "";
+    if (item.indexOf('=') != -1) {
+      [key, val] = item.split('=');
+    }
     val = Twitch.ParseFlag(key, val);
     Twitch.DebugCache.add('flags', key);
     Twitch.DebugCache.add('flag-' + key, val);
@@ -511,8 +516,12 @@ Twitch.IRC = {
       cmd: cmd,
       line: line,
       patinfo: [pattern, match],
-      fields: {}
+      fields: {},
+      message: null
     };
+    if (rules.hasOwnProperty("message")) {
+      resp.message = match[rules.message];
+    }
     for (let [fn, fi] of Object.entries(rules)) {
       /* Perform special parsing on specific items */
       if (["username", "user", "login"].includes(fn)) {
@@ -549,7 +558,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     parts.shift();
   }
   if (parts[0] == "PING") {
-    /* "PING <server>" */
+    /* "PING :<server>" */
     result.cmd = "PING";
     result.server = parts[1].lstrip(':');
   } else if (parts[1] == "CAP" && parts[2] == "*" && parts[3] == "ACK") {
@@ -559,9 +568,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.server = parts[0].lstrip(':');
     result.flags = line.substr(line.indexOf(':', 1)+1).split(" ");
   } else if (parts[1] == "375" || parts[1] == "376" || parts[1] == "366") {
-    /* 375: Start TOPIC listing
-     * 376: End TOPIC listing
-     * 366: End of NAMES listing */
+    /* 375: Start TOPIC; 376: End TOPIC; 366: End NAMES */
     /* :<server> <code> <username> :<message> */
     result.cmd = "OTHER";
     result.server = parts[0].lstrip(':');

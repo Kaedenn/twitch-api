@@ -11,20 +11,18 @@
  */
 
 /* FIXME:
- *  _self_userstate:
- *    Broken for multiple channels; index by channel
+ *  OnWebsocketMessage:
+ *    Use Twitch.IRC.Parse over Twitch.ParseIRCMessage. Requires significant
+ *    rewrite of OnWebsocketMessage and of bound event handlers in drivers.
  *  OnWebsocketError:
  *    error seems to be lost somewhere
  */
 
 /* TODO:
  *  Fix the following:
- *    Generate a UUID for the faux PRIVMSG
  *    Join specific room (JoinChannel only looks at channel.channel)
  *  Implement the following features:
  *    Cheermote support (see https://dev.twitch.tv/docs/irc/tags/#privmsg-twitch-tags)
- *      API to format message with emotes (splitting?)
- *    Emote support (see https://dev.twitch.tv/docs/irc/tags/#privmsg-twitch-tags)
  *      API to format message with emotes (splitting?)
  *    Raid messages
  *      msg-param-viewerCount (raid size)
@@ -526,16 +524,17 @@ function _TwitchClient__build_privmsg(chobj, message) {
   /* Construct the parsed flags object */
   let flag_obj = {};
   let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
-  flag_obj["badges"] = this._self_userstate["badges"];
+  let chstr = Twitch.FormatChannel(chobj);
+  flag_obj["badges"] = this._self_userstate[chstr]["badges"];
   if (!flag_obj["badges"]) {
     flag_obj["badges"] = [];
   }
-  flag_obj["color"] = this._self_userstate["color"];
-  flag_obj["subscriber"] = this._self_userstate["subscriber"];
-  flag_obj["mod"] = this._self_userstate["mod"];
-  flag_obj["vip"] = this._self_userstate["vip"] || null;
-  flag_obj["broadcaster"] = this._self_userstate["broadcaster"] || null;
-  flag_obj["display-name"] = this._self_userstate["display-name"];
+  flag_obj["color"] = this._self_userstate[chstr]["color"];
+  flag_obj["subscriber"] = this._self_userstate[chstr]["subscriber"];
+  flag_obj["mod"] = this._self_userstate[chstr]["mod"];
+  flag_obj["vip"] = this._self_userstate[chstr]["vip"] || null;
+  flag_obj["broadcaster"] = this._self_userstate[chstr]["broadcaster"] || null;
+  flag_obj["display-name"] = this._self_userstate[chstr]["display-name"];
   flag_obj["emotes"] = emote_obj;
   flag_obj["id"] = Util.Random.uuid();
   flag_obj["user-id"] = this._self_userid;
@@ -574,7 +573,7 @@ function _TwitchClient__build_privmsg(chobj, message) {
   flag_str += `;user-type=${flag_obj["user-type"]}`;
 
   /* Build the raw and parsed objects */
-  let user = this._self_userstate["display-name"].toLowerCase();
+  let user = this._self_userstate[chstr]["display-name"].toLowerCase();
   let useruri = `:${user}!${user}@${user}.tmi.twitch.tv`;
   let channel = Twitch.FormatChannel(chobj);
 
@@ -595,19 +594,19 @@ function _TwitchClient__build_privmsg(chobj, message) {
 TwitchClient.prototype.IsSub =
 function _TwitchClient_IsSub(channel) {
   /* FIXME: use channel */
-  return this._self_userstate["sub"];
+  return this._self_userstate[Twitch.FormatChannel(channel)]["sub"];
 }
 
 TwitchClient.prototype.IsMod =
 function _TwitchClient_IsMod(channel) {
   /* FIXME: use channel */
-  return this._self_userstate["mod"];
+  return this._self_userstate[Twitch.FormatChannel(channel)]["mod"];
 }
 
 TwitchClient.prototype.IsVIP =
 function _TwitchClient_IsVIP(channel) {
   /* FIXME: use channel */
-  return this._self_userstate["vip"];
+  return this._self_userstate[Twitch.FormatChannel(channel)]["vip"];
 }
 
 /* Timeout the specific user in the specified channel */
@@ -939,12 +938,6 @@ function _TwitchClient_GetEmote(emote_id) {
   return Twitch.URL.Emote(emote_id, '1.0');
 }
 
-/* Return the URL to the image for the cheermote specified */
-TwitchClient.prototype.GetCheer =
-function _TwitchClient_GetCheer(prefix, tier, scheme="dark", size="1") {
-  return Twitch.URL.Cheer(prefix, tier, scheme, size);
-}
-
 /* Callback: called when the websocket opens */
 TwitchClient.prototype.OnWebsocketOpen =
 function _TwitchClient_OnWebsocketOpen(name, pass) {
@@ -971,6 +964,9 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
 
     /* Parse the message (TODO: Use Twitch.IRC.Parse()) */
     let result = Twitch.ParseIRCMessage(line);
+    let result2 = Twitch.IRC.Parse(line);
+    Util.Trace('result1:', result);
+    Util.Trace('result2:', result);
 
     /* Make sure the room is tracked */
     if (result.channel && result.channel.channel) {
@@ -987,6 +983,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
     Util.FireEvent(new TwitchEvent(result.cmd, line, result));
     Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
     let cname = result.channel ? result.channel.channel : null;
+    let cstr = result.channel ? Twitch.FormatChannel(result.channel) : null;
 
     /* Handle each command that could be returned */
     switch (result.cmd) {
@@ -1046,8 +1043,11 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
       case "WHISPER":
         break;
       case "USERSTATE":
+        if (!this._self_userstate.hasOwnProperty(cstr)) {
+          this._self_userstate[cstr] = {};
+        }
         for (let [key, val] of Object.entries(result.flags)) {
-          this._self_userstate[key] = val;
+          this._self_userstate[cstr][key] = val;
         }
         break;
       case "ROOMSTATE":
