@@ -161,11 +161,16 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
     Twitch.Warning(`ParseChannel: ${ch} not in expected format`);
     ch = parts[0];
   }
+  if (ch.indexOf('#') != 0) {
+    ch = '#' + ch;
+  }
   return {channel: ch, room: room, roomuid: roomuid};
 }
 
 /* Format a channel name, room name, or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
+  if (typeof(room) == "undefined") room = null;
+  if (typeof(roomuid) == "undefined") roomuid = null;
   if (typeof(channel) == "string") {
     if (channel == "*") {
       /* Sent from GLOBAL */
@@ -176,6 +181,9 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
       }
       if (roomuid !== null) {
         channel += ':' + roomuid;
+      }
+      if (channel.indexOf('#') != 0) {
+        channel = '#' + channel;
       }
       return channel;
     }
