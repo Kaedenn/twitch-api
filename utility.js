@@ -59,33 +59,35 @@ Array.prototype.all = function _Array_all(func) {
 }
 
 /* Obtain the maximal element from an array */
-Array.prototype.max = function(func) {
+Array.prototype.max = function(cmp) {
+  if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
-  let values = [];
+  let max_value = cmp(this[0]);
+  let max_elem = this[0];
   for (let e of this) {
-    if (func !== undefined) {
-      values.push(func(e));
-    } else {
-      values.push(e);
+    if (cmp(e) > max_value) {
+      max_elem = e;
+      max_value = cmp(e);
     }
   }
-  return Math.max.apply(Math, values);
+  return max_elem;
 }
 
 /* Obtain the minimal element from an array */
-Array.prototype.min = function(func) {
+Array.prototype.min = function(cmp) {
+  if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
-  let values = [];
+  let min_value = cmp(this[0]);
+  let min_elem = this[0];
   for (let e of this) {
-    if (func !== undefined) {
-      values.push(func(e));
-    } else {
-      values.push(e);
+    if (cmp(e) < min_value) {
+      min_elem = e;
+      min_value = cmp(e);
     }
   }
-  return Math.min.apply(Math, values);
+  return min_elem;
 }
 
 /* Strip characters from left (pos) or right (neg) */
@@ -407,7 +409,6 @@ class LoggerUtility {
    * (NOTE: will be called with an array of arguments) */
   add_filter(func, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
-    console.log('Adding filter', func, 'for', sev);
     this._filters[this._sev_value(sev)].push(func);
   }
 
@@ -447,8 +448,6 @@ class LoggerUtility {
     let val = this._sev_value(sev);
     for (let hook of this._hooks[val]) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
-      console.log(`Calling "${hook}" with ${args.length} args (${args.toSource()})`);
-      console.log(`argobj = ${argobj.toSource()}`);
       hook.apply(hook, args);
     }
     if (stacktrace) {
