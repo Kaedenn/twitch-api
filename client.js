@@ -11,6 +11,8 @@
  */
 
 /* FIXME:
+ *  _self_userstate:
+ *    Broken for multiple channels; index by channel
  *  OnWebsocketError:
  *    error seems to be lost somewhere
  */
@@ -442,11 +444,12 @@ function _TwitchClient__getChannelCheers(cname, cid) {
     return;
   }
   this._api.Get(Twitch.URL.Cheers(cid), (function(json) {
-    for (let badge_def of json.actions) {
+    for (let cdef of json.actions) {
       /* Simplify things later by adding the regexp here */
-      badge_def.word_pattern = new RegExp('^(' + RegExp.escape(badge_def.prefix) + ')([1-9][0-9]*)$', 'i');
-      badge_def.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(badge_def.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)')
-      this._channel_cheers[cname][badge_def.prefix] = badge_def;
+      cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
+      cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
+      cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
+      this._channel_cheers[cname][cdef.prefix] = cdef;
     }
   }).bind(this), {}, false);
 }
@@ -530,10 +533,11 @@ function _TwitchClient__build_privmsg(chobj, message) {
   flag_obj["color"] = this._self_userstate["color"];
   flag_obj["subscriber"] = this._self_userstate["subscriber"];
   flag_obj["mod"] = this._self_userstate["mod"];
+  flag_obj["vip"] = this._self_userstate["vip"] || null;
+  flag_obj["broadcaster"] = this._self_userstate["broadcaster"] || null;
   flag_obj["display-name"] = this._self_userstate["display-name"];
   flag_obj["emotes"] = emote_obj;
-  /* TODO: generate unique ID */
-  flag_obj["id"] = "00000000-0000-0000-0000-000000000000";
+  flag_obj["id"] = Util.Random.uuid();
   flag_obj["user-id"] = this._self_userid;
   flag_obj["room-id"] = this._rooms[chobj.channel].id;
   flag_obj["tmi-sent-ts"] = (new Date()).getTime();
@@ -554,6 +558,13 @@ function _TwitchClient__build_privmsg(chobj, message) {
   flag_str += `;display-name=${flag_obj["display-name"]}`;
   flag_str += `;subscriber=${flag_obj["subscriber"]}`;
   flag_str += `;mod=${flag_obj["mod"]}`;
+  /* Only populate vip and broadcaster attributes if set */
+  if (flag_obj["vip"]) {
+    flag_str += `;vip=${flag_obj["vip"]}`;
+  }
+  if (flag_obj["broadcaster"]) {
+    flag_str += `;broadcaster=${flag_obj["broadcaster"]}`;
+  }
   flag_str += `;emotes=${Twitch.FormatEmoteFlag(flag_obj["emotes"])}`;
   flag_str += `;id=${flag_obj["id"]}`;
   flag_str += `;user-id=${flag_obj["user-id"]}`;
@@ -566,20 +577,37 @@ function _TwitchClient__build_privmsg(chobj, message) {
   let user = this._self_userstate["display-name"].toLowerCase();
   let useruri = `:${user}!${user}@${user}.tmi.twitch.tv`;
   let channel = Twitch.FormatChannel(chobj);
+
   /* @<flags> <useruri> PRIVMSG <channel> :<message> */
   let raw_line = `${flag_str} ${useruri} PRIVMSG ${channel} :${message}`;
-  let parsed = {};
-  parsed.cmd = "PRIVMSG";
-  parsed.flags = flag_obj;
-  parsed.user = Twitch.ParseUser(useruri);
-  parsed.channel = chobj;
-  parsed.message = message;
-
-  /* Mark the object as synthesized */
-  parsed.synthesized = true;
 
   /* Construct and return the event */
-  return new TwitchChatEvent(raw_line, parsed);
+  return new TwitchChatEvent(raw_line, ({
+    cmd: "PRIVMSG",
+    flags: flag_obj,
+    user: Twitch.ParseUser(useruri),
+    channel: chobj,
+    message: message,
+    synthesized: true /* mark the object as synthesized */
+  }));
+}
+
+TwitchClient.prototype.IsSub =
+function _TwitchClient_IsSub(channel) {
+  /* FIXME: use channel */
+  return this._self_userstate["sub"];
+}
+
+TwitchClient.prototype.IsMod =
+function _TwitchClient_IsMod(channel) {
+  /* FIXME: use channel */
+  return this._self_userstate["mod"];
+}
+
+TwitchClient.prototype.IsVIP =
+function _TwitchClient_IsVIP(channel) {
+  /* FIXME: use channel */
+  return this._self_userstate["vip"];
 }
 
 /* Timeout the specific user in the specified channel */
@@ -703,11 +731,20 @@ function _TwitchClient_IsCheer(cname, word) {
 TwitchClient.prototype.FindCheers =
 function _TwitchClient_FindCheers(cname, message) {
   let matches = [];
+  /* FIXME: Do this with one regexp evaluation per emote, not two */
   if (this._channel_cheers.hasOwnProperty(cname)) {
     for (let name of Object.keys(this._channel_cheers[cname])) {
-      let match = message.search(this._channel_cheers[cname][name].line_pattern);
-      if (match !== null) {
-        matches.push(match);
+      let cheer = this._channel_cheers[cname][name];
+      let wpat = cheer.word_pattern;
+      let parts = message.split(cheer.split_pattern);
+      let offset = 0;
+      for (let part of parts) {
+        let m = part.match(wpat);
+        if (m) {
+          let num_bits = Number.parseInt(m[2]);
+          matches.push({cheer: cheer, bits: num_bits, start: offset, end: offset + part.length});
+        }
+        offset += part.length;
       }
     }
   }
