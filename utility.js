@@ -1,3 +1,5 @@
+"use strict";
+
 /** Generic Utility-ish Functions for the TASToys' JS Twitch API
  *
  * Provides the following APIs, among others:
@@ -25,16 +27,12 @@
  *    Inspired by https://ux.stackexchange.com/a/107319
  */
 
-/** vim folding
- * Blocks:
-%g/{{{[0-9]/norm ^3t{zf%
- * Functions:
-%g/^}/norm zf%
- */
+/* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
-"use strict";
-
-/* Standard object (Array, String, RegExp) additions {{{0 */
+/* Calculates the divmod of the values given */
+Math.divmod = function _Math_divmod(n, r) {
+  return [n / r, n % r];
+}
 
 /* Return true if any of the values satisfy the function given */
 Array.prototype.any = function _Array_any(func) {

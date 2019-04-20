@@ -1,9 +1,5 @@
 "use strict";
 
-/* Collapse all:
- * %g/^\([^ ][^(]*\)\?\(\<Twitch\|class\|function\|let\|let\>\)[^{]\+{$/norm $zf%
- */
-
 /* Reference materials:
  *  https://dev.twitch.tv/docs/irc/msg-id/
  *  https://dev.twitch.tv/docs/irc/commands/
@@ -34,6 +30,8 @@
  *    HOSTTARGET
  *    RECONNECT
  */
+
+/* Event classes {{{0 */
 
 /* Base Event object for Twitch events */
 class TwitchEvent extends Event {
@@ -145,12 +143,15 @@ class TwitchChatEvent extends TwitchEvent {
   }
 }
 
+/* End of event classes section 0}}} */
+
 /* TwitchClient constructor definition */
 function TwitchClient(opts) {
   let cfg_name = opts.Name;
   let cfg_clientid = opts.ClientID;
   let cfg_pass = opts.Pass;
 
+  /* Core variables */
   this._ws = null;
   this._is_open = false;
   this._connected = false;
@@ -162,6 +163,10 @@ function TwitchClient(opts) {
   this._pending_channels = opts.Channels || [];
   /* Room information {"#ch": {...}} */
   this._rooms = {};
+  /* History of sent chat messages (recent = first) */
+  this._history = [];
+  /* Maximum history size */
+  this._hist_max = opts.HistorySize || 300;
   /* Granted capabilities */
   this._capabilities = [];
   /* TwitchClient's userstate information */
@@ -186,11 +191,10 @@ function TwitchClient(opts) {
   this._channel_cheers = {};
 
   /* Extension emotes */
-  this._ffz_emotes = {};
   this._ffz_channel_emotes = {};
   this._ffz_badges = {};
   this._ffz_badge_users = {};
-  this._bttv_emotes = {};
+  this._bttv_badges = {}; /* TODO */
   this._bttv_channel_emotes = {};
 
   /* Handle authentication and password management */
@@ -261,6 +265,8 @@ function TwitchClient(opts) {
   }
 }
 
+/* Debugging section {{{0 */
+
 /* debug(args...): output everything given to the console as a debugging
  * message, if config.Debug was set to true */
 TwitchClient.prototype.debug =
@@ -290,7 +296,9 @@ function _TwitchClient_SetDebug(val) {
   Util.DebugLevel = this._debug;
 }
 
-/* Bind a function to the TwitchChat event specified */
+/* End debugging section 0}}} */
+
+/* Bind a function to the event specified (wraps document.addEventListener) */
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
   document.addEventListener(event, callback);
@@ -302,11 +310,7 @@ function _TwitchClient_unbind(event, callback) {
   document.removeEventListener(event, callback);
 }
 
-/* Return whether or not the client is authenticated with an AuthID */
-TwitchClient.prototype.IsAuthed =
-function _TwitchClient_IsAuthed() {
-  return this._authed;
-}
+/* Private functions section {{{0 */
 
 /* Private: Ensure the user specified is in reduced form */
 TwitchClient.prototype._ensureUser =
@@ -591,22 +595,38 @@ function _TwitchClient__build_privmsg(chobj, message) {
   }));
 }
 
+/* End private functions section 0}}} */
+
+/* Role and moderation functions {{{0 */
+
+/* Return whether or not the client is authenticated with an AuthID */
+TwitchClient.prototype.IsAuthed =
+function _TwitchClient_IsAuthed() {
+  return this._authed;
+}
+
+/* Return true if the client is a subscriber in the channel given */
 TwitchClient.prototype.IsSub =
 function _TwitchClient_IsSub(channel) {
-  /* FIXME: use channel */
   return this._self_userstate[Twitch.FormatChannel(channel)]["sub"];
 }
 
+/* Return true if the client is a VIP in the channel given */
+TwitchClient.prototype.IsVIP =
+function _TwitchClient_IsVIP(channel) {
+  return this._self_userstate[Twitch.FormatChannel(channel)]["vip"];
+}
+
+/* Return true if the client is a moderator in the channel given */
 TwitchClient.prototype.IsMod =
 function _TwitchClient_IsMod(channel) {
-  /* FIXME: use channel */
   return this._self_userstate[Twitch.FormatChannel(channel)]["mod"];
 }
 
-TwitchClient.prototype.IsVIP =
-function _TwitchClient_IsVIP(channel) {
-  /* FIXME: use channel */
-  return this._self_userstate[Twitch.FormatChannel(channel)]["vip"];
+/* Return true if the client is the broadcaster for the channel given */
+TwitchClient.prototype.IsCaster =
+function _TwitchClient_IsCaster(channel) {
+  return this._self_userstate[Twitch.FormatChannel(channel)]["broadcaster"];
 }
 
 /* Timeout the specific user in the specified channel */
@@ -640,6 +660,8 @@ TwitchClient.prototype.UnBan =
 function _TwitchClient_UnBan(channel, user) {
   this.SendMessage(channel, `/unban ${user}`);
 }
+
+/* End of role and moderation functions 0}}} */
 
 /* Request the client to join the channel specified */
 TwitchClient.prototype.JoinChannel =
@@ -697,21 +719,7 @@ function _TwitchClient_GetName() {
   return this._username;
 }
 
-/* Get an object containing all of the known badges */
-TwitchClient.prototype.GetBadges =
-function _TwitchClient_GetBadges() {
-  let result = {global: {}};
-  for (let cname of Object.keys(this._channel_badges)) {
-    result[cname] = {};
-    for (let [name, val] of Object.entries(this._channel_badges[cname])) {
-      result[cname][name] = val;
-    }
-  }
-  for (let name of Object.keys(this._global_badges)) {
-    result.global[name] = this._global_badges[name];
-  }
-  return result;
-}
+/* Functions related to cheers {{{0 */
 
 /* Return whether or not the given word is a cheer for the given channel */
 TwitchClient.prototype.IsCheer =
@@ -730,20 +738,19 @@ function _TwitchClient_IsCheer(cname, word) {
 TwitchClient.prototype.FindCheers =
 function _TwitchClient_FindCheers(cname, message) {
   let matches = [];
-  /* FIXME: Do this with one regexp evaluation per emote, not two */
+  let parts = message.split(" ");
+  let offset = 0;
   if (this._channel_cheers.hasOwnProperty(cname)) {
-    for (let name of Object.keys(this._channel_cheers[cname])) {
-      let cheer = this._channel_cheers[cname][name];
-      let wpat = cheer.word_pattern;
-      let parts = message.split(cheer.split_pattern);
-      let offset = 0;
-      for (let part of parts) {
-        let m = part.match(wpat);
-        if (m) {
-          let num_bits = Number.parseInt(m[2]);
-          matches.push({cheer: cheer, bits: num_bits, start: offset, end: offset + part.length});
+    for (let [name, cheer] of Object.entries(this._channel_cheers[cname])) {
+      if (message.search(cheer.line_pattern) > -1) {
+        for (let token of parts) {
+          let m = token.match(cheer.word_pattern);
+          if (m) {
+            let num_bits = Number.parseInt(m[2]);
+            matches.push({cheer: cheer, name: m[1], bits: num_bits, start: offset, end: offset + token.length});
+          }
+          offset += token.length + 1;
         }
-        offset += part.length;
       }
     }
   }
@@ -761,6 +768,8 @@ function _TwitchClient_GetCheer(cname, name) {
   }
   return cheer;
 }
+
+/* End of functions related to cheers 0}}} */
 
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetRoomInfo =
@@ -794,29 +803,10 @@ function _TwitchClient_HasCapability(test_cap) {
   return false;
 }
 
-/* Return whether or not the numeric ID refers to the client itself */
-TwitchClient.prototype.IsSelf =
-function _TwitchClient_IsSelf(userid) {
+/* Return whether or not the numeric user ID refers to the client itself */
+TwitchClient.prototype.IsUIDSelf =
+function _TwitchClient_IsUIDSelf(userid) {
   return userid == this._self_userid;
-}
-
-/* Set the client's name to the value given, optionally including a password.
- * This is called automatically when the client connects; please specify the
- * desired username and password in the constructor's configuration argument
- */
-TwitchClient.prototype.SetName =
-function _TwitchClient_SetName(name, pass) {
-  if (name && pass) {
-    this._username = name;
-  } else {
-    this._username = `justinfan${Math.floor(Math.random() * 999999)}`;
-  }
-  if (!!pass) {
-    this._ws.send(`PASS ${pass.indexOf("oauth:") == 0 ? "" : "oauth:"}${pass}`);
-    this._ws.send(`NICK ${name}`);
-  } else {
-    this._ws.send(`NICK ${this._username}`);
-  }
 }
 
 /* Send a message to the channel specified */
@@ -852,6 +842,66 @@ function _TwitchClient_SendMessageToAll(message) {
 TwitchClient.prototype.SendRaw =
 function _TwitchClient_SendRaw(raw_msg) {
   this._ws.send(raw_msg.trimEnd() + "\r\n");
+}
+
+/* History functions {{{0 */
+
+/* Add a message to the history of sent messages */
+TwitchClient.prototype.AddHistory =
+function _TwitchClient_AddHistory(message) {
+  this._history.unshift(message);
+  if (this._history.length > this._hist_max) {
+    this._history.pop();
+  }
+}
+
+/* Obtain the history of sent messages */
+TwitchClient.prototype.GetHistory =
+function _TwitchClient_GetHistort() {
+  /* Make a copy to prevent unexpected modification */
+  return this._history.map((x) => x);
+}
+
+/* Obtain the nth most recently sent message */
+TwitchClient.prototype.GetHistoryItem =
+function _TwitchClient_GetHistoryItem(n) {
+  console.log("GetHistoryItem(", n, ")");
+  if (n >= 0 && n < this._history.length) {
+    return this._history[n];
+  }
+  return null;
+}
+
+/* Obtain the maximum number of history items */
+TwitchClient.prototype.GetHistoryMax =
+function _TwitchClient_GetHistoryMax() {
+  return this._hist_max;
+}
+
+/* Obtain the current number of history items */
+TwitchClient.prototype.GetHistoryLength =
+function _TwitchClient_GetHistoryLength() {
+  return this._history.length;
+}
+
+/* End of history functions 0}}} */
+
+/* Badge handling functions {{{0 */
+
+/* Get an object containing all of the known badges */
+TwitchClient.prototype.GetAllBadges =
+function _TwitchClient_GetAllBadges() {
+  let result = {global: {}};
+  for (let cname of Object.keys(this._channel_badges)) {
+    result[cname] = {};
+    for (let [name, val] of Object.entries(this._channel_badges[cname])) {
+      result[cname][name] = val;
+    }
+  }
+  for (let name of Object.keys(this._global_badges)) {
+    result.global[name] = this._global_badges[name];
+  }
+  return result;
 }
 
 /* Return true if the badge specified is a global badge */
@@ -916,6 +966,12 @@ function _TwitchClient_GetChannelBadge(channel, badge_name) {
   return this._channel_badges[channel.channel][badge_name];
 }
 
+/* Obtain all of the global badges */
+TwitchClient.prototype.GetGlobalBadges =
+function _TwitchClient_GetGlobalBadges() {
+  return new Object(this._global_badges);
+}
+
 /* Obtain all of the channel badges for the specified channel */
 TwitchClient.prototype.GetChannelBadges =
 function _TwitchClient_GetChannelBadges(channel) {
@@ -926,11 +982,7 @@ function _TwitchClient_GetChannelBadges(channel) {
   return {};
 }
 
-/* Obtain all of the global badges */
-TwitchClient.prototype.GetGlobalBadges =
-function _TwitchClient_GetGlobalBadges() {
-  return new Object(this._global_badges);
-}
+/* End of badge handling functions 0}}} */
 
 /* Return the URL to the image for the emote specified */
 TwitchClient.prototype.GetEmote =
@@ -942,7 +994,17 @@ function _TwitchClient_GetEmote(emote_id) {
 TwitchClient.prototype.OnWebsocketOpen =
 function _TwitchClient_OnWebsocketOpen(name, pass) {
   this._ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
-  this.SetName(name, pass);
+  if (name && pass) {
+    this._username = name;
+  } else {
+    this._username = `justinfan${Math.floor(Math.random() * 999999)}`;
+  }
+  if (!!pass) {
+    this._ws.send(`PASS ${pass.indexOf("oauth:") == 0 ? "" : "oauth:"}${pass}`);
+    this._ws.send(`NICK ${name}`);
+  } else {
+    this._ws.send(`NICK ${this._username}`);
+  }
   let chlist = this._pending_channels;
   this._pending_channels = [];
   for (let i of chlist) {

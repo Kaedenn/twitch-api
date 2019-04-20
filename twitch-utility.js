@@ -387,8 +387,8 @@ Twitch.IRC = {
     ],
     HOSTTARGET: [
       /* ":<server> HOSTTARGET <channel> :<hosting-user> -\r\n" */
-      /^([^ ]+) HOSTTARGET (\#[^ ]\+) :([^ ]+).*(?:\r\n)$/,
-      {server: 1, channel: 3, user: 4}
+      /^([^ ]+) HOSTTARGET (\#[^ ]+) :([^ ]+).*(?:\r\n)?$/,
+      {server: 1, channel: 2, user: 3, message: 4}
     ],
     NOTICE: [
       /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
