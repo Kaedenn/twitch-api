@@ -27,7 +27,39 @@
  *    Inspired by https://ux.stackexchange.com/a/107319
  */
 
+/* General Utilities */
+let Util = {};
+Util.__wskey = null;
+Util.__wscfg = "twitch-api-web-storage-key";
+
+/* Browser identification */
+Util.Browser = {};
+Util.Browser.FIREFOX = "Firefox";
+Util.Browser.CHROME = "Chrome";
+Util.Browser.UNKNOWN = "Unknown";
+Util.Browser.Get = function _Util_Browser_Get() {
+  let p_firefox = /\bFirefox\/[0-9.]+\b/;
+  let p_chrome = /\bChrome\/[0-9.]+\b/;
+  if (navigator.userAgent.match(p_firefox)) {
+    return Util.Browser.FIREFOX;
+  } else if (navigator.userAgent.match(p_chrome)) {
+    return Util.Browser.CHROME;
+  } else {
+    return Util.Browser.UNKNOWN;
+  }
+}
+Util.Browser.Chrome = Util.Browser.Get() == Util.Browser.CHROME;
+Util.Browser.Firefox = Util.Browser.Get() == Util.Browser.FIREFOX;
+
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
+
+if (!Object.toSource) {
+  /* Not running on Firefox */
+  Object.prototype.toSource = function _Object_toSource() {
+    /* TODO: ensure this works and doesn't cause problems */
+    return JSON.stringify(this);
+  }
+}
 
 /* Calculates the divmod of the values given */
 Math.divmod = function _Math_divmod(n, r) {
@@ -134,12 +166,9 @@ String.prototype.escape = function _String_escape() {
   return result;
 }
 
-/* Obtain an escaped version of the string, akin to Object.toSource() */
+/* Obtain an escaped version of the string */
 String.prototype.repr = function _String_repr() {
-  let m = this.toSource().match(/^\(new String\((.*)\)\)$/);
-  if (m) {
-    return m[1];
-  }
+  return JSON.stringify(this);
 }
 
 /* Implement Array-line functions for String (map, forEach, withCharAt) */
@@ -188,11 +217,6 @@ RegExp.escape = function _RegExp_escape(string) {
 }
 
 /* End standard object additions 0}}} */
-
-/* General Utilities */
-let Util = {};
-Util.__wskey = null;
-Util.__wscfg = "twitch-api-web-storage-key";
 
 /* Regular expression matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
@@ -272,12 +296,33 @@ Util.GetStack = function _Util_GetStack() {
 Util.ParseStack = function _Util_ParseStack(lines) {
   let frames = [];
   for (let line of lines) {
-    let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
     let frame = {};
-    frame.name = m[1];
-    frame.file = m[2];
-    frame.line = parseInt(m[3]);
-    frame.column = parseInt(m[4]);
+    if (Util.Browser.Get() == Util.Browser.CHROME) {
+      // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
+      let m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
+      if (m == null) {
+        Util.ErrorOnly("Failed to parse stack frame", line);
+        continue;
+      }
+      frame = {};
+      frame.name = m[1];
+      frame.actual_name = m[2];
+      frame.file = m[3];
+      frame.line = parseInt(m[4]);
+      frame.column = parseInt(m[5]);
+    } else if (Util.Browser.Firefox) {
+      // "(function)@(file):(line):(column)"
+      let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
+      if (m == null) {
+        Util.ErrorOnly("Failed to parse stack frame", line);
+        continue;
+      }
+      frame = {};
+      frame.name = m[1];
+      frame.file = m[2];
+      frame.line = parseInt(m[3]);
+      frame.column = parseInt(m[4]);
+    }
     frames.push(frame);
   }
   return frames;
