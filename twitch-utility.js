@@ -457,6 +457,7 @@ Twitch.IRC = {
             fields.sub_kind = flags["msg-id"].toUpperCase();
             fields.sub_user = flags["login"];
             fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_total_months = flags["msg-param-cumulative-months"];
             fields.sub_plan = flags["msg-param-sub-plan"];
             fields.sub_plan_name = flags["msg-param-sub-plan-name"];
             break;
@@ -465,14 +466,16 @@ Twitch.IRC = {
             fields.sub_kind = flags["msg-id"].toUpperCase();
             fields.sub_user = flags["login"];
             fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_total_months = flags["msg-param-cumulative-months"];
             fields.sub_plan = flags["msg-param-sub-plan"];
             fields.sub_plan_name = flags["msg-param-sub-plan-name"];
             break;
-          case "giftsub":
+          case "subgift":
             fields.issub = true;
             fields.sub_kind = flags["msg-id"].toUpperCase();
             fields.sub_user = flags["msg-param-recipient-user-name"];
             fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_total_months = flags["msg-param-cumulative-months"];
             fields.sub_plan = flags["msg-param-sub-plan"];
             fields.sub_plan_name = flags["msg-param-sub-plan-name"];
             break;
@@ -481,8 +484,15 @@ Twitch.IRC = {
             fields.sub_kind = flags["msg-id"].toUpperCase();
             fields.sub_user = flags["msg-param-recipient-user-name"];
             fields.sub_months = flags["msg-param-sub-months"];
+            fields.sub_total_months = flags["msg-param-cumulative-months"];
             fields.sub_plan = flags["msg-param-sub-plan"];
             fields.sub_plan_name = flags["msg-param-sub-plan-name"];
+            break;
+          case "raid":
+            /* TODO */
+            /* msg-param-displayName - raiding user
+             * msg-param-login - raiding user's username
+             * msg-param-viewerCount - number of viewers */
             break;
         }
       }
@@ -649,32 +659,45 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.sub_gifting_user = null;
     result.sub_months = null;
     if (result.flags["msg-id"]) {
+      if (result.flags.hasOwnProperty('msg-param-cumulative-months')) {
+        result.sub_total_months = result.flags['msg-param-cumulative-months'];
+      }
+      if (result.flags.hasOwnProperty('msg-param-streak-months')) {
+        result.sub_streak_months = result.flags['msg-param-streak-months'];
+      }
+      if (result.flags.hasOwnProperty('msg-param-sub-plan-name')) {
+        result.sub_plan = result.flags['msg-param-sub-plan-name'];
+      }
       switch (result.flags["msg-id"]) {
         case "sub":
           result.issub = true;
           result.sub_kind = "SUB";
           result.sub_user = result.flags["login"];
-          result.sub_months = result.flags["msg-param-sub-months"];
+          result.sub_months = result.sub_total_months;
+          result.sub_total_months = result.flags["msg-param-cumulative-months"];
           break;
         case "resub":
           result.issub = true;
           result.sub_kind = "RESUB";
           result.sub_user = result.flags["login"];
-          result.sub_months = result.flags["msg-param-sub-months"];
+          result.sub_months = result.sub_total_months;
+          result.sub_total_months = result.flags["msg-param-cumulative-months"];
           break;
         case "subgift":
           result.issub = true;
           result.sub_kind = "GIFTSUB";
           result.sub_gifting_user = result.flags["login"];
           result.sub_user = result.flags["msg-param-recipient-user-name"];
-          result.sub_months = result.flags["msg-param-sub-months"];
+          result.sub_months = result.sub_total_months;
+          result.sub_total_months = result.flags["msg-param-cumulative-months"];
           break;
         case "anonsubgift":
           result.issub = true;
           result.sub_kind = "ANONGIFTSUB";
           result.sub_gifting_user = result.flags["login"];
           result.sub_user = result.flags["msg-param-recipient-user-name"];
-          result.sub_months = result.flags["msg-param-sub-months"];
+          result.sub_months = result.sub_total_months;
+          result.sub_total_months = result.flags["msg-param-cumulative-months"];
           break;
       }
     }
