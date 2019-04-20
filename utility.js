@@ -36,6 +36,7 @@ Util.__wscfg = "twitch-api-web-storage-key";
 Util.Browser = {};
 Util.Browser.FIREFOX = "Firefox";
 Util.Browser.CHROME = "Chrome";
+Util.Browser.OBS = "OBS";
 Util.Browser.UNKNOWN = "Unknown";
 Util.Browser.Get = function _Util_Browser_Get() {
   let p_firefox = /\bFirefox\/[0-9.]+\b/;
@@ -44,12 +45,16 @@ Util.Browser.Get = function _Util_Browser_Get() {
     return Util.Browser.FIREFOX;
   } else if (navigator.userAgent.match(p_chrome)) {
     return Util.Browser.CHROME;
+  } else if (!!window.obssource) {
+    return Util.Browser.OBS;
   } else {
     return Util.Browser.UNKNOWN;
   }
 }
-Util.Browser.Chrome = Util.Browser.Get() == Util.Browser.CHROME;
-Util.Browser.Firefox = Util.Browser.Get() == Util.Browser.FIREFOX;
+Util.Browser.Current = Util.Browser.Get()
+Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
+Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
+Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
@@ -310,7 +315,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frame.file = m[3];
       frame.line = parseInt(m[4]);
       frame.column = parseInt(m[5]);
-    } else if (Util.Browser.Firefox) {
+    } else if (Util.Browser.IsFirefox) {
       // "(function)@(file):(line):(column)"
       let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
       if (m == null) {
