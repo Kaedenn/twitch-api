@@ -47,7 +47,7 @@ class _Twitch_DebugCache {
 Twitch.DebugCache = new _Twitch_DebugCache();
 
 /* API hosts {{{0 */
-Twitch.JTVNW = "http://static-cdn.jtvnw.net";
+Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
