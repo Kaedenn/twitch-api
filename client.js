@@ -865,7 +865,6 @@ function _TwitchClient_GetHistort() {
 /* Obtain the nth most recently sent message */
 TwitchClient.prototype.GetHistoryItem =
 function _TwitchClient_GetHistoryItem(n) {
-  console.log("GetHistoryItem(", n, ")");
   if (n >= 0 && n < this._history.length) {
     return this._history[n];
   }
