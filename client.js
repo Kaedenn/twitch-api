@@ -529,6 +529,9 @@ function _TwitchClient__build_privmsg(chobj, message) {
   let flag_obj = {};
   let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
   let chstr = Twitch.FormatChannel(chobj);
+  if (!this._self_userstate[chstr]) {
+    Util.Error("_self_userstate[chstr] missing: \"" + chstr + "\"");
+  }
   flag_obj["badges"] = this._self_userstate[chstr]["badges"];
   if (!flag_obj["badges"]) {
     flag_obj["badges"] = [];
