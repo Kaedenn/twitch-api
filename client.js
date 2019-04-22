@@ -18,14 +18,14 @@
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
  *  Implement the following features:
- *    Cheermote support (see https://dev.twitch.tv/docs/irc/tags/#privmsg-twitch-tags)
- *      API to format message with emotes (splitting?)
  *    Raid messages
  *      msg-param-viewerCount (raid size)
  *      msg-param-displayName (raider's name)
  *      msg-param-login (raider's login)
- *    FFZ & BTTV Support
- *      API to add emotes
+ *    FFZ support
+ *      "CatInABox" emote (#pangaeapanga)
+ *    BTTV support
+ *      "BIGFROG" emote (#pangaeapanga)
  *  Implement the following commands:
  *    HOSTTARGET
  *    RECONNECT

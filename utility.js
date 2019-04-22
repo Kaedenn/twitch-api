@@ -30,7 +30,7 @@
 /* General Utilities */
 let Util = {};
 Util.__wskey = null;
-Util.__wscfg = "twitch-api-web-storage-key";
+Util.__wscfg = "kae-twapi-local-key";
 
 Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014" +
@@ -1041,30 +1041,19 @@ class _Util_Notification {
     this._enabled = false;
     this._max = 2; /* max simultaneous notifications */
     this._active = {}; /* currently-active notifications */
-    if (this.available) {
-      if (Notification.permission === "granted") {
-        this._enabled = true;
-      } else if (Notification.permission !== "denied") {
-        this.acquire();
-      } else {
-        /* denied outright */
-        console.log("Notifications disabled by user");
-      }
-    }
   }
   get available() { return window.hasOwnProperty("Notification"); }
 
   acquire() {
-    let self = this;
     if (this.available) {
       this._req_promise = window.Notification.requestPermission();
-      this._req_promise.then(function(s) {
+      this._req_promise.then((function(s) {
         if (s === "granted") {
-          self._enabled = true;
+          this._enabled = true;
         } else {
-          self._enabled = false;
+          this._enabled = false;
         }
-      });
+      }).bind(this));
     }
   }
 
@@ -1075,18 +1064,28 @@ class _Util_Notification {
 }
 
 Util.Notify = new _Util_Notification();
-Util.Notify.Available = window.hasOwnProperty("Notification");
-Util.Notify.Enabled = Util.Notify.Available ? Notification.permission === "granted" : false;
 /* End notification APIs 0}}} */
 
 /* Return true if the given object inherits from the given typename */
-Util.IsInstanceOf = function _Object_isInstanceOf(obj, typename) {
+Util.IsInstanceOf = function _Object_IsInstanceOf(obj, typename) {
   for (let p = obj; p; p = p.__proto__) {
     if (p.constructor.name == typename) {
       return true;
     }
   }
   return false;
+}
+
+/* Return true if the object is an array */
+Util.IsArray = function _Util_IsArray(value) {
+  /* Values are considered "arrays" if value[Symbol.iterator] is a function
+   * and that object is not a string */
+  if (typeof(value) === "string") return false;
+  if (value && typeof(val[Symbol.iterator]) == "function") {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 /* PRNG (Pseudo-Random Number Generator) {{{0 */
@@ -1197,8 +1196,10 @@ Util.ApplyAttributes = function _Util_ApplyAttributes(node, attrs, escape=true) 
 
 /* Fire an event */
 Util.FireEvent = function _Util_FireEvent(e) {
+  /* Add a stacktrace to the event for debugging reasons */
   e._stacktrace = Util.ParseStack(Util.GetStack());
-  e._stacktrace.shift(); /* Discard Util.FireEvent */
+  /* Discard the Util.FireEvent stack frame */
+  e._stacktrace.shift();
   document.dispatchEvent(e);
 }
 
