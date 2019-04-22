@@ -4,4 +4,7 @@
 *.uri
 extras
 notes.txt
+.eslintrc.js
+Makefile
+test.html
 
