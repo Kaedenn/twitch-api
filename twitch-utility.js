@@ -173,6 +173,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   if (typeof(room) == "undefined") room = null;
   if (typeof(roomuid) == "undefined") roomuid = null;
   if (typeof(channel) == "string") {
+    channel = channel.toLowerCase();
     if (channel == "*") {
       /* Sent from GLOBAL */
       return "GLOBAL";
@@ -544,7 +545,13 @@ Twitch.IRC = {
       } else if (fn == "users") {
         resp.fields[fn] = match[fi].split(" ");
       } else if (fn == "flags") {
-        resp.fields[fn] = Twitch.ParseData(match[fi]);
+        resp.fields[fn] = Twitch.ParseData(match[fi]); /* FIXME: undefined */
+/*TypeError: dataString is undefined[Learn More] twitch-utility.js:240:3
+    _Twitch_ParseData https://kaedenn.github.io/twitch-api/twitch-utility.js:240
+    _Twitch_IRC_Parse https://kaedenn.github.io/twitch-api/twitch-utility.js:547
+    _TwitchClient_OnWebsocketMessage https://kaedenn.github.io/twitch-api/client.js:1028
+    onmessage https://kaedenn.github.io/twitch-api/client.js:252
+*/
       } else {
         resp.fields[fn] = match[fi];
       }
