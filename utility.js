@@ -1081,7 +1081,7 @@ Util.IsArray = function _Util_IsArray(value) {
   /* Values are considered "arrays" if value[Symbol.iterator] is a function
    * and that object is not a string */
   if (typeof(value) === "string") return false;
-  if (value && typeof(val[Symbol.iterator]) == "function") {
+  if (value && typeof(value[Symbol.iterator]) == "function") {
     return true;
   } else {
     return false;
