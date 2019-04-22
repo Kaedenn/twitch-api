@@ -1083,7 +1083,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         if (!event.flag('badges')) event.flags.badges = [];
         if (this._enable_ffz) {
           for (let [badge_nr, users] of Object.entries(this._ffz_badge_users)) {
-            if (users.indexOf(result.user) > -1 || result.user === "kaedenn_") {
+            if (users.indexOf(result.user) > -1) {
               let ffz_badges = event.flag('ffz-badges');
               if (ffz_badges === undefined) ffz_badges = [];
               ffz_badges.push(this._ffz_badges[badge_nr]);
