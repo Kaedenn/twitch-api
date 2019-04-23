@@ -462,19 +462,42 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
   this._ffz_channel_emotes[cname] = {};
   if (this._no_assets) return;
   this._api.GetSimple(Twitch.URL.FFZEmotes(cid), (function(json) {
-    /* TODO: store */
+    let ffz = this._ffz_channel_emotes[cname];
+    ffz.id = json.room._id;
+    ffz.set_id = json.room.set;
+    ffz.css = json.room.css;
+    ffz.display_name = json.room.display_name;
+    ffz.user_name = json.room.id;
+    ffz.is_group = json.room.is_group;
+    ffz.mod_urls = {};
+    for (let [k, v] of Object.entries(json.room.mod_urls)) {
+      ffz.mod_urls[k] = Util.URL(v);
+    }
+    ffz.mod_badge = Util.URL(json.room.moderator_badge);
+    ffz.sets_raw = json.sets;
+    let set_def = json.sets[ffz.set_id];
+    if (!set_def) {
+      Util.Log(`Set ${ffz.set_id} not defined; no FFZ emotes found`);
+      return;
+    }
+    ffz.emotes_name = set_def.title;
+    ffz.emotes_desc = set_def.description || "";
+    ffz.emotes = {};
+    for (let [k, v] of Object.entries(set_def.emoticons)) {
+      if (v.hidden) continue;
+      ffz.emotes[v.name] = v;
+      for (let [size, url] of Object.entries(v.urls)) {
+        ffz.emotes[v.name].urls[size] = Util.URL(url);
+      }
+    }
+    console.log(ffz);
     /* NOTE: gives 404 when channel has no emotes */
-    //console.log(`Received FFZ emotes for ${cname}:${cid}:`, json);
+    console.log(`Received FFZ emotes for ${cname}:${cid}:`);
+    console.log(json);
   }).bind(this), (function _ffze_onerror(resp) {
     if (resp.status == 404) {
       Util.Log(`Channel ${cname}:${cid} has no FFZ emotes`);
     }
-  }));
-  this._api.GetSimple(Twitch.URL.FFZAllEmotes(), (function(json) {
-    /* TODO: store */
-    //console.log("Received global FFZ emotes:", json);
-  }).bind(this), (function _ffzae_onerror(resp) {
-    
   }));
 }
 
@@ -486,17 +509,12 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
     /* TODO: store */
     /* NOTE: gives 404 when channel has no emotes */
-    //console.log("Received BTTV emotes for", cname, json);
+    console.log("Received BTTV emotes for", cname);
+    console.log(json);
   }).bind(this), (function _bttve_onerror(resp) {
     if (resp.status == 404) {
       Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
-  }));
-  this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), (function(json) {
-    /* TODO: store */
-    //console.log("Received global BTTV emotes", json);
-  }).bind(this), (function _bttvae_onerror(resp) {
-    
   }));
 }
 
@@ -596,6 +614,12 @@ function _TwitchClient__build_privmsg(chobj, message) {
 }
 
 /* End private functions section 0}}} */
+
+/* Obtain the FFZ emotes for a channel */
+TwitchClient.prototype.GetFFZEmotes =
+function _TwitchClient_GetFFZEmotes(channel) {
+  return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
+}
 
 /* Role and moderation functions {{{0 */
 
