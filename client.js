@@ -490,10 +490,6 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
         ffz.emotes[v.name].urls[size] = Util.URL(url);
       }
     }
-    console.log(ffz);
-    /* NOTE: gives 404 when channel has no emotes */
-    console.log(`Received FFZ emotes for ${cname}:${cid}:`);
-    console.log(json);
   }).bind(this), (function _ffze_onerror(resp) {
     if (resp.status == 404) {
       Util.Log(`Channel ${cname}:${cid} has no FFZ emotes`);
@@ -508,7 +504,6 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   if (this._no_assets) return;
   this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
     /* TODO: store */
-    /* NOTE: gives 404 when channel has no emotes */
     console.log("Received BTTV emotes for", cname);
     console.log(json);
   }).bind(this), (function _bttve_onerror(resp) {
