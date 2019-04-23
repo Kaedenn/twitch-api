@@ -62,6 +62,12 @@ Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
 Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
 Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 
+/* Regular expression matching URLs */
+Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+
+/* Escape characters */
+Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
+
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
 if (!Object.toSource) {
@@ -229,9 +235,6 @@ RegExp.escape = function _RegExp_escape(string) {
 
 /* End standard object additions 0}}} */
 
-/* Regular expression matching URLs */
-Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
-
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
   if (url.startsWith('//')) {
@@ -243,9 +246,6 @@ Util.URL = function _Util_URL(url) {
   }
   return url;
 }
-
-/* Escape characters */
-Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
 
 /* Logging {{{0 */
 Util.LEVEL_TRACE = 2;
@@ -1249,7 +1249,68 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
   return result;
 }
 
-/* localStorage functions {{{0 */
+/* Special escaping {{{0 */
+
+/* Build a character escape sequence for the code given */
+Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
+  // Handle certain special escape sequences
+  let special_chrs = "bfnrtv";
+  let special = Util.StringToCodes("\b\f\n\r\t\v");
+  if (special.indexOf(code) > -1) {
+    return `\\${special_chrs.charAt(special.indexOf(code))}`;
+  } else {
+    return `\\x${code.toString(16).padStart(2, '0')}`;
+  }
+}
+
+/* Strip escape characters from a string */
+Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
+  let is_slash = (c) => c == "\\";
+  let is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
+  let result = "";
+  for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
+    if (cn < 0x20)
+      result = result.concat(Util.EscapeCharCode(cn));
+    else if (ch == '\\')
+      result = result.concat('\\\\');
+    else
+      result = result.concat(ch);
+  }
+  return result;
+}
+
+/* End special escaping 0}}} */
+
+/* Configuration and localStorage functions {{{0 */
+
+/* Implement a configuration object with configurable defaults */
+/* TODO / IN PROGRESS
+class _Util_Config {
+  constructor() {
+    this._c = {};
+    this._defaults = {};
+  }
+  add(name, value, opts) {
+    if (typeof(opts) != "object") opts = {};
+  }
+  set(name, value, opts) {
+  }
+  get(name) {
+    if (this._c.hasOwnProperty(name)) {
+      return this.c[name];
+    }
+    if (this._defaults.hasOwnProperty(name)) {
+      return this._defaults[name];
+    }
+  }
+  get_raw(name) {
+    if (this._c.hasOwnProperty(name)) {
+      return this._c[name];
+    }
+  }
+}
+Util.Config = _Util_Config;
+*/
 
 /* Obtain the configured localStorage key */
 Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
@@ -1290,39 +1351,7 @@ Util.SetWebStorage = function _Util_SetWebStorage(value, key=null) {
   }
 }
 
-/* End localStorage functions 0}}} */
-
-/* Special escaping {{{0 */
-
-/* Build a character escape sequence for the code given */
-Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
-  // Handle certain special escape sequences
-  let special_chrs = "bfnrtv";
-  let special = Util.StringToCodes("\b\f\n\r\t\v");
-  if (special.indexOf(code) > -1) {
-    return `\\${special_chrs.charAt(special.indexOf(code))}`;
-  } else {
-    return `\\x${code.toString(16).padStart(2, '0')}`;
-  }
-}
-
-/* Strip escape characters from a string */
-Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
-  let is_slash = (c) => c == "\\";
-  let is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
-  let result = "";
-  for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
-    if (cn < 0x20)
-      result = result.concat(Util.EscapeCharCode(cn));
-    else if (ch == '\\')
-      result = result.concat('\\\\');
-    else
-      result = result.concat(ch);
-  }
-  return result;
-}
-
-/* End special escaping 0}}} */
+/* End configuration and localStorage functions 0}}} */
 
 /* Query String handling {{{0 */
 
