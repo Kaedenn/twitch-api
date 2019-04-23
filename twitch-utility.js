@@ -753,6 +753,22 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   } else {
     Util.Warn("OnWebsocketMessage: unknown message:", parts);
   }
+  /* Ensure result.flags has values defined by badges */
+  if (result.flags && result.flags.badges) {
+    for (let badge_def of result.flags.badges) {
+      let [badge_name, badge_rev] = badge_def;
+      if (badge_name === "broadcaster") {
+        result.flags.broadcaster = 1;
+        result.flags.mod = 1;
+      }
+      if (badge_name === "subscriber") {
+        result.flags.subscriber = 1;
+      }
+      if (badge_name === "moderator") {
+        result.flags.mod = 1;
+      }
+    }
+  }
   return result;
 }
 

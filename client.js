@@ -97,12 +97,8 @@ class TwitchEvent extends Event {
   repr() {
     /* Return a value similar to Object.toSource() */
     let cls = Object.getPrototypeOf(this).constructor.name;
-    let args = [
-      this._cmd.repr(),
-      this._raw.toSource(),
-      this._parsed.toSource()
-    ].join(",");
-    return `new ${cls}(${args})`;
+    let args = [this._cmd, this._raw, this._parsed];
+    return `new ${cls}(${JSON.stringify(args)})`;
   }
 }
 
@@ -113,8 +109,9 @@ class TwitchChatEvent extends TwitchEvent {
     this._id = parsed.flags.id;
   }
   get id() { return this._id; }
-  get ismod() { return this._parsed.flags.mod; }
-  get issub() { return this._parsed.flags.subscriber; }
+  get iscaster() { return this.has_badge("broadcaster"); }
+  get ismod() { return this._parsed.flags.mod || this.has_badge("moderator") || this.iscaster; }
+  get issub() { return this._parsed.flags.subscriber || this.has_badge("subscriber"); }
   get isvip() { return this.has_badge("vip"); }
   has_badge(badge, rev=undefined) {
     if (!this.flag("badges"))
@@ -137,7 +134,7 @@ class TwitchChatEvent extends TwitchEvent {
     let cls = Object.getPrototypeOf(this).constructor.name;
     let args = [
       this._raw.repr(),
-      this._parsed.toSource()
+      JSON.stringify(this._parsed)
     ].join(",");
     return `new ${cls}(${args})`;
   }
