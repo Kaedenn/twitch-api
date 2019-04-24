@@ -500,9 +500,17 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
   if (this._no_assets) return;
   this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
-    /* TODO: store */
-    console.log("Received BTTV emotes for", cname);
-    console.log(json);
+    let bttv = this._bttv_channel_emotes[cname];
+    bttv.emotes = {};
+    for (let emote of json.emotes) {
+      bttv.emotes[emote.code] = {
+        'id': emote.id,
+        'code': emote.code,
+        'channel': emote.channel,
+        'image-type': emote.imageType,
+        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id).replace('{{image}}', '1x'))
+      };
+    }
   }).bind(this), (function _bttve_onerror(resp) {
     if (resp.status == 404) {
       Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
@@ -611,6 +619,12 @@ function _TwitchClient__build_privmsg(chobj, message) {
 TwitchClient.prototype.GetFFZEmotes =
 function _TwitchClient_GetFFZEmotes(channel) {
   return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
+}
+
+/* Obtain the BTTV emotes for a channel */
+TwitchClient.prototype.GetBTTVEmotes =
+function _TwitchClient_GetBTTVEmotes(channel) {
+  return this._bttv_channel_emotes[Twitch.FormatChannel(channel)];
 }
 
 /* Role and moderation functions {{{0 */
@@ -834,7 +848,11 @@ function _TwitchClient_SendMessage(channel, message, bypassFaux=false) {
     this._ws.send(`PRIVMSG ${channel.channel} :${message}`);
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
-      Util.FireEvent(this._build_privmsg(channel, message));
+      if (this._self_userstate[Twitch.FormatChannel(channel)]) {
+        Util.FireEvent(this._build_privmsg(channel, message));
+      } else {
+        Util.Error(`No USERSTATE given for channel ${channel}`);
+      }
     }
   } else {
     let chname = Twitch.FormatChannel(channel);
