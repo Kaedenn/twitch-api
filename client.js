@@ -599,6 +599,12 @@ function _TwitchClient__build_privmsg(chobj, message) {
   let useruri = `:${user}!${user}@${user}.tmi.twitch.tv`;
   let channel = Twitch.FormatChannel(chobj);
 
+  /* Handle /me */
+  if (message.startsWith('/me ')) {
+    message = message.substr(message.indexOf(' '));
+    flag_obj.action = true;
+  }
+
   /* @<flags> <useruri> PRIVMSG <channel> :<message> */
   let raw_line = `${flag_str} ${useruri} PRIVMSG ${channel} :${message}`;
 

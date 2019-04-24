@@ -734,8 +734,8 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     /* ":<server> HOSTTARGET <channel> :<user> -\r\n" */
     result.cmd = "HOSTTARGET";
     result.server = parts[0];
-    result.channel = parts[1];
-    result.user = parts[2];
+    result.channel = Twitch.ParseChannel(parts[2]);
+    result.user = parts[3].lstrip(":");
   } else if (parts[1] == "NOTICE") {
     /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
     result.cmd = "NOTICE";
