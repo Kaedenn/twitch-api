@@ -1285,35 +1285,6 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 
 /* Configuration and localStorage functions {{{0 */
 
-/* Implement a configuration object with configurable defaults */
-/* TODO / IN PROGRESS
-class _Util_Config {
-  constructor() {
-    this._c = {};
-    this._defaults = {};
-  }
-  add(name, value, opts) {
-    if (typeof(opts) != "object") opts = {};
-  }
-  set(name, value, opts) {
-  }
-  get(name) {
-    if (this._c.hasOwnProperty(name)) {
-      return this.c[name];
-    }
-    if (this._defaults.hasOwnProperty(name)) {
-      return this._defaults[name];
-    }
-  }
-  get_raw(name) {
-    if (this._c.hasOwnProperty(name)) {
-      return this._c[name];
-    }
-  }
-}
-Util.Config = _Util_Config;
-*/
-
 /* Obtain the configured localStorage key */
 Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
   if (Util.__wskey !== null) {
@@ -1329,7 +1300,7 @@ Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
   window.localStorage.setItem(Util.__wscfg, JSON.stringify(key));
 }
 
-/* Get storage value, using either the configured key or the one given */
+/* Get and decode value, using either the configured key or the one given */
 Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
   if (key === null) {
     key = Util.GetWebStorageKey();
@@ -1341,7 +1312,7 @@ Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
   }
 }
 
-/* Store a localStorage value */
+/* JSON encode and store a localStorage value */
 Util.SetWebStorage = function _Util_SetWebStorage(value, key=null) {
   if (key === null) {
     key = Util.GetWebStorageKey();
@@ -1351,6 +1322,20 @@ Util.SetWebStorage = function _Util_SetWebStorage(value, key=null) {
   } else {
     window.localStorage.setItem(key, JSON.stringify(value));
   }
+}
+
+/* Append a value to the given localStorage key */
+Util.StorageAppend = function _Util_StorageAppend(key, value) {
+  let v = Util.GetWebStorage(key);
+  let new_v = [];
+  if (v === null) {
+    new_v = [value];
+  } else if (!(v instanceof Array)) {
+    new_v = [v, value];
+  } else {
+    v.push(value);
+  }
+  Util.SetWebStorage(new_v, key);
 }
 
 /* End configuration and localStorage functions 0}}} */
