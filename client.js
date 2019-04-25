@@ -163,7 +163,7 @@ function TwitchClient(opts) {
   /* History of sent chat messages (recent = first) */
   this._history = [];
   /* Maximum history size */
-  this._hist_max = opts.HistorySize || 300;
+  this._hist_max = opts.HistorySize || TwitchClient.DEFAULT_HISTORY_SIZE;
   /* Granted capabilities */
   this._capabilities = [];
   /* TwitchClient's userstate information */
@@ -261,6 +261,9 @@ function TwitchClient(opts) {
     };
   }
 }
+
+/* Statics */
+TwitchClient.DEFAULT_HISTORY_SIZE = 300;
 
 /* Debugging section {{{0 */
 
@@ -599,14 +602,15 @@ function _TwitchClient__build_privmsg(chobj, message) {
   let useruri = `:${user}!${user}@${user}.tmi.twitch.tv`;
   let channel = Twitch.FormatChannel(chobj);
 
-  /* Handle /me */
-  if (message.startsWith('/me ')) {
-    message = message.substr(message.indexOf(' '));
-    flag_obj.action = true;
-  }
-
   /* @<flags> <useruri> PRIVMSG <channel> :<message> */
-  let raw_line = `${flag_str} ${useruri} PRIVMSG ${channel} :${message}`;
+  let raw_line = `${flag_str} ${useruri} PRIVMSG ${channel} :`;
+  if (message.startsWith('/me ')) {
+    raw_line += '\x01ACTION ' + message + '\x01';
+    message = message.substr('/me '.length);
+    flag_obj.action = true;
+  } else {
+    raw_line += message;
+  }
 
   /* Construct and return the event */
   return new TwitchChatEvent(raw_line, ({

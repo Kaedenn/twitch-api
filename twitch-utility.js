@@ -625,7 +625,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.flags = data;
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    if (msg.startsWith('\x01ACTION')) {
+    if (msg.startsWith('\x01ACTION ')) {
       result.action = true;
       result.message = msg.strip('\x01').substr('ACTION '.length);
     } else {

@@ -248,9 +248,11 @@ Util.URL = function _Util_URL(url) {
 }
 
 /* Logging {{{0 */
-Util.LEVEL_TRACE = 2;
-Util.LEVEL_DEBUG = 1;
-Util.LEVEL_OFF = 0;
+Util.LEVEL_MIN = 0;
+Util.LEVEL_OFF = Util.LEVEL_MIN;
+Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
+Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
+Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = 0;
 Util._stack_trim_begin_level = [0];
 Util._stack_trim_end_level = [0];
