@@ -70,14 +70,6 @@ Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&":
 
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
-if (!Object.toSource) {
-  /* Not running on Firefox */
-  Object.prototype.toSource = function _Object_toSource() {
-    /* TODO: ensure this works and doesn't cause problems */
-    return JSON.stringify(this);
-  }
-}
-
 /* Calculates the divmod of the values given */
 Math.divmod = function _Math_divmod(n, r) {
   return [n / r, n % r];
