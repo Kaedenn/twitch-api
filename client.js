@@ -194,6 +194,12 @@ function TwitchClient(opts) {
   this._bttv_badges = {}; /* TODO */
   this._bttv_channel_emotes = {};
 
+  /* Let the client be used as an arbitrary key-value store */
+  this._kv = {};
+  this.get = function _Client_get(k) { return this._kv[k]; }
+  this.set = function _Client_set(k, v) { this._kv[k] = v; }
+  this.has = function _Client_has(k) { return this._kv.hasOwnProperty(k); }
+
   /* Handle authentication and password management */
   this._authed = !!cfg_pass;
   let oauth, oauth_header;
@@ -1234,4 +1240,5 @@ function _TwitchClient_OnWebsocketClose(event) {
 
 /* Mark the Twitch Client API as loaded */
 TwitchClient.API_Loaded = true;
+document.dispatchEvent(new Event("twapi-client-loaded"));
 

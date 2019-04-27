@@ -257,4 +257,5 @@ var AllColors = {
 
 /* Mark the Colors API as loaded */
 AllColors.API_Loaded = true;
+document.dispatchEvent(new Event("twapi-colors-loaded"));
 

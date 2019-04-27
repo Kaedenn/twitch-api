@@ -788,4 +788,5 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
 
 /* Mark the Twitch Utility API as loaded */
 Twitch.API_Loaded = true;
+document.dispatchEvent(new Event("twapi-twutil-loaded"));
 

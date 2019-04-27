@@ -1335,6 +1335,8 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
 /* Query String handling {{{0 */
 
 /* Parse a query string (with leading ? omitted) with the following rules:
+ *  `base64=<value>` results in <value> being Base64 decoded and appended
+ *    to the rest of the values.
  *  `key` gives {key: true}
  *  `key=` gives {key: false}
  *  `key=true` gives {key: true}
@@ -1350,6 +1352,11 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
   for (let part of query.split('&')) {
     if (part.indexOf('=') == -1) {
       obj[part] = true;
+    } else if (part.startsWith('base64=')) {
+      let val = decodeURIComponent(part.substr(part.indexOf('=')+1));
+      for (let [k, v] of Object.entries(Util.ParseQueryString(atob(val)))) {
+        obj[k] = v;
+      }
     } else {
       let key = part.substr(0, part.indexOf('='));
       let val = part.substr(part.indexOf('=')+1);
@@ -1475,4 +1482,5 @@ Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
 
 /* Mark the Utility API as loaded */
 Util.API_Loaded = true;
+document.dispatchEvent(new Event("twapi-utility-loaded"));
 
