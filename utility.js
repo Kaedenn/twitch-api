@@ -1243,6 +1243,37 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
   return result;
 }
 
+/* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
+Util.FormatDate = function _Util_FormatDate(date) {
+  let [y, m, d] = [date.getFullYear(), date.getMonth(), date.getDay()];
+  let [h, mi, s] = [date.getHours(), date.getMinutes(), date.getSeconds()];
+  let ms = date.getMilliseconds();
+  let p = [y, Util.Pad(m, 2), Util.Pad(d, 2),
+           Util.Pad(h, 2), Util.Pad(mi, 2), Util.Pad(s, 2),
+           Util.Pad(ms, 3)];
+  return `${p[0]}-${p[1]}-${p[2]} ${p[3]}:${p[4]}:${p[5]}.${p[6]}`;
+}
+
+/* Format an interval in seconds to "Xh Ym Zs" */
+Util.FormatInterval = function _Util_FormatInterval(time) {
+  let parts = [];
+  time = Math.round(time);
+  if (time < 0) {
+    parts.push('-');
+    time *= -1;
+  }
+  if (time % 60 != 0) { parts.unshift(`${time % 60}s`); }
+  time = Math.floor(time / 60);
+  if (time > 0) {
+    if (time % 60 != 0) { parts.unshift(`${time % 60}m`); }
+    time = Math.floor(time / 60);
+  }
+  if (time > 0) {
+    parts.unshift(`${time}h`);
+  }
+  return parts.join(" ");
+}
+
 /* Special escaping {{{0 */
 
 /* Build a character escape sequence for the code given */
