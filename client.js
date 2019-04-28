@@ -227,6 +227,7 @@ function TwitchClient(opts) {
     }
 
     for (let c of this._channels) {
+      console.log("Marking", c, "as pending");
       this._pending_channels.push(c);
     }
     this._channels = [];
@@ -1054,11 +1055,11 @@ function _TwitchClient_OnWebsocketOpen(name, pass) {
   } else {
     this._ws.send(`NICK ${this._username}`);
   }
-  let chlist = this._pending_channels;
-  this._pending_channels = [];
-  for (let i of chlist) {
+  for (let i of this._pending_channels) {
+    console.log("Joining pending channel", i);
     this.JoinChannel(i);
   }
+  this._pending_channels = [];
   this._getGlobalBadges();
   Util.FireEvent(new TwitchEvent("OPEN", null, {"has-clientid": this._has_clientid}));
 }
@@ -1232,7 +1233,11 @@ function _TwitchClient_OnWebsocketError(event) {
 /* Callback: called when the websocket is closed */
 TwitchClient.prototype.OnWebsocketClose =
 function _TwitchClient_OnWebsocketClose(event) {
-  this._pending_channels = this._channels;
+  for (let chobj of this._channels) {
+    if (this._pending_channels.indexOf(chobj) == -1) {
+      this._pending_channels.push(chobj);
+    }
+  }
   this._channels = [];
   Util.Log("WebSocket Closed", event);
   Util.FireEvent(new TwitchEvent("CLOSE", event));
