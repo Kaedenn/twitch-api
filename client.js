@@ -227,7 +227,6 @@ function TwitchClient(opts) {
     }
 
     for (let c of this._channels) {
-      console.log("Marking", c, "as pending");
       this._pending_channels.push(c);
     }
     this._channels = [];
@@ -1056,7 +1055,6 @@ function _TwitchClient_OnWebsocketOpen(name, pass) {
     this._ws.send(`NICK ${this._username}`);
   }
   for (let i of this._pending_channels) {
-    console.log("Joining pending channel", i);
     this.JoinChannel(i);
   }
   this._pending_channels = [];
