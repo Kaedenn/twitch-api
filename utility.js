@@ -67,7 +67,7 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 
 /* Escape characters */
 Util.EscapeChars = {
-  "<": "&lt;", 
+  "<": "&lt;",
   ">": "&gt;",
   '"': "&quot;",
   "'": "&apos;",
