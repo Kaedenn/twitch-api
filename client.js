@@ -22,12 +22,7 @@
  *      msg-param-viewerCount (raid size)
  *      msg-param-displayName (raider's name)
  *      msg-param-login (raider's login)
- *    FFZ support
- *      "CatInABox" emote (#pangaeapanga)
- *    BTTV support
- *      "BIGFROG" emote (#pangaeapanga)
  *  Implement the following commands:
- *    HOSTTARGET
  *    RECONNECT
  */
 
@@ -417,7 +412,7 @@ function _TwitchClient__onDeOp(channel, user) {
 TwitchClient.prototype._getRooms =
 function _TwitchClient__getRooms(cname, cid) {
   if (this._no_assets) return;
-  this._api.Get(Twitch.URL.Rooms(cid), (function(json) {
+  this._api.GetCB(Twitch.URL.Rooms(cid), (function(json) {
     for (let room_def of json["rooms"]) {
       if (this._rooms[cname].rooms === undefined)
         this._rooms[cname].rooms = {};
@@ -430,12 +425,11 @@ function _TwitchClient__getRooms(cname, cid) {
 TwitchClient.prototype._getChannelBadges =
 function _TwitchClient__getChannelBadges(cname, cid) {
   this._channel_badges[cname] = {};
-  if (this._no_assets) return;
   if (!this._has_clientid) {
     Util.Warn("Unable to get badges; no clientid");
     return;
   }
-  this._api.Get(Twitch.URL.Badges(cid), (function(json) {
+  this._api.GetCB(Twitch.URL.Badges(cid), (function(json) {
     for (let badge_name of Object.keys(json)) {
       this._channel_badges[cname][badge_name] = json[badge_name];
     }
@@ -446,12 +440,11 @@ function _TwitchClient__getChannelBadges(cname, cid) {
 TwitchClient.prototype._getChannelCheers =
 function _TwitchClient__getChannelCheers(cname, cid) {
   this._channel_cheers[cname] = {};
-  if (this._no_assets) return;
   if (!this._has_clientid) {
     Util.Warn("Unable to get channel cheers; no clientid");
     return;
   }
-  this._api.Get(Twitch.URL.Cheers(cid), (function(json) {
+  this._api.GetCB(Twitch.URL.Cheers(cid), (function(json) {
     for (let cdef of json.actions) {
       /* Simplify things later by adding the regexp here */
       cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
@@ -466,8 +459,7 @@ function _TwitchClient__getChannelCheers(cname, cid) {
 TwitchClient.prototype._getFFZEmotes =
 function _TwitchClient__getFFZEmotes(cname, cid) {
   this._ffz_channel_emotes[cname] = {};
-  if (this._no_assets) return;
-  this._api.GetSimple(Twitch.URL.FFZEmotes(cid), (function(json) {
+  this._api.GetSimpleCB(Twitch.URL.FFZEmotes(cid), (function(json) {
     let ffz = this._ffz_channel_emotes[cname];
     ffz.id = json.room._id;
     ffz.set_id = json.room.set;
@@ -476,24 +468,30 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
     ffz.user_name = json.room.id;
     ffz.is_group = json.room.is_group;
     ffz.mod_urls = {};
-    for (let [k, v] of Object.entries(json.room.mod_urls)) {
-      ffz.mod_urls[k] = Util.URL(v);
+    if (json.room.mod_urls) {
+      for (let [k, v] of Object.entries(json.room.mod_urls)) {
+        if (!!v) {
+          ffz.mod_urls[k] = Util.URL(v);
+        }
+      }
     }
-    ffz.mod_badge = Util.URL(json.room.moderator_badge);
+    if (json.room.moderator_badge) {
+      ffz.mod_badge = Util.URL(json.room.moderator_badge);
+    } else {
+      ffz.mod_badge = null;
+    }
     ffz.sets_raw = json.sets;
-    let set_def = json.sets[ffz.set_id];
-    if (!set_def) {
-      Util.Log(`Set ${ffz.set_id} not defined; no FFZ emotes found`);
-      return;
-    }
-    ffz.emotes_name = set_def.title;
-    ffz.emotes_desc = set_def.description || "";
-    ffz.emotes = {};
-    for (let [k, v] of Object.entries(set_def.emoticons)) {
-      if (v.hidden) continue;
-      ffz.emotes[v.name] = v;
-      for (let [size, url] of Object.entries(v.urls)) {
-        ffz.emotes[v.name].urls[size] = Util.URL(url);
+    if (json.sets[ffz.set_id]) {
+      let set_def = json.sets[ffz.set_id];
+      ffz.emotes_name = set_def.title;
+      ffz.emotes_desc = set_def.description || "";
+      ffz.emotes = {};
+      for (let [k, v] of Object.entries(set_def.emoticons)) {
+        if (v.hidden) continue;
+        ffz.emotes[v.name] = v;
+        for (let [size, url] of Object.entries(v.urls)) {
+          ffz.emotes[v.name].urls[size] = Util.URL(url);
+        }
       }
     }
   }).bind(this), (function _ffze_onerror(resp) {
@@ -507,8 +505,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
 TwitchClient.prototype._getBTTVEmotes =
 function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
-  if (this._no_assets) return;
-  this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
+  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')), (function(json) {
     let bttv = this._bttv_channel_emotes[cname];
     bttv.emotes = {};
     for (let emote of json.emotes) {
@@ -532,13 +529,13 @@ TwitchClient.prototype._getGlobalBadges =
 function _TwitchClient__getGlobalBadges() {
   this._global_badges = {};
   if (this._no_assets) return;
-  this._api.Get(Twitch.URL.AllBadges(), (function(json) {
+  this._api.GetCB(Twitch.URL.AllBadges(), (function(json) {
     for (let badge_name of Object.keys(json["badge_sets"])) {
       this._global_badges[badge_name] = json["badge_sets"][badge_name];
     }
   }).bind(this), {}, false);
   if (this._enable_ffz) {
-    this._api.GetSimple(Twitch.URL.FFZBadgeUsers(), (function(resp) {
+    this._api.GetSimpleCB(Twitch.URL.FFZBadgeUsers(), (function(resp) {
       for (let badge of Object.values(resp.badges)) {
         this._ffz_badges[badge.id] = badge;
       }
@@ -820,13 +817,13 @@ function _TwitchClient_GetCheer(cname, name) {
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetRoomInfo =
 function _TwitchClient_GetRoomInfo(room) {
-  return this._rooms[room];
+  return this._rooms[room] || {};
 }
 
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetChannelInfo =
 function _TwitchClient_GetChannelInfo(channel) {
-  return this._rooms[channel];
+  return this._rooms[channel] || {};
 }
 
 /* Get the list of currently-joined channels */
@@ -1140,7 +1137,6 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
             }
           }
         }
-        /* TODO: add BTTV badges */
         let ui = this._rooms[cname].userInfo[result.user];
         ui.ismod = event.ismod;
         ui.issub = event.issub;
@@ -1166,14 +1162,22 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         if (this._authed) {
           this._getRooms(cname, result.flags["room-id"]);
         }
-        this._getChannelBadges(cname, result.flags["room-id"]);
-        this._getChannelCheers(cname, result.flags["room-id"]);
-        if (this._enable_ffz) {
-          this._getFFZEmotes(cname, result.flags["room-id"]);
+        if (!this._no_assets) {
+          this._getChannelBadges(cname, result.flags["room-id"]);
+          this._getChannelCheers(cname, result.flags["room-id"]);
+          if (this._enable_ffz) {
+            this._getFFZEmotes(cname, result.flags["room-id"]);
+          }
+          if (this._enable_bttv) {
+            this._getBTTVEmotes(cname, result.flags["room-id"]);
+          }
         }
-        if (this._enable_bttv) {
-          this._getBTTVEmotes(cname, result.flags["room-id"]);
-        }
+        this._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), (function(resp) {
+          if (resp.streams && resp.streams.length > 0) {
+            this._rooms[cname].stream = resp.streams[0];
+            this._rooms[cname].streams = resp.streams;
+          }
+        }).bind(this));
         break;
       case "USERNOTICE":
         if (result.sub_kind == "SUB") {
@@ -1207,7 +1211,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
     }
     if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        this._api.Get(
+        this._api.GetCB(
           Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')),
           (function(json) {
             for (let eset of Object.keys(json["emoticon_sets"])) {

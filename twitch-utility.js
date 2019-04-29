@@ -55,6 +55,8 @@ Twitch.BTTV = "https://api.betterttv.net/2";
 Twitch.URL = {};
 /* Twitch rooms */
 Twitch.URL.Rooms = (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`;
+/* Twitch streams */
+Twitch.URL.Stream = (cid) => `${Twitch.Kraken}/streams?channel=${cid}`;
 /* Twitch badges */
 Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
@@ -77,12 +79,12 @@ Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
 /* End of API hosts 0}}} */
 
-/* Abstract XMLHttpRequest to a simple url -> callback system */
+/* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */
 Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {
   this._onerror = onerror;
 
-  /* GET url, without headers */
-  this.GetSimple =
+  /* GET url, without headers, using callbacks */
+  this.GetSimpleCB =
   function _Twitch_API_GetSimple(url, callback, errorcb=null) {
     let req = new XMLHttpRequest();
     req.onreadystatechange = function() {
@@ -104,8 +106,8 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
     req.send();
   };
 
-  /* GET url, adding any given headers, optionally adding private headers */
-  this.Get =
+  /* GET url, optionally adding private headers, using callbacks */
+  this.GetCB =
   function _Twitch_API_Get(url, callback, headers={}, add_private=false, errorcb=null) {
     let req = new XMLHttpRequest();
     let callerStack = Util.GetStack();
@@ -140,6 +142,23 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
     }
     req.send();
   }
+
+  /* GetSimple, returning a Promise */
+  this.GetSimplePromise =
+  async function _Twitch_API_GetSimplePromise(url) {
+    let self = this;
+    return await new Promise(function(resolve, reject) {
+      self.GetSimpleCB(url, resolve, reject);
+    });
+  };
+
+  /* Get, returning a promise */
+  this.GetPromise =
+  async function _Twitch_API_GetPromise(url, headers={}, add_private=false) {
+    return await new Promise((function(resolve, reject) {
+      this.GetCB(url, resolve, headers, add_private, reject);
+    }).bind(this));
+  };
 }
 
 /* Extract username from user specification */

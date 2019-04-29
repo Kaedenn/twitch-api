@@ -430,14 +430,17 @@ class LoggerUtility {
     }
   }
 
+  /* Object of severity name to severity number */
   static get SEVERITIES() {
     return {ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1};
   }
 
+  /* Get the numeric value for the severity given */
   _sev_value(sev) {
     return LoggerUtility.SEVERITIES[sev];
   }
 
+  /* Validate that the given severity exists */
   _assert_sev(sev) {
     if (this._hooks[this._sev_value(sev)] === undefined) {
       console.exception(`Logger: invalid severity ${sev}`);
