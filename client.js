@@ -103,11 +103,21 @@ class TwitchChatEvent extends TwitchEvent {
     super("CHAT", raw_line, parsed);
     this._id = parsed.flags.id;
   }
-  get id() { return this._id; }
-  get iscaster() { return this.has_badge("broadcaster"); }
-  get ismod() { return this._parsed.flags.mod || this.has_badge("moderator") || this.iscaster; }
-  get issub() { return this._parsed.flags.subscriber || this.has_badge("subscriber"); }
-  get isvip() { return this.has_badge("vip"); }
+  get id() {
+    return this._id;
+  }
+  get iscaster() {
+    return this.has_badge("broadcaster");
+  }
+  get ismod() {
+    return this._parsed.flags.mod || this.has_badge("moderator") || this.iscaster;
+  }
+  get issub() {
+    return this._parsed.flags.subscriber || this.has_badge("subscriber");
+  }
+  get isvip() {
+    return this.has_badge("vip");
+  }
   has_badge(badge, rev=undefined) {
     if (!this.flag("badges"))
       return false;
@@ -240,7 +250,7 @@ function TwitchClient(opts) {
       this._send(m);
     };
     this._ws.onopen = function(e) {
-      Util.DebugOnly('ws open>', e);
+      Util.DebugOnly("Connected to", this.url, ":", this);
       this.client._connected = false;
       this.client._is_open = true;
       this.client.OnWebsocketOpen(cfg_name, oauth);
@@ -514,7 +524,8 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
         'code': emote.code,
         'channel': emote.channel,
         'image-type': emote.imageType,
-        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id).replace('{{image}}', '1x'))
+        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id)
+                                        .replace('{{image}}', '1x'))
       };
     }
   }).bind(this), (function _bttve_onerror(resp) {
@@ -790,7 +801,13 @@ function _TwitchClient_FindCheers(cname, message) {
           let m = token.match(cheer.word_pattern);
           if (m) {
             let num_bits = Number.parseInt(m[2]);
-            matches.push({cheer: cheer, name: m[1], bits: num_bits, start: offset, end: offset + token.length});
+            matches.push({
+              cheer: cheer,
+              name: m[1],
+              bits: num_bits,
+              start: offset,
+              end: offset + token.length
+            });
           }
           offset += token.length + 1;
         }

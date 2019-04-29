@@ -66,7 +66,13 @@ Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
 
 /* Escape characters */
-Util.EscapeChars = {"<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&apos;", "&": "&amp;"};
+Util.EscapeChars = {
+  "<": "&lt;", 
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+  "&": "&amp;"
+};
 
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
@@ -1359,7 +1365,8 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
   } else if (!(v instanceof Array)) {
     new_v = [v, value];
   } else {
-    v.push(value);
+    new_v = v;
+    new_v.push(value);
   }
   Util.SetWebStorage(new_v, key);
 }
