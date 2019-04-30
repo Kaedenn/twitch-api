@@ -586,24 +586,60 @@ Util._ColorParser = null;
 /* Create a class for parsing colors */
 class ColorParser {
   constructor() {
-    this._canvas = document.createElement('canvas');
-    this._canvas.width = this._canvas.height = 1;
-    this._ctx = this._canvas.getContext('2d');
+    this._e = document.createElement('div');
+    this._e.setAttribute("style", "position: absolute; z-index: -100");
+    this._e.setAttribute("id", "color-parser-div");
+    this._e.setAttribute("width", "0px");
+    this._e.setAttribute("height", "0px");
+    document.body.appendChild(this._e);
+    this._rgb_pat = /rgb\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
+    this._rgba_pat = /rgba\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
     this._cache = {};
   }
-  do_parse(color) {
-    if (this._cache[color]) return this._cache[color];
-    this._ctx.clearRect(0, 0, 1, 1);
-    this._ctx.fillStyle = color;
-    this._ctx.fillRect(0, 0, 1, 1);
-    this._cache[color] = this._ctx.getImageData(0, 0, 1, 1).data;
-    return this._cache[color];
+  _parse(color) {
+    if (this._cache[color]) {
+      return this._cache[color];
+    }
+    this._e.style.color = null;
+    this._e.style.color = color;
+    if (this._e.style.color.length === 0) {
+      throw new Error(`ColorParser: Invalid color ${color}`);
+    }
+    let rgbstr = getComputedStyle(this._e).color;
+    let rgbtuple = [];
+    Util.Debug(color, rgbstr, this._rgb_pat.exec(rgbstr), this._rgba_pat.exec(rgbstr));
+    let m = this._rgb_pat.exec(rgbstr) || this._rgba_pat.exec(rgbstr);
+    if (m !== null) {
+      rgbtuple = m.slice(1);
+    } else {
+      /* Shouldn't ever happen */
+      throw new Error("Failed to parse computed color", rgbstr);
+    }
+    let r = Number(rgbtuple[0]); r = Number.isNaN(r) ? 0 : r;
+    let g = Number(rgbtuple[1]); g = Number.isNaN(g) ? 0 : g;
+    let b = Number(rgbtuple[2]); b = Number.isNaN(b) ? 0 : b;
+    let res = [r, g, b];
+    if (rgbtuple.length == 4 && rgbtuple[3] !== undefined) {
+      let a = Number(rgbtuple[3]); a = Number.isNaN(a) ? 0 : a;
+      res.push(a);
+    }
+    this._cache[color] = res;
+    return res;
   }
-  static parse(color) {
+  static parse(color, failQuiet=false) {
     if (Util._ColorParser == null) {
       Util._ColorParser = new ColorParser();
     }
-    return Util._ColorParser.do_parse(color);
+    try {
+      return Util._ColorParser._parse(color);
+    }
+    catch (e) {
+      if (failQuiet) {
+        return null;
+      } else {
+        throw e;
+      }
+    }
   }
 }
 
@@ -1020,7 +1056,7 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
 }
 
 /* Determine which color contrasts the best with the given color */
-Util.GetMaxConstrast = function _Util_GetBestContrast(c1, ...colors) {
+Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
   let best_color = null;
   let best_contast = null;
   for (let c of colors) {
