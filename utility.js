@@ -1371,6 +1371,46 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
   Util.SetWebStorage(new_v, key);
 }
 
+/* Class for handling configuration */
+class ConfigStore {
+  constructor(key, noPersist=null) {
+    this._key = key;
+    this._config = Util.GetWebStorage(this._key) || {};
+    this._persist = {};
+    if (Util.IsArray(noPersist)) {
+      for (let k of noPersist) {
+        this._persist[k] = false;
+      }
+    } else if (noPersist !== null) {
+      Util.Warn("ConfigStore: noPersist: expected array, got", noPersist);
+    }
+  }
+  setPersist(key, persist=true) {
+    this._persist[key] = persist;
+  }
+  getPersists(key) {
+    return this._persist.hasOwnProperty[key] && this._persist[key];
+  }
+  _merge(k, v) {
+    this._config[k] = v;
+    Util.SetWebStorage(this._config, this._key);
+  }
+  addValue(key, val) {
+    this._merge(key, val);
+  }
+  addValues(array) {
+    for (let [k,v] of array) {
+      this.addValue(k, v);
+    }
+  }
+  addObject(obj) {
+    this.addValues(Object.entries(obj));
+  }
+  getValue(k) {
+    return this._config[k];
+  }
+}
+
 /* End configuration and localStorage functions 0}}} */
 
 /* Query String handling {{{0 */
