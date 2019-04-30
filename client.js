@@ -323,6 +323,18 @@ function _TwitchClient_unbind(event, callback) {
 
 /* Private functions section {{{0 */
 
+/* Return the value of _self_userstate for the given channel and attribute */
+TwitchClient.prototype._selfUserState =
+function _TwitchClient__selfUserState(channel, value) {
+  let ch = Twitch.FormatChannel(channel);
+  if (this._self_userstate) {
+    if (this._self_userstate[ch]) {
+      return this._self_userstate[ch][value];
+    }
+  }
+  return null;
+}
+
 /* Private: Ensure the user specified is in reduced form */
 TwitchClient.prototype._ensureUser =
 function _TwitchClient__ensureUser(user) {
@@ -662,25 +674,25 @@ function _TwitchClient_IsAuthed() {
 /* Return true if the client is a subscriber in the channel given */
 TwitchClient.prototype.IsSub =
 function _TwitchClient_IsSub(channel) {
-  return this._self_userstate[Twitch.FormatChannel(channel)]["sub"];
+  return this._selfUserState(channel, "sub");
 }
 
 /* Return true if the client is a VIP in the channel given */
 TwitchClient.prototype.IsVIP =
 function _TwitchClient_IsVIP(channel) {
-  return this._self_userstate[Twitch.FormatChannel(channel)]["vip"];
+  return this._selfUserState(channel, "vip");
 }
 
 /* Return true if the client is a moderator in the channel given */
 TwitchClient.prototype.IsMod =
 function _TwitchClient_IsMod(channel) {
-  return this._self_userstate[Twitch.FormatChannel(channel)]["mod"];
+  return this._selfUserState(channel, "mod");
 }
 
 /* Return true if the client is the broadcaster for the channel given */
 TwitchClient.prototype.IsCaster =
 function _TwitchClient_IsCaster(channel) {
-  return this._self_userstate[Twitch.FormatChannel(channel)]["broadcaster"];
+  return this._selfUserState(channel, "broadcaster");
 }
 
 /* Timeout the specific user in the specified channel */
