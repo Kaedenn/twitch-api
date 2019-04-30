@@ -1,10 +1,38 @@
+# Custom additions
 
-*.swp
-*.swo
-*.uri
-extras
-notes.txt
-.eslintrc.js
+# Ignore files not meant for distribution
+plugins/dwangoAC.js
+
+# Ignore assets not included in project
+assets/3rdparty/
+
+# Ignore supporting material
 Makefile
-test.html
+*.html
+
+# Re-include delivered tests
+!tests/*
+
+# Ignore Node.js files
+node_modules/
+package-lock.json
+package.json
+.eslintrc*
+
+# Ignore compiled Python files
+*.pyc
+*.pyo
+
+# Ignore reference material
+ref/
+extras/
+notes.txt
+*.uri
+
+# Ignore notes files
+notes.txt
+
+# Ignore swap files
+.*.swp
+.*.swo
 
