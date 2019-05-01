@@ -1,0 +1,60 @@
+<!DOCTYPE xhtml>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Twitch API - WebSocket Test</title>
+  <meta charset="utf-8" />
+  <script type="text/javascript" src="https://kaedenn.github.io/twitch-filtered-chat/assets/jquery-3.4.0.js"></script>
+  <script type="text/javascript" src="../utility.js"></script>
+  <script type="text/javascript" src="harness.js"></script>
+  <style type="text/css">
+#output .line {
+  font-family: monospace;
+}
+  </style>
+  <script type="text/javascript">
+
+function recv_data(data) {
+  for (let l of data.split("\r\n")) {
+    this.out(`${this.escape(l)}`);
+  }
+}
+
+function test1_basic() {
+  let self = this;
+  let ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
+  ws.onopen = function(e) {
+    console.log(e);
+    self.out("ws open");
+    ws.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
+    ws.send("NICK justinfan123123");
+    self.out("Closing in 5s...");
+    window.setTimeout(function() {
+      self.out("Closing");
+      ws.close();
+    }, 5000);
+  }
+  ws.onmessage = function(e) {
+    console.log(e);
+    recv_data.bind(self)(e.data);
+  }
+  ws.onerror = function(e) {
+    console.log(e);
+    self.out("ws error> " + self.escape(JSON.stringify(e)));
+  }
+  ws.onclose = function(e) {
+    console.log(e);
+    self.out("ws close");
+  }
+}
+
+var T = null;
+$(document).ready(function() {
+  T = new Tests();
+  T.add("Basic", test1_basic);
+  T.run();
+});
+  </script>
+</head>
+<body>
+</body>
+</html>
