@@ -1102,7 +1102,10 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
     let result = Twitch.ParseIRCMessage(line);
     let result2 = Twitch.IRC.Parse(line);
     Util.Trace('result1:', result);
-    Util.Trace('result2:', result);
+    Util.Trace('result2:', result2);
+
+    /* Fire twitch-message for every line received */
+    Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
 
     /* Make sure the room is tracked */
     if (result.channel && result.channel.channel) {
@@ -1117,7 +1120,6 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
 
     /* Fire top-level events, dispatch top-level callbacks */
     Util.FireEvent(new TwitchEvent(result.cmd, line, result));
-    Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
     let cname = result.channel ? result.channel.channel : null;
     let cstr = result.channel ? Twitch.FormatChannel(result.channel) : null;
 

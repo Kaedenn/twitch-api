@@ -1329,7 +1329,10 @@ Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
   if (key === null) {
     Util.Error("Util.GetWebStorage called without a key configured");
   } else {
-    return JSON.parse(window.localStorage.getItem(key));
+    let v = window.localStorage.getItem(key);
+    if (v === null) return null;
+    if (v === "") return "";
+    return JSON.parse(v);
   }
 }
 
