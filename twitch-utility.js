@@ -1,24 +1,5 @@
 "use strict";
 
-/* Reference information
- *
- * PRIVMSG flags:
- * 'badge-info': "subscriber/12"
- * 'badges': [["moderator", "1"], ["subscriber", "12"], ["bits", "1000"]]
- * 'color': "#0262C1"
- * 'display-name': "Kaedenn_"
- * 'emotes': null
- * 'flags': null
- * 'id': "6d7a2b5e-284d-44a7-8f99-0b910ca11b2b"
- * 'mod': 1
- * 'room-id': 70067886
- * 'subscriber': 1
- * 'tmi-sent-ts': 1555203525573
- * 'turbo': 0
- * 'user-id': 175437030
- * 'user-type': "mod"
- */
-
 /* Twitch utilities */
 let Twitch = {};
 
@@ -46,7 +27,7 @@ class _Twitch_DebugCache {
 }
 Twitch.DebugCache = new _Twitch_DebugCache();
 
-/* API hosts {{{0 */
+/* API URLs {{{0 */
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
@@ -77,7 +58,7 @@ Twitch.URL.FFZBadgeUsers = () => `${Twitch.FFZ}/badges`;
 Twitch.URL.BTTVAllEmotes = () => `${Twitch.BTTV}/emotes`;
 Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
-/* End of API hosts 0}}} */
+/* End of API URLs 0}}} */
 
 /* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */
 Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {

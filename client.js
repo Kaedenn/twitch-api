@@ -196,7 +196,7 @@ function TwitchClient(opts) {
   this._ffz_channel_emotes = {};
   this._ffz_badges = {};
   this._ffz_badge_users = {};
-  this._bttv_badges = {}; /* TODO */
+  this._bttv_badges = {}; /* If BTTV adds badges */
   this._bttv_channel_emotes = {};
 
   /* Let the client be used as an arbitrary key-value store */
@@ -250,7 +250,7 @@ function TwitchClient(opts) {
       this._send(m);
     };
     this._ws.onopen = function(e) {
-      Util.DebugOnly("Connected to", this.url, ":", this);
+      Util.LogOnly("ws open>", this.url);
       this.client._connected = false;
       this.client._is_open = true;
       this.client.OnWebsocketOpen(cfg_name, oauth);

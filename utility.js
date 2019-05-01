@@ -1,6 +1,6 @@
 "use strict";
 
-/** Generic Utility-ish Functions for the TASToys' JS Twitch API
+/** Generic Utility-ish Functions for the Twitch Chat API
  *
  * Provides the following APIs, among others:
  *
@@ -14,7 +14,7 @@
  * Functions for handling location.search (query string) management
  * Functions for generating version 4 (random) UUIDs
  *
- * Credits, citations:
+ * Citations:
  *  PRNG and UUID generation
  *    https://github.com/kelektiv/node-uuid.git
  *  Color calculations (RGBtoHSL, HSLtoRGB)
@@ -186,7 +186,7 @@ String.prototype.repr = function _String_repr() {
   return JSON.stringify(this);
 }
 
-/* Implement Array-line functions for String (map, forEach, withCharAt) */
+/* Implement Array.map for strings */
 String.prototype.map = function _String_map(func) {
   let result = "";
   for (let ch of this) {
@@ -195,12 +195,14 @@ String.prototype.map = function _String_map(func) {
   return result;
 };
 
+/* Implement Array.forEach for strings */
 String.prototype.forEach = function _String_forEach(func) {
   for (let ch of this) {
     func(ch);
   }
 };
 
+/* Return a string with the specified character changed */
 String.prototype.withCharAt = function _String_withCharAt(chr, pos) {
   let result = this;
   if (pos >= 0 && pos < this.length) {
@@ -233,6 +235,8 @@ RegExp.escape = function _RegExp_escape(string) {
 
 /* End standard object additions 0}}} */
 
+/* URL and URI handling {{{0 */
+
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
   if (url.startsWith('//')) {
@@ -245,13 +249,108 @@ Util.URL = function _Util_URL(url) {
   return url;
 }
 
+/* Converts an XHR onError object to an Error object */
+Util.XHRError = function _Util_XHRError(obj, stack=null) {
+  let e = JSON.parse(JSON.stringify(obj));
+  if (stack !== null) {
+    e.stack = stack;
+  }
+  Object.setPrototypeOf(e, Error.prototype);
+  return e;
+}
+
+/* Converts a Response object to an Error object */
+Util.ResponseError = function _Util_ResponseError(resp, stack=null) {
+  let m = `${resp.status} ${resp.statusText}`;
+}
+
+class _Util_API {
+  constructor(headers=null, args=null) {
+    this._headers = headers || {};
+    this._args = args || {};
+  }
+
+  /* Return an API object with the arguments given */
+  static withArgs(args) { return new _Util_API(null, args); }
+
+  /* Fetch a resource using the native window.fetch API */
+  _fetch_native(url, parms) {
+    let init = parms || {};
+    init.headers = {};
+    for (let [k, v] of Object.entries(this._args)) {
+      init[k] = v;
+    }
+    for (let [k, v] of Object.entries(this._headers)) {
+      init.headers[k] = v;
+    }
+    return fetch(url, parms)
+      .then(function(resp) {
+        if (!resp.ok) {
+          throw Util.ResponseError(resp);
+        } else {
+          return resp.json();
+        }
+      });
+  }
+
+  /* Fetch a resource using XMLHttpRequest */
+  _fetch_xhr(url, parms) {
+    let stack = Util.GetStack();
+    return new Promise(function (resolve, reject) {
+      let r = new XMLHttpRequest();
+      r.onreadystatechange = function() {
+        if (this.readyState == XMLHttpRequest.DONE) {
+          resolve(JSON.parse(this.responseText));
+        }
+      }
+      r.onerror = function(e) {
+        e._stacktrace = stack;
+        reject(e);
+      }
+      r.open(parms.method || "GET", url);
+      for (let [k, v] of Object.entries(this._headers)) {
+        r.setRequestHeader(k, v);
+      }
+      r.send(parms.body || null);
+    });
+  }
+
+  /* Fetch the given URL with the given parameter object.
+   * NOTE: Does no response status code checking */
+  fetch(url, parms=null) {
+    if (window.fetch) {
+      return this._fetch_native(url, parms);
+    } else {
+      return this._fetch_xhr(url, parms);
+    }
+  }
+
+  /* Fetch the given URL and return a promise of the JSON result.
+   * NOTE: Does no response status code checking */
+  async fetchWait(url, parms=null) {
+    let response = await this.fetch(url, parms);
+    let json = await response.json();
+    return json;
+  }
+
+  fetchCB(url, parms, onSuccess, onError=null) {
+    onError = onError || Util.Error;
+    this.fetchAsync(url, parms)
+      .then(function(json) { onSuccess(json, this); })
+      .catch(function(...args) { onError(args, this); });
+  }
+}
+Util.API = _Util_API;
+
+/* End URL and URI handling 0}}} */
+
 /* Logging {{{0 */
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
 Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
 Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
-Util.DebugLevel = 0;
+Util.DebugLevel = Util.LEVEL_OFF;
 Util._stack_trim_begin_level = [0];
 Util._stack_trim_end_level = [0];
 
@@ -563,7 +662,7 @@ class LoggerUtility {
   ErrorOnly(...args) { this.do_log("ERROR", args, false); }
 }
 
-/* Logger instance */
+/* Logger instance and shortcut functions */
 Util.Logger = new LoggerUtility();
 Util.Trace = Util.Logger.Trace.bind(Util.Logger);
 Util.Debug = Util.Logger.Debug.bind(Util.Logger);
@@ -645,7 +744,6 @@ class ColorParser {
 
 /* Class for handling colors and color arithmetic */
 class Color {
-
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
     r /= 255; g /= 255; b /= 255;
@@ -851,164 +949,13 @@ class Color {
    */
 }
 
-Util.COLORS = {
-  "indigo": "#4b0082",
-  "gold": "#ffd700",
-  "firebrick": "#b22222",
-  "indianred": "#cd5c5c",
-  "yellow": "#ffff00",
-  "darkolivegreen": "#556b2f",
-  "darkseagreen": "#8fbc8f",
-  "slategrey": "#708090",
-  "darkslategrey": "#2f4f4f",
-  "mediumvioletred": "#c71585",
-  "mediumorchid": "#ba55d3",
-  "chartreuse": "#7fff00",
-  "mediumslateblue": "#7b68ee",
-  "black": "#000000",
-  "springgreen": "#00ff7f",
-  "crimson": "#dc143c",
-  "lightsalmon": "#ffa07a",
-  "brown": "#a52a2a",
-  "turquoise": "#40e0d0",
-  "olivedrab": "#6b8e23",
-  "cyan": "#00ffff",
-  "silver": "#c0c0c0",
-  "skyblue": "#87ceeb",
-  "gray": "#808080",
-  "darkturquoise": "#00ced1",
-  "goldenrod": "#daa520",
-  "darkgreen": "#006400",
-  "darkviolet": "#9400d3",
-  "darkgray": "#a9a9a9",
-  "lightpink": "#ffb6c1",
-  "teal": "#008080",
-  "darkmagenta": "#8b008b",
-  "lightgoldenrodyellow": "#fafad2",
-  "lavender": "#e6e6fa",
-  "yellowgreen": "#9acd32",
-  "thistle": "#d8bfd8",
-  "violet": "#ee82ee",
-  "navy": "#000080",
-  "dimgrey": "#696969",
-  "orchid": "#da70d6",
-  "blue": "#0000ff",
-  "ghostwhite": "#f8f8ff",
-  "honeydew": "#f0fff0",
-  "cornflowerblue": "#6495ed",
-  "darkblue": "#00008b",
-  "darkkhaki": "#bdb76b",
-  "mediumpurple": "#9370db",
-  "cornsilk": "#fff8dc",
-  "red": "#ff0000",
-  "bisque": "#ffe4c4",
-  "slategray": "#708090",
-  "darkcyan": "#008b8b",
-  "khaki": "#f0e68c",
-  "wheat": "#f5deb3",
-  "deepskyblue": "#00bfff",
-  "rebeccapurple": "#663399",
-  "darkred": "#8b0000",
-  "steelblue": "#4682b4",
-  "aliceblue": "#f0f8ff",
-  "lightslategrey": "#778899",
-  "gainsboro": "#dcdcdc",
-  "mediumturquoise": "#48d1cc",
-  "floralwhite": "#fffaf0",
-  "coral": "#ff7f50",
-  "lightgrey": "#d3d3d3",
-  "burlywood": "#deb887",
-  "darksalmon": "#e9967a",
-  "beige": "#f5f5dc",
-  "azure": "#f0ffff",
-  "lightsteelblue": "#b0c4de",
-  "oldlace": "#fdf5e6",
-  "greenyellow": "#adff2f",
-  "royalblue": "#4169e1",
-  "lightseagreen": "#20b2aa",
-  "mistyrose": "#ffe4e1",
-  "sienna": "#a0522d",
-  "lightcoral": "#f08080",
-  "orangered": "#ff4500",
-  "navajowhite": "#ffdead",
-  "lime": "#00ff00",
-  "palegreen": "#98fb98",
-  "lightcyan": "#e0ffff",
-  "seashell": "#fff5ee",
-  "mediumspringgreen": "#00fa9a",
-  "fuchsia": "#ff00ff",
-  "papayawhip": "#ffefd5",
-  "blanchedalmond": "#ffebcd",
-  "peru": "#cd853f",
-  "aquamarine": "#7fffd4",
-  "white": "#ffffff",
-  "darkslategray": "#2f4f4f",
-  "tomato": "#ff6347",
-  "ivory": "#fffff0",
-  "dodgerblue": "#1e90ff",
-  "lemonchiffon": "#fffacd",
-  "chocolate": "#d2691e",
-  "orange": "#ffa500",
-  "forestgreen": "#228b22",
-  "darkgrey": "#a9a9a9",
-  "olive": "#808000",
-  "mintcream": "#f5fffa",
-  "antiquewhite": "#faebd7",
-  "darkorange": "#ff8c00",
-  "cadetblue": "#5f9ea0",
-  "moccasin": "#ffe4b5",
-  "limegreen": "#32cd32",
-  "saddlebrown": "#8b4513",
-  "grey": "#808080",
-  "darkslateblue": "#483d8b",
-  "lightskyblue": "#87cefa",
-  "deeppink": "#ff1493",
-  "plum": "#dda0dd",
-  "aqua": "#00ffff",
-  "darkgoldenrod": "#b8860b",
-  "maroon": "#800000",
-  "sandybrown": "#f4a460",
-  "magenta": "#ff00ff",
-  "tan": "#d2b48c",
-  "rosybrown": "#bc8f8f",
-  "pink": "#ffc0cb",
-  "lightblue": "#add8e6",
-  "palevioletred": "#db7093",
-  "mediumseagreen": "#3cb371",
-  "slateblue": "#6a5acd",
-  "linen": "#faf0e6",
-  "dimgray": "#696969",
-  "powderblue": "#b0e0e6",
-  "seagreen": "#2e8b57",
-  "snow": "#fffafa",
-  "mediumblue": "#0000cd",
-  "midnightblue": "#191970",
-  "paleturquoise": "#afeeee",
-  "palegoldenrod": "#eee8aa",
-  "whitesmoke": "#f5f5f5",
-  "darkorchid": "#9932cc",
-  "salmon": "#fa8072",
-  "lightslategray": "#778899",
-  "lawngreen": "#7cfc00",
-  "lightgreen": "#90ee90",
-  "lightgray": "#d3d3d3",
-  "hotpink": "#ff69b4",
-  "lightyellow": "#ffffe0",
-  "lavenderblush": "#fff0f5",
-  "purple": "#800080",
-  "mediumaquamarine": "#66cdaa",
-  "green": "#008000",
-  "blueviolet": "#8a2be2",
-  "peachpuff": "#ffdab9"
-};
-
 /* Parse a CSS color.
  * Overloads
  *  Util.ParseColor('css color spec')
  *  Util.ParseColor([r, g, b])
  *  Util.ParseColor([r, g, b, a])
  *  Util.ParseColor(r, g, b[, a]) */
-Util.ParseCSSColor = function _Util_ParseColor(color) {
+Util.ParseCSSColor = function _Util_ParseColor(...color) {
   let r = 0, g = 0, b = 0, a = 0;
   if (color.length == 1) { color = color[0]; }
   if (typeof(color) == "string") {
@@ -1055,10 +1002,16 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
   return (l1 + 0.05) / (l2 + 0.05);
 }
 
-/* Determine which color contrasts the best with the given color */
+/* Determine which color contrasts the best with the given color
+ * Overloads:
+ *  Util.GetMaxContrast(color, c1, c2, c3, ...)
+ *  Util.GetMaxContrast(color, [c1, c2, c3, ...]) */
 Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
   let best_color = null;
   let best_contast = null;
+  if (colors.length == 1 && Util.IsArray(colors[0])) {
+    colors = colors[0];
+  }
   for (let c of colors) {
     let contrast = Util.ContrastRatio(c1, c);
     if (best_color === null) {
@@ -1075,7 +1028,7 @@ Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
 /* End color handling 0}}} */
 
 /* Notification APIs {{{0 */
-class _Util_Notification {
+Util.Notification = class _Util_Notification {
   constructor() {
     this._enabled = false;
     this._max = 2; /* max simultaneous notifications */
@@ -1102,7 +1055,7 @@ class _Util_Notification {
   notify(msg) { /* TODO */ }
 }
 
-Util.Notify = new _Util_Notification();
+Util.Notify = new Util.Notification();
 /* End notification APIs 0}}} */
 
 /* Return true if the given object inherits from the given typename */
@@ -1128,7 +1081,7 @@ Util.IsArray = function _Util_IsArray(value) {
 }
 
 /* PRNG (Pseudo-Random Number Generator) {{{0 */
-class _Util_Random {
+Util.RandomGenerator = class _Util_Random {
   constructor(disable_crypto) {
     this._crypto = null;
     if (disable_crypto) {
@@ -1203,7 +1156,7 @@ class _Util_Random {
   }
 };
 
-Util.Random = new _Util_Random();
+Util.Random = new Util.RandomGenerator();
 /* End PRNG 0}}} */
 
 /* Escape the string and return a map of character movements */
