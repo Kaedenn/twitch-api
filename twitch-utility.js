@@ -68,7 +68,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
   this.GetSimpleCB =
   function _Twitch_API_GetSimple(url, callback, errorcb=null) {
     let req = new XMLHttpRequest();
-    req.onreadystatechange = function() {
+    req.onreadystatechange = function _XHR_onreadystatechange() {
       if (this.readyState == 4) {
         if (this.status == 200) {
           callback(JSON.parse(this.responseText));
@@ -92,7 +92,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
   function _Twitch_API_Get(url, callback, headers={}, add_private=false, errorcb=null) {
     let req = new XMLHttpRequest();
     let callerStack = Util.GetStack();
-    req.onreadystatechange = function() {
+    req.onreadystatechange = function _XHR_onreadystatechange() {
       if (this.readyState == 4) {
         if (this.status == 200) {
           callback(JSON.parse(this.responseText));
@@ -128,7 +128,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
   this.GetSimplePromise =
   async function _Twitch_API_GetSimplePromise(url) {
     let self = this;
-    return await new Promise(function(resolve, reject) {
+    return await new Promise(function _API_GetSimple(resolve, reject) {
       self.GetSimpleCB(url, resolve, reject);
     });
   };
@@ -136,7 +136,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
   /* Get, returning a promise */
   this.GetPromise =
   async function _Twitch_API_GetPromise(url, headers={}, add_private=false) {
-    return await new Promise((function(resolve, reject) {
+    return await new Promise((function _API_GetPromise(resolve, reject) {
       this.GetCB(url, resolve, headers, add_private, reject);
     }).bind(this));
   };

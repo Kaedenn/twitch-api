@@ -83,7 +83,7 @@ Math.divmod = function _Math_divmod(n, r) {
 
 /* Return true if any of the values satisfy the function given */
 Array.prototype.any = function _Array_any(func) {
-  if (!func) func = (function(x) { !!x; });
+  if (!func) func = (function _bool(x) { !!x; });
   for (let e of this) {
     if (func(e)) {
       return true;
@@ -94,7 +94,7 @@ Array.prototype.any = function _Array_any(func) {
 
 /* Return true if all of the values satisfy the function given */
 Array.prototype.all = function _Array_all(func) {
-  if (!func) func = (function(x) { !!x; });
+  if (!func) func = (function _bool(x) { !!x; });
   for (let e of this) {
     if (!func(e)) {
       return false;
@@ -104,7 +104,7 @@ Array.prototype.all = function _Array_all(func) {
 }
 
 /* Obtain the maximal element from an array */
-Array.prototype.max = function(cmp) {
+Array.prototype.max = function __Array_max(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
@@ -120,7 +120,7 @@ Array.prototype.max = function(cmp) {
 }
 
 /* Obtain the minimal element from an array */
-Array.prototype.min = function(cmp) {
+Array.prototype.min = function __Array_min(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
@@ -284,7 +284,7 @@ class _Util_API {
       init.headers[k] = v;
     }
     return fetch(url, parms)
-      .then(function(resp) {
+      .then(function _fetch_then(resp) {
         if (!resp.ok) {
           throw Util.ResponseError(resp);
         } else {
@@ -298,12 +298,12 @@ class _Util_API {
     let stack = Util.GetStack();
     return new Promise(function (resolve, reject) {
       let r = new XMLHttpRequest();
-      r.onreadystatechange = function() {
+      r.onreadystatechange = function _XHR_onreadystatechange() {
         if (this.readyState == XMLHttpRequest.DONE) {
           resolve(JSON.parse(this.responseText));
         }
       }
-      r.onerror = function(e) {
+      r.onerror = function _XHR_onerror(e) {
         e._stacktrace = stack;
         reject(e);
       }
@@ -336,8 +336,8 @@ class _Util_API {
   fetchCB(url, parms, onSuccess, onError=null) {
     onError = onError || Util.Error;
     this.fetchAsync(url, parms)
-      .then(function(json) { onSuccess(json, this); })
-      .catch(function(...args) { onError(args, this); });
+      .then(function _fetchCB_then(json) { onSuccess(json, this); })
+      .catch(function _fetchCB_catch(...args) { onError(args, this); });
   }
 }
 Util.API = _Util_API;
@@ -1039,7 +1039,7 @@ Util.Notification = class _Util_Notification {
   acquire() {
     if (this.available) {
       this._req_promise = window.Notification.requestPermission();
-      this._req_promise.then((function(s) {
+      this._req_promise.then((function _notif_then(s) {
         if (s === "granted") {
           this._enabled = true;
         } else {
