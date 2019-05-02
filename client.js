@@ -1202,7 +1202,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
             }
           }
         }
-        let ui = room[cname].userInfo[result.user];
+        let ui = room.userInfo[result.user];
         ui.ismod = event.ismod;
         ui.issub = event.issub;
         ui.isvip = event.isvip;
