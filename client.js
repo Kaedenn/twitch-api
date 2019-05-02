@@ -271,7 +271,11 @@ function TwitchClient(opts) {
       Util.DebugOnly('ws send>', Twitch.StripCredentials(m).repr());
       this._ws.send(m);
     }).bind(this);
+
+    Util.LogOnly("Connecting to Twitch...");
   }).bind(this);
+
+  Util.LogOnly("Client constructed and ready for action");
 }
 
 /* Statics */
