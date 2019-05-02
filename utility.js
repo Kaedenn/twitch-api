@@ -32,13 +32,18 @@ let Util = {};
 Util.__wskey = null;
 Util.__wscfg = "kae-twapi-local-key";
 
+/* Everyone needs an ASCII table */
 Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014" +
              "\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d" +
              "\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
 
-/* Browser identification */
+/* RegExp for matching URLs */
+Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+
+/* Browser identification {{{0 */
+
 Util.Browser = {};
 Util.Browser.FIREFOX = "Firefox";
 Util.Browser.CHROME = "Chrome";
@@ -62,8 +67,7 @@ Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
 Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
 Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 
-/* Regular expression matching URLs */
-Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+/* End of browser identification 0}}} */
 
 /* Escape characters */
 Util.EscapeChars = {
@@ -1179,14 +1183,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
   return Array.of.apply(Array, argobj);
 }
 
-/* Apply a set of attributes to an HTMLElement */
-Util.ApplyAttributes = function _Util_ApplyAttributes(node, attrs, escape=true) {
-  for (let [k,v] of Object.entries(attrs)) {
-    node.setAttribute(k, escape ? (new String(v)).escape() : v);
-  }
-}
-
-/* Fire an event */
+/* Fire an event: dispatchEvent with a _stacktrace attribute  */
 Util.FireEvent = function _Util_FireEvent(e) {
   /* Add a stacktrace to the event for debugging reasons */
   e._stacktrace = Util.ParseStack(Util.GetStack());

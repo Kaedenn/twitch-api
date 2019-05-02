@@ -53,6 +53,7 @@ class TwitchEvent extends Event {
       WHISPER: "WHISPER",
       USERSTATE: "USERSTATE",
       ROOMSTATE: "ROOMSTATE",
+      STREAMINFO: "STREAMINFO",
       USERNOTICE: "USERNOTICE",
       GLOBALUSERSTATE: "GLOBALUSERSTATE",
       CLEARCHAT: "CLEARCHAT",
@@ -309,6 +310,8 @@ function _TwitchClient_SetDebug(val) {
 
 /* End debugging section 0}}} */
 
+/* Event handling {{{0 */
+
 /* Bind a function to the event specified (wraps document.addEventListener) */
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
@@ -320,6 +323,8 @@ TwitchClient.prototype.unbind =
 function _TwitchClient_unbind(event, callback) {
   document.removeEventListener(event, callback);
 }
+
+/* End event handling 0}}} */
 
 /* Private functions section {{{0 */
 
@@ -362,12 +367,15 @@ function _TwitchClient__ensureRoom(channel) {
   let cname = channel.channel;
   if (!(cname in this._rooms)) {
     this._rooms[cname] = {
-      users: [],
-      userInfo: {},
-      operators: [],
-      channel: channel,
-      rooms: {},
-      id: null
+      users: [],        /* Joined users */
+      userInfo: {},     /* Joined users' info */
+      operators: [],    /* Operators */
+      channel: channel, /* Channel object */
+      rooms: {},        /* Known rooms */
+      id: null,         /* Channel ID */
+      online: false,    /* Currently streaming */
+      stream: {},       /* Stream status */
+      streams: []       /* Stream statuses */
     }
   }
 }
@@ -468,7 +476,7 @@ function _TwitchClient__getChannelCheers(cname, cid) {
   }
   this._api.GetCB(Twitch.URL.Cheers(cid), (function _cheers_cb(json) {
     for (let cdef of json.actions) {
-      /* Simplify things later by adding the regexp here */
+      /* Simplify things later by adding the regexps here */
       cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
       cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
       cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
@@ -652,18 +660,6 @@ function _TwitchClient__build_privmsg(chobj, message) {
 
 /* End private functions section 0}}} */
 
-/* Obtain the FFZ emotes for a channel */
-TwitchClient.prototype.GetFFZEmotes =
-function _TwitchClient_GetFFZEmotes(channel) {
-  return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
-}
-
-/* Obtain the BTTV emotes for a channel */
-TwitchClient.prototype.GetBTTVEmotes =
-function _TwitchClient_GetBTTVEmotes(channel) {
-  return this._bttv_channel_emotes[Twitch.FormatChannel(channel)];
-}
-
 /* Role and moderation functions {{{0 */
 
 /* Return whether or not the client is authenticated with an AuthID */
@@ -730,6 +726,8 @@ function _TwitchClient_UnBan(channel, user) {
 
 /* End of role and moderation functions 0}}} */
 
+/* Channel functions {{{0 */
+
 /* Request the client to join the channel specified */
 TwitchClient.prototype.JoinChannel =
 function _TwitchClient_JoinChannel(channel) {
@@ -780,13 +778,21 @@ function _TwitchClient_IsInChannel(channel) {
   }
 }
 
-/* Get the client's current username */
-TwitchClient.prototype.GetName =
-function _TwitchClient_GetName() {
-  return this._username;
+/* Get the list of currently-joined channels */
+TwitchClient.prototype.GetJoinedChannels =
+function _TwitchClient_GetJoinedChannels() {
+  return this._channels;
 }
 
-/* Functions related to cheers {{{0 */
+/* Get information regarding the channel specified */
+TwitchClient.prototype.GetChannelInfo =
+function _TwitchClient_GetChannelInfo(channel) {
+  return this._rooms[channel] || {};
+}
+
+/* End channel functions 0}}} */
+
+/* Functions related to cheers and emotes {{{0 */
 
 /* Return whether or not the given word is a cheer for the given channel */
 TwitchClient.prototype.IsCheer =
@@ -842,25 +848,25 @@ function _TwitchClient_GetCheer(cname, name) {
   return cheer;
 }
 
-/* End of functions related to cheers 0}}} */
-
-/* Get information regarding the channel specified */
-TwitchClient.prototype.GetRoomInfo =
-function _TwitchClient_GetRoomInfo(room) {
-  return this._rooms[room] || {};
+/* Return the URL to the image for the emote specified */
+TwitchClient.prototype.GetEmote =
+function _TwitchClient_GetEmote(emote_id) {
+  return Twitch.URL.Emote(emote_id, '1.0');
 }
 
-/* Get information regarding the channel specified */
-TwitchClient.prototype.GetChannelInfo =
-function _TwitchClient_GetChannelInfo(channel) {
-  return this._rooms[channel] || {};
+/* Obtain the FFZ emotes for a channel */
+TwitchClient.prototype.GetFFZEmotes =
+function _TwitchClient_GetFFZEmotes(channel) {
+  return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
 }
 
-/* Get the list of currently-joined channels */
-TwitchClient.prototype.GetJoinedChannels =
-function _TwitchClient_GetJoinedChannels() {
-  return this._channels;
+/* Obtain the BTTV emotes for a channel */
+TwitchClient.prototype.GetBTTVEmotes =
+function _TwitchClient_GetBTTVEmotes(channel) {
+  return this._bttv_channel_emotes[Twitch.FormatChannel(channel)];
 }
+
+/* End of functions related to cheers and emotes 0}}} */
 
 /* Return true if the client has been granted the capability specified. Values
  * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
@@ -876,11 +882,19 @@ function _TwitchClient_HasCapability(test_cap) {
   return false;
 }
 
+/* Get the client's current username */
+TwitchClient.prototype.GetName =
+function _TwitchClient_GetName() {
+  return this._username;
+}
+
 /* Return whether or not the numeric user ID refers to the client itself */
 TwitchClient.prototype.IsUIDSelf =
 function _TwitchClient_IsUIDSelf(userid) {
   return userid == this._self_userid;
 }
+
+/* Functions for sending messages {{{0 */
 
 /* Send a message to the channel specified */
 TwitchClient.prototype.SendMessage =
@@ -920,6 +934,8 @@ TwitchClient.prototype.SendRaw =
 function _TwitchClient_SendRaw(raw_msg) {
   this.send(raw_msg.trimEnd() + "\r\n");
 }
+
+/* End of functions for sending messages 0}}} */
 
 /* History functions {{{0 */
 
@@ -1060,11 +1076,7 @@ function _TwitchClient_GetChannelBadges(channel) {
 
 /* End of badge handling functions 0}}} */
 
-/* Return the URL to the image for the emote specified */
-TwitchClient.prototype.GetEmote =
-function _TwitchClient_GetEmote(emote_id) {
-  return Twitch.URL.Emote(emote_id, '1.0');
-}
+/* Websocket callbacks {{{0 */
 
 /* Callback: called when the websocket opens */
 TwitchClient.prototype.OnWebsocketOpen =
@@ -1101,9 +1113,13 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
 
     /* Parse the message (TODO: Use Twitch.IRC.Parse()) */
     let result = Twitch.ParseIRCMessage(line);
-    let result2 = Twitch.IRC.Parse(line);
     Util.Trace('result1:', result);
-    Util.Trace('result2:', result2);
+    try {
+      let result2 = Twitch.IRC.Parse(line);
+      Util.Trace('result2:', result2);
+    } catch (e) {
+      Util.Error(e);
+    }
 
     /* Fire twitch-message for every line received */
     Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
@@ -1119,10 +1135,23 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
       continue;
     }
 
-    /* Fire top-level events, dispatch top-level callbacks */
+    /* Fire top-level event */
     Util.FireEvent(new TwitchEvent(result.cmd, line, result));
-    let cname = result.channel ? result.channel.channel : null;
-    let cstr = result.channel ? Twitch.FormatChannel(result.channel) : null;
+
+    /* Parse and handle result.channel to simplify code below */
+    let cname = null;
+    let cstr = null;
+    let room = null;
+    let roomid = null;
+    if (result.channel) {
+      this._ensureRoom(result.channel);
+      cname = result.channel.channel;
+      cstr = Twitch.FormatChannel(result.channel);
+      room = this._rooms[cname];
+      if (result.flags && result.flags["room-id"]) {
+        roomid = result.flags["room-id"];
+      }
+    }
 
     /* Handle each command that could be returned */
     switch (result.cmd) {
@@ -1155,8 +1184,8 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         break;
       case "PRIVMSG":
         let event = new TwitchChatEvent(line, result);
-        if (!this._rooms[cname].userInfo.hasOwnProperty(result.user)) {
-          this._rooms[cname].userInfo[result.user] = {};
+        if (!room.userInfo.hasOwnProperty(result.user)) {
+          room.userInfo[result.user] = {};
         }
         if (!event.flag('badges')) event.flags.badges = [];
         if (this._enable_ffz) {
@@ -1169,7 +1198,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
             }
           }
         }
-        let ui = this._rooms[cname].userInfo[result.user];
+        let ui = room[cname].userInfo[result.user];
         ui.ismod = event.ismod;
         ui.issub = event.issub;
         ui.isvip = event.isvip;
@@ -1189,27 +1218,33 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         }
         break;
       case "ROOMSTATE":
-        this._rooms[cname].id = result.flags["room-id"];
-        this._rooms[cname].channel = result.channel;
+        room.id = roomid;
+        room.channel = result.channel;
         if (this._authed) {
-          this._getRooms(cname, result.flags["room-id"]);
+          this._getRooms(cname, roomid);
         }
         if (!this._no_assets) {
-          this._getChannelBadges(cname, result.flags["room-id"]);
-          this._getChannelCheers(cname, result.flags["room-id"]);
+          this._getChannelBadges(cname, roomid);
+          this._getChannelCheers(cname, roomid);
           if (this._enable_ffz) {
-            this._getFFZEmotes(cname, result.flags["room-id"]);
+            this._getFFZEmotes(cname, roomid);
           }
           if (this._enable_bttv) {
-            this._getBTTVEmotes(cname, result.flags["room-id"]);
+            this._getBTTVEmotes(cname, roomid);
           }
         }
         this._api.GetCB(Twitch.URL.Stream(result.flags['room-id']),
                         (function _stream_cb(resp) {
           if (resp.streams && resp.streams.length > 0) {
-            this._rooms[cname].stream = resp.streams[0];
-            this._rooms[cname].streams = resp.streams;
+            room.stream = resp.streams[0];
+            room.streams = resp.streams;
+            room.online = true;
+          } else {
+            room.stream = {};
+            room.streams = [];
+            room.online = false;
           }
+          Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
         }).bind(this));
         break;
       case "USERNOTICE":
@@ -1242,17 +1277,19 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         Util.Warn("Unhandled event:", result);
         break;
     }
+
+    /* Obtain emotes the client is able to use */
     if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
         this._api.GetCB(
           Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')),
-          (function _emoteset_cb(json) {
-            for (let eset of Object.keys(json["emoticon_sets"])) {
-              for (let edef of json["emoticon_sets"][eset]) {
-                this._self_emotes[edef.id] = edef.code;
-              }
+        (function _emoteset_cb(json) {
+          for (let eset of Object.keys(json["emoticon_sets"])) {
+            for (let edef of json["emoticon_sets"][eset]) {
+              this._self_emotes[edef.id] = edef.code;
             }
-          }).bind(this));
+          }
+        }).bind(this));
       }
     }
   }
@@ -1277,6 +1314,8 @@ function _TwitchClient_OnWebsocketClose(event) {
   Util.Log("WebSocket Closed", event);
   Util.FireEvent(new TwitchEvent("CLOSE", event));
 }
+
+/* End websocket callbacks 0}}} */
 
 /* Mark the Twitch Client API as loaded */
 TwitchClient.API_Loaded = true;
