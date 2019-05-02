@@ -27,6 +27,7 @@ package.json
 ref/
 extras/
 notes.txt
+notes/
 *.uri
 
 # Ignore notes files
