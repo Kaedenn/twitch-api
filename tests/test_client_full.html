@@ -218,6 +218,147 @@ function send_all(str, fn=null) {
   }
 }
 
+/* Handle //help */
+function on_command_help(args) {
+  if (typeof(args) == "string")
+    args = args.escape();
+  let help_commands = {
+    help: "//help [command]: Help message or help for a specific command",
+    config: "//config [<key> [<value>]]: Get or set a configuration value",
+    join: "//join <channel>: Join the specified channel",
+    part: "//part <channel>: Part from the specified channel",
+    debug: "//debug [<level>]: Display or change the debugging status",
+    reconnect: "//reconnect: Disconnect and reconnect to the Twitch servers",
+    badges: "//badges: Show all the known badges (quite large set)"
+  };
+  if (args === undefined || args.length == 0) {
+    for (let [cmd, line] of Object.entries(help_commands)) {
+      line = line.escape();
+      add_pre(`//${cmd}: ${line}`);
+    }
+  } else if (args.lstrip('/') in help_commands) {
+    let line = help_commands[args.lstrip('/')].escape();
+    add_pre(`Help: ${line}`);
+  } else {
+    add_pre(`Help: don't know what "${args}" is`);
+  }
+}
+
+/* Handle //config */
+function on_command_config(args) {
+  let cfgRaw = window.localStorage.getItem('config');
+  let cfg = JSON.parse(cfgRaw);
+  let changed = false;
+  if (args === undefined || args.length == 0) {
+    add_pre(`Config: ${cfgRaw}`);
+  } else {
+    let [key, val] = args.split_n(' ', 1);
+    if (key in cfg) {
+      if (val) {
+        cfg[key] = val;
+        add_pre(`Config: Set "${key}" to "${String(val).escape()}"`);
+        changed = true;
+      } else {
+        val = cfg[key];
+        add_pre(`Config: "${key}" = "${String(val).escape()}" (${typeof(val)})`);
+      }
+    }
+  }
+  if (changed)
+    window.localStorage.setItem('config', JSON.stringify(cfg));
+}
+
+/* Handle //join */
+function on_command_join(args) {
+  client.JoinChannel(args);
+}
+
+/* Handle //part */
+function on_command_part(args) {
+  client.LeaveChannel(args);
+}
+
+/* Handle //debug */
+function on_command_debug(args) {
+  /* TODO */
+}
+
+/* Handle //reconnect */
+function on_command_reconnect(args) {
+  client.Connect();
+}
+
+/* Handle //badges */
+function on_command_badges(args) {
+  let badges = client.GetBadges();
+  function to_img(url, title) {
+    return `<img src="${url.escape()}" title="${title.escape()}" />`;
+  }
+  /* Display global badges */
+  for (let name of Object.keys(badges.global)) {
+    if (!badges.global[name])
+      continue;
+    for (let [ver, badge] of Object.entries(badges.global[name].versions)) {
+      if (!badges.global[name].versions)
+        continue;
+      let urls = [badge.image_url_4x, badge.image_url_2x, badge.image_url_1x];
+      let alt = `${name} [${ver}]`;
+      let line = `${name}/${ver}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      add_pre(line);
+    }
+  }
+  /* Display channel badges */
+  for (let chname of Object.keys(badges).sort()) {
+    if (chname == "global")
+      continue;
+    for (let name of Object.keys(badges[chname]).sort()) {
+      if (!badges[chname][name])
+        continue;
+      let urls = [
+        badges[chname][name].alpha,
+        badges[chname][name].image/*,
+        badges[chname][name].svg (too big)*/
+      ];
+      let alt = `${name} (${chname})`;
+      let line = `${chname}: ${name}: ${urls.map((u) => to_img(u, alt)).join(" ")}`;
+      add_pre(line);
+    }
+  }
+}
+
+/* Handle chat commands */
+function on_chat_command(event) {
+  let [cmd, args] = event.target.value.split_n(' ', 1);
+  cmd = cmd.lstrip('/').strip();
+  if (args !== undefined) args = args.strip();
+  switch (cmd) {
+    case "help":
+      on_command_help(args);
+      break;
+    case "config":
+      on_command_config(args);
+      break;
+    case "join":
+      on_command_join(args);
+      break;
+    case "part":
+      on_command_part(args);
+      break;
+    case "debug":
+      on_command_debug(args);
+      break;
+    case "reconnect":
+      on_command_reconnect(args);
+      break;
+    case "badges":
+      on_command_badges(args);
+      break;
+    default:
+      add_pre(`No such command "${cmd}"`, true);
+      break;
+  }
+}
+
 /* Handle chat submission */
 function on_chat_enter(event) {
   for (let ch of config.Channels) {
@@ -239,7 +380,11 @@ $(document).ready(function() {
   /* Bind on_chat_enter to pressing Enter/Return on #txtChat */
   $('#txtChat').on('keyup', function(e) {
     if (e.keyCode == KeyEvent.DOM_VK_RETURN) {
-      on_chat_enter(e);
+      if (e.target.value.startsWith('//')) {
+        on_chat_command(e);
+      } else {
+        on_chat_enter(e);
+      }
       e.target.value = "";
       return false; /* prevent bubbling */
     }
@@ -251,7 +396,7 @@ $(document).ready(function() {
     add_html(`<span class="notice">Util.Warn: ${msg}</span>`);
   }, "WARN");
   Util.Logger.add_hook(function(sev, stacktrace, ...args) {
-    console.log(`on Util.Logger.ERROR ${sev} ${stacktrace.toString()} ${args.toString().replace(/\n/g, '\\n')}`);
+    console.log(`on Util.Logger.ERROR ${sev.toSource()} ${stacktrace.toSource()} ${args.toSource().replace(/\n/g, '\\n')}`);
     let msg;
     if (args.length == 1) {
       if (args[0] instanceof Error) {
@@ -274,7 +419,7 @@ $(document).ready(function() {
   client.bind('twitch-chat', function(event) {
     if (Util.DebugLevel > 0) {
       if (event.values.synthesized) {
-        add_pre(JSON.stringify(event.values), true);
+        add_pre(event.values.toSource(), true);
       }
     }
     add_html(to_html(event));
@@ -301,13 +446,56 @@ $(document).ready(function() {
   /* Handle twitch-message events */
   client.bind('twitch-message', function(event) {
     if (Util.DebugLevel > 0) {
-      add_pre(JSON.stringify(event.values), true);
+      add_pre(event.values.toSource(), true);
     }
   });
 
   /* Finally connect to Twitch */
   client.Connect();
 });
+
+/* Old API; kept here for reference
+client.on('WSMESSAGE', function(msg) { });
+client.on('WSMESSAGELINE', function(line) { add_pre(line, true); });
+client.on('MESSAGE', function(parsed) { add_pre(parsed.toSource(), true); });
+client.on('CONNECT', function(flags) { });
+client.on('CLOSE', function() { add_html("<hr/>Connection closed</hr>"); });
+client.on('TOPIC', function(message) { });
+client.on('NAMES', function(usernames) { });
+client.on('JOIN', function(user, channel) { });
+client.on('PART', function(user, channel) { });
+client.on('MODE', function(user, channel, modeset) { });
+client.on('PRIVMSG', function(user, channel, flags, message) { });
+client.on('USERSTATE', function(user, channel, flags) { });
+client.on('ROOMSTATE', function(channel, flags) { });
+client.on('USERNOTICE', function(channel, flags, message) { });
+client.on('SUB', function(user, channel, tier, months) { });
+client.on('RESUB', function(user, channel, tier, months) { });
+client.on('GIFTSUB', function(user, channel, tier, gifter, months) { });
+client.on('ANONGIFTSUB', function(user, channel, tier, months) { });
+client.on('GLOBALUSERSTATE', function(flags) { });
+client.on('CLEARCHAT', function(user, channel, flags) { });
+client.on('NOTICE', function(channel, message) { });
+*/
+
+function format_urls(message) {
+  let m = message + ' ';
+  var start = 0, end = 0;
+  while (start > -1 && start < (m.length-1)) {
+    end = m.indexOf(' ', start+1);
+    var word = m.substring(start, end).trim();
+    var word_l = word.toLowerCase();
+    if (word_l.indexOf('www') == 0 || word_l.indexOf('http://') == 0 || word_l.indexOf('https://') == 0) {
+      var scheme = word_l.indexOf('http') != 0 ? 'https://' : '';
+      var href = scheme + word;
+      var s = `<a target="_blank" href="${href}">${word}</a>`;
+      m = m.substring(0, start) + ' ' + s + m.substring(end);
+    }
+    start = m.indexOf(' ', start+1);
+  }
+  m = m.trim();
+  return m;
+}
 
 /* Functions for adding content to the main content window */
 
@@ -373,7 +561,7 @@ function _to_html_name(event) {
 function _to_html_msg(event) {
   let e_msg = document.createElement('span');
   e_msg.setAttribute('class', 'message');
-  e_msg.innerText = event.message;
+  e_msg.innerHTML = format_urls(event.message.escape());
   return e_msg;
 }
 
