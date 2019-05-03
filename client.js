@@ -247,29 +247,54 @@ function TwitchClient(opts) {
     this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
     this._ws.client = this;
     this._ws.onopen = (function _ws_onopen(e) {
-      Util.LogOnly("ws open>", this.url);
-      self._connected = false;
-      self._is_open = true;
-      self.OnWebsocketOpen(cfg_name, oauth);
+      try {
+        Util.LogOnly("ws open>", this.url);
+        self._connected = false;
+        self._is_open = true;
+        self.OnWebsocketOpen(cfg_name, oauth);
+      } catch (e) {
+        alert("ws._onopen error: " + e.toString());
+        throw e;
+      }
     }).bind(this._ws);
     this._ws.onmessage = (function _ws_onmessage(e) {
-      Util.DebugOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
-      self.OnWebsocketMessage(e);
+      try {
+        Util.DebugOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
+        self.OnWebsocketMessage(e);
+      } catch (e) {
+        alert("ws._onmessage error: " + e.toString());
+        throw e;
+      }
     }).bind(this._ws);
     this._ws.onerror = (function _ws_onerror(e) {
-      Util.DebugOnly('ws error>', e);
-      self._connected = false;
-      self.OnWebsocketError(e);
+      try {
+        Util.DebugOnly('ws error>', e);
+        self._connected = false;
+        self.OnWebsocketError(e);
+      } catch (e) {
+        alert("ws._onmessage error: " + e.toString());
+        throw e;
+      }
     }).bind(this._ws);
     this._ws.onclose = (function _ws_onclose(e) {
-      Util.DebugOnly('ws close>', e);
-      self._connected = false;
-      self._is_open = false;
-      self.OnWebsocketClose(e);
+      try {
+        Util.DebugOnly('ws close>', e);
+        self._connected = false;
+        self._is_open = false;
+        self.OnWebsocketClose(e);
+      } catch (e) {
+        alert("ws._onmessage error: " + e.toString());
+        throw e;
+      }
     }).bind(this._ws);
     this.send = (function _TwitchClient_send(m) {
-      Util.DebugOnly('ws send>', Twitch.StripCredentials(m).repr());
-      this._ws.send(m);
+      try {
+        this._ws.send(m);
+        Util.DebugOnly('ws send>', Twitch.StripCredentials(m).repr());
+      } catch (e) {
+        alert("this.send error: " + e.toString());
+        throw e;
+      }
     }).bind(this);
 
     Util.LogOnly("Connecting to Twitch...");
