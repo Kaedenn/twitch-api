@@ -984,7 +984,7 @@ Util.ParseCSSColor = function _Util_ParseColor(...color) {
  *  Util.RelativeLuminance([r, g, b, a])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
-  let color = Util.ParseCSSColor(args);
+  let color = Util.ParseCSSColor(args.length == 1 ? args[0] : args);
   let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
   function c_to_cx(c) {
     if (c < 0.03928) {
