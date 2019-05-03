@@ -746,7 +746,7 @@ class ColorParser {
 }
 
 /* Class for handling colors and color arithmetic */
-class Color {
+class _Util_Color {
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
     r /= 255; g /= 255; b /= 255;
@@ -783,6 +783,28 @@ class Color {
     return [r, g, b];
   }
 
+  /* Convert (y, i, q) (0~255) to (r, g, b) (0~255) */
+  static YIQToRGB(y, i, q) {
+    let mat = [[1, 0.956, 0.619],
+               [1, -0.272, -0.647],
+               [1, -1.106, 1.703]];
+    let r = mat[0][0] * y + mat[0][1] * i + mat[0][2] * q;
+    let g = mat[1][0] * y + mat[1][1] * i + mat[1][2] * q;
+    let b = mat[2][0] * y + mat[2][1] * i + mat[2][2] * q;
+    return [r, g, b];
+  }
+
+  /* Convert (r, g, b) (0~255) to (y, i, q) (0~255) */
+  static RGBToYIQ(r, g, b) {
+    let mat = [[0.299, 0.587, 0.144],
+               [0.5959, -0.2746, -0.3213],
+               [0.2155, -0.5227, 0.3112]];
+    let y = mat[0][0] * r + mat[0][1] * g + mat[0][2] * b;
+    let i = mat[1][0] * r + mat[1][1] * g + mat[1][2] * b;
+    let q = mat[2][0] * r + mat[2][1] * g + mat[2][2] * b;
+    return [y, i, q];
+  }
+
   /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
   static Renorm1(...args) {
     let [r, g, b, a] = args;
@@ -805,14 +827,20 @@ class Color {
 
   /* Create a Color object from the hue, saturation, and luminance given */
   static FromHSL(h, s, l) {
-    let [r, g, b] = Color.HSLToRGB(h, s, l);
-    return new Color(r, g, b);
+    let [r, g, b] = Util.Color.HSLToRGB(h, s, l);
+    return new Util.Color(r, g, b);
   }
 
   /* Create a Color object from the hue, saturation, luminance, and alpha given */
   static FromHSLA(h, s, l, a) {
-    let [r, g, b] = Color.HSLToRGB(h, s, l);
-    return new Color(r, g, b, a);
+    let [r, g, b] = Util.Color.HSLToRGB(h, s, l);
+    return new Util.Color(r, g, b, a);
+  }
+
+  /* Create a Color object from the YIQ values given */
+  static FromYIQ(y, i, q) {
+    let [r, g, b] = Util.Color.YIQToRGB(y, i, q);
+    return new Util.Color(r, g, b);
   }
 
   /* Overloads
@@ -835,7 +863,7 @@ class Color {
     if (args.length == 1) {
       /* Handle Color(Color) and Color("string") */
       let arg = args[0];
-      if (arg instanceof Color) {
+      if (arg instanceof Util.Color) {
         [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
         this.scale = arg.scale;
       } else if (typeof(arg) == "string" || arg instanceof String) {
@@ -861,31 +889,31 @@ class Color {
 
   /* Attribute: [r, g, b] scaled to [0,1] */
   get rgb_1() {
-    let c = new Color(this.r, this.g, this.b);
+    let c = new Util.Color(this.r, this.g, this.b);
     return [c.r / 255, c.g / 255, c.b / 255];
   }
 
   /* Attribute: [r, g, b, a] scaled to [0,1] */
   get rgba_1() {
-    let c = new Color(this.r, this.g, this.b, this.a);
+    let c = new Util.Color(this.r, this.g, this.b, this.a);
     return [c.r / 255, c.g / 255, c.b / 255, c.a / 255];
   }
 
   /* Attribute: [h, s, l] */
-  get hsl() { return Color.RGBToHSL(this.r, this.g, this.b); }
+  get hsl() { return Util.Color.RGBToHSL(this.r, this.g, this.b); }
   set hsl(hsl) {
     let [h, s, l] = hsl;
-    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
   }
 
   /* Attribute: [h, s, l, a] */
   get hsla() {
-    let [r, g, b] = Color.RGBToHSL(this.r, this.g, this.b);
+    let [r, g, b] = Util.Color.RGBToHSL(this.r, this.g, this.b);
     return [r, g, b, a];
   }
   set hsla(hsla) {
     let [h, s, l, a] = hsla;
-    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
     this.a = a;
   }
 
@@ -894,7 +922,7 @@ class Color {
   set hue(new_h) {
     let [h, s, l] = this.hsl;
     h = new_h;
-    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
   }
 
   /* Attribute: saturation of [h, s, l] */
@@ -902,7 +930,7 @@ class Color {
   set saturation(new_s) {
     let [h, s, l] = this.hsl;
     s = new_s;
-    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
   }
 
   /* Attribute: luminance of [h, s, l] */
@@ -910,7 +938,14 @@ class Color {
   set luminance(new_l) {
     let [h, s, l] = this.hsl;
     l = new_l;
-    [this.r, this.g, this.b] = Color.HSLToRGB(h, s, l);
+    [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
+  }
+
+  /* Attribute: [y, i, q] */
+  get yiq() { return Util.Color.RGBToYIQ(this.r, this.g, this.b); }
+  set yiq(yiq) {
+    let [y, i, q] = yiq;
+    [this.r, this.g, this.b] = Util.Color.YIQToRGB(y, i, q);
   }
 
   /* Calculate the Relative Luminance */
@@ -929,7 +964,7 @@ class Color {
   /* Calculate the contrast ratio against the given color */
   getConstrastRatioWith(c2) {
     let l1 = this.getRelativeLuminance();
-    let l2 = (new Color(c2)).getRelativeLuminance();
+    let l2 = (new Util.Color(c2)).getRelativeLuminance();
     return (l1 + 0.05) / (l2 + 0.05);
   }
 
@@ -951,6 +986,7 @@ class Color {
    *  "#ff0000" -> hsl -> "#ff0000"
    */
 }
+Util.Color = _Util_Color;
 
 /* Parse a CSS color.
  * Overloads
@@ -1026,12 +1062,6 @@ Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
     }
   }
   return best_color;
-}
-
-/* Calculate the YIQ index of the given color */
-Util.YIQ = function _Util_YIQ(color) {
-  let c = Util.ParseCSSColor(color);
-  return ((c[0] * 299) + (c[1] * 587) + (c[2] * 114)) / 1000;
 }
 
 /* End color handling 0}}} */
