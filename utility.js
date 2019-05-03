@@ -710,7 +710,6 @@ class ColorParser {
     }
     let rgbstr = getComputedStyle(this._e).color;
     let rgbtuple = [];
-    Util.Debug(color, rgbstr, this._rgb_pat.exec(rgbstr), this._rgba_pat.exec(rgbstr));
     let m = this._rgb_pat.exec(rgbstr) || this._rgba_pat.exec(rgbstr);
     if (m !== null) {
       rgbtuple = m.slice(1);
