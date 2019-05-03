@@ -1028,6 +1028,12 @@ Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
   return best_color;
 }
 
+/* Calculate the YIQ index of the given color */
+Util.YIQ = function _Util_YIQ(color) {
+  let c = Util.ParseCSSColor(color);
+  return ((c[0] * 299) + (c[1] * 587) + (c[2] * 114)) / 1000;
+}
+
 /* End color handling 0}}} */
 
 /* Notification APIs {{{0 */
