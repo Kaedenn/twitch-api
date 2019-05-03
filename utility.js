@@ -27,6 +27,10 @@
  *    Inspired by https://ux.stackexchange.com/a/107319
  */
 
+/* TODO:
+ * Color replacement API (see KapChat)
+ */
+
 /* General Utilities */
 let Util = {};
 Util.__wskey = null;
@@ -47,15 +51,19 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 Util.Browser = {};
 Util.Browser.FIREFOX = "Firefox";
 Util.Browser.CHROME = "Chrome";
+Util.Browser.TESLA = "Tesla";
 Util.Browser.OBS = "OBS";
 Util.Browser.UNKNOWN = "Unknown";
 Util.Browser.Get = function _Util_Browser_Get() {
   let p_firefox = /\bFirefox\/[0-9.]+\b/;
   let p_chrome = /\bChrome\/[0-9.]+\b/;
+  let p_tesla = /\bTesla\b/;
   if (navigator.userAgent.match(p_firefox)) {
     return Util.Browser.FIREFOX;
   } else if (navigator.userAgent.match(p_chrome)) {
     return Util.Browser.CHROME;
+  } else if (navigator.userAgent.match(p_tesla)) {
+    return Util.Browser.TESLA;
   } else if (!!window.obssource) {
     return Util.Browser.OBS;
   } else {
@@ -65,6 +73,7 @@ Util.Browser.Get = function _Util_Browser_Get() {
 Util.Browser.Current = Util.Browser.Get()
 Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
 Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
+Util.Browser.IsTesla = Util.Browser.Current == Util.Browser.TESLA;
 Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 
 /* End of browser identification 0}}} */

@@ -120,9 +120,9 @@ class TwitchChatEvent extends TwitchEvent {
     return this.has_badge("vip");
   }
   has_badge(badge, rev=undefined) {
-    if (!this.flag("badges"))
+    if (!this.flags.badges)
       return false;
-    for (let [badge_name, badge_rev] of this.flag("badges")) {
+    for (let [badge_name, badge_rev] of this.flags.badges) {
       if (badge_name == badge) {
         if (rev !== undefined) {
           return badge_rev == rev;
@@ -1216,11 +1216,11 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         if (!room.userInfo.hasOwnProperty(result.user)) {
           room.userInfo[result.user] = {};
         }
-        if (!event.flag('badges')) event.flags.badges = [];
+        if (!event.flags.badges) event.flags.badges = [];
         if (this._enable_ffz) {
           for (let [badge_nr, users] of Object.entries(this._ffz_badge_users)) {
             if (users.indexOf(result.user) > -1) {
-              let ffz_badges = event.flag('ffz-badges');
+              let ffz_badges = event.flags['ffz-badges'];
               if (ffz_badges === undefined) ffz_badges = [];
               ffz_badges.push(this._ffz_badges[badge_nr]);
               event.flags['ffz-badges'] = ffz_badges;
@@ -1231,9 +1231,9 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         ui.ismod = event.ismod;
         ui.issub = event.issub;
         ui.isvip = event.isvip;
-        ui.userid = event.flag('user-id');
-        ui.uuid = event.flag('id');
-        ui.badges = event.flag('badges');
+        ui.userid = event.flags['user-id'];
+        ui.uuid = event.flags['id'];
+        ui.badges = event.flags['badges'];
         Util.FireEvent(event);
         break;
       case "WHISPER":
