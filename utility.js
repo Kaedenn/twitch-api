@@ -338,14 +338,6 @@ class _Util_API {
     }
   }
 
-  /* Fetch the given URL and return a promise of the JSON result.
-   * NOTE: Does no response status code checking */
-  async fetchWait(url, parms=null) {
-    let response = await this.fetch(url, parms);
-    let json = await response.json();
-    return json;
-  }
-
   fetchCB(url, parms, onSuccess, onError=null) {
     onError = onError || Util.Error;
     this.fetchAsync(url, parms)

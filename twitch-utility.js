@@ -123,23 +123,6 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
     }
     req.send();
   }
-
-  /* GetSimple, returning a Promise */
-  this.GetSimplePromise =
-  async function _Twitch_API_GetSimplePromise(url) {
-    let self = this;
-    return await new Promise(function _API_GetSimple(resolve, reject) {
-      self.GetSimpleCB(url, resolve, reject);
-    });
-  };
-
-  /* Get, returning a promise */
-  this.GetPromise =
-  async function _Twitch_API_GetPromise(url, headers={}, add_private=false) {
-    return await new Promise((function _API_GetPromise(resolve, reject) {
-      this.GetCB(url, resolve, headers, add_private, reject);
-    }).bind(this));
-  };
 }
 
 /* Extract username from user specification */
