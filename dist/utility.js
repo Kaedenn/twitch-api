@@ -397,6 +397,28 @@ String.prototype.split_n = function _String_split_n(sep, num) {
   return results;
 };
 
+/* Ensure String.trimStart is present */
+if (typeof "".trimStart != "function") {
+  String.prototype.trimStart = function () {
+    var i = 0;
+    while (i < this.length && this[i] == ' ') {
+      i += 1;
+    }
+    return i == 0 ? this : this.substr(i);
+  };
+}
+
+/* Ensure String.trimEnd is present */
+if (typeof "".trimEnd != "function") {
+  String.prototype.trimEnd = function () {
+    var i = this.length - 1;
+    while (i > 0 && this[i] == ' ') {
+      i -= 1;
+    }
+    return this.substr(0, i + 1);
+  };
+}
+
 /* Escape a string for use in regex */
 RegExp.escape = function _RegExp_escape(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
