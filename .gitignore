@@ -36,5 +36,7 @@ notes.txt
 
 # Ignore swap files
 .*.swp
+.swp
 .*.swo
+.swo
 

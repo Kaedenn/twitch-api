@@ -294,11 +294,6 @@ Util.XHRError = function _Util_XHRError(obj, stack=null) {
   return e;
 }
 
-/* Converts a Response object to an Error object */
-Util.ResponseError = function _Util_ResponseError(resp, stack=null) {
-  let m = `${resp.status} ${resp.statusText}`;
-}
-
 class _Util_API {
   constructor(headers=null, args=null) {
     this._headers = headers || {};
@@ -321,7 +316,7 @@ class _Util_API {
     return fetch(url, parms)
       .then(function _fetch_then(resp) {
         if (!resp.ok) {
-          throw Util.ResponseError(resp);
+          Util.Throw(Error, `${url}: ${resp.status} ${resp.statusText}`);
         } else {
           return resp.json();
         }
@@ -370,6 +365,19 @@ class _Util_API {
 Util.API = _Util_API;
 
 /* End URL and URI handling 0}}} */
+
+/* Error handling {{{0 */
+
+Util.Throw = function _Util_Throw(type, msg) {
+  let e = new (type)(msg + "\n" + Util.GetStack());
+  e._stack_raw = e.stack;
+  e._stack = Util.GetStack();
+  e._stacktrace = Util.ParseStack(Util.GetStack()) || [];
+  e._stacktrace.shift();
+  throw e;
+}
+
+/* End error handling 0}}} */
 
 /* Logging {{{0 */
 Util.LEVEL_MIN = 0;
@@ -433,8 +441,15 @@ Util.GetStack = function _Util_GetStack() {
 Util.ParseStack = function _Util_ParseStack(lines) {
   let frames = [];
   for (let line of lines) {
-    let frame = {};
-    if (Util.Browser.Get() == Util.Browser.CHROME) {
+    let frame = {
+      text: line,
+      name: '???',
+      file: window.location.pathname,
+      line: 0,
+      column: 0
+    };
+    frame.text = line;
+    if (Util.Browser.IsChrome) {
       // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
       let m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
       if (m == null) {
@@ -459,6 +474,10 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frame.file = m[2];
       frame.line = parseInt(m[3]);
       frame.column = parseInt(m[4]);
+    } else if (Util.Browser.IsOBS) {
+
+    } else if (Util.Browser.IsTesla) {
+
     }
     frames.push(frame);
   }
@@ -729,7 +748,7 @@ class ColorParser {
     this._e.style.color = null;
     this._e.style.color = color;
     if (this._e.style.color.length === 0) {
-      throw new Error(`ColorParser: Invalid color ${color}`);
+      Util.Throw(TypeError, `ColorParser: Invalid color ${color}`);
     }
     let rgbstr = getComputedStyle(this._e).color;
     let rgbtuple = [];
@@ -738,7 +757,7 @@ class ColorParser {
       rgbtuple = m.slice(1);
     } else {
       /* Shouldn't ever happen */
-      throw new Error("Failed to parse computed color", rgbstr);
+      Util.Throw(`Failed to parse computed color ${rgbstr}`);
     }
     let r = Number(rgbtuple[0]); r = Number.isNaN(r) ? 0 : r;
     let g = Number(rgbtuple[1]); g = Number.isNaN(g) ? 0 : g;
@@ -893,14 +912,14 @@ class _Util_Color {
         let [r, g, b, a] = ColorParser.parse(arg);
         [this.r, this.g, this.b, this.a] = [r, g, b, a];
       } else {
-        throw new TypeError(`Invalid argument "${arg}" to Color()`);
+        Util.Throw(TypeError, `Invalid argument "${arg}" to Color()`);
       }
     } else if (args.length >= 3 && args.length <= 4) {
       /* Handle Color(r, g, b) and Color(r, g, b, a) */
       [this.r, this.g, this.b] = args;
       if (args.length == 4) this.a = args[3];
     } else if (args.length > 0) {
-      throw new TypeError(`Invalid arguments "${args}" to Color()`);
+      Util.Throw(`Invalid arguments "${args}" to Color()`);
     }
   }
 

@@ -1,0 +1,51 @@
+<!DOCTYPE xhtml>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>Twitch-API Testing Client</title>
+  <meta charset="utf-8" />
+  <link rel="shortcut icon" href="assets/settings_white.png" type="image/png">
+  <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+  <script type="text/javascript" src="../utility.js"></script>
+  <script type="text/javascript" src="harness.js"></script>
+  <script type="text/javascript">
+
+function test1_basic() {
+  try {
+    Util.Throw(TypeError, "message");
+  }
+  catch (e) {
+    if (e._stacktrace) {
+      for (let stack of e._stacktrace) {
+        this.out("trace: " + JSON.stringify(stack), true);
+      }
+    }
+    if (e._stack) {
+      this.out("stack: " + JSON.stringify(e._stack), true);
+    }
+    if (e._stack_raw) {
+      this.out("stack raw: " + JSON.stringify(e._stack_raw), true);
+    }
+    if (e.stack && e.stack.indexOf('\n') > -1) {
+      let lines = e.stack.split(/\n/);
+      for (let i = 0; i < lines.length; ++i) {
+        this.out(`${i} | ${JSON.stringify(lines[i])}`, true);
+      }
+    }
+    this.out(JSON.stringify(e.stack), true);
+  }
+  return true;
+}
+
+var T = null;
+function onReady() {
+  T = new Tests();
+  T.add("basic", test1_basic);
+  T.run();
+}
+$(document).ready(onReady);
+  </script>
+</head>
+<body>
+<div id="output"></div>
+</body>
+</html>

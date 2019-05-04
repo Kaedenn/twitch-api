@@ -262,7 +262,7 @@ function TwitchClient(opts) {
         Util.DebugOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
         self.OnWebsocketMessage(e);
       } catch (e) {
-        alert("ws._onmessage error: " + e.toString());
+        alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
       }
     }).bind(this._ws);
@@ -305,6 +305,7 @@ function TwitchClient(opts) {
 
 /* Statics */
 TwitchClient.DEFAULT_HISTORY_SIZE = 300;
+TwitchClient.DEFAULT_MAX_MESSAGES = 100;
 
 /* Debugging section {{{0 */
 

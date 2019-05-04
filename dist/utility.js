@@ -452,13 +452,6 @@ Util.XHRError = function _Util_XHRError(obj) {
   return e;
 };
 
-/* Converts a Response object to an Error object */
-Util.ResponseError = function _Util_ResponseError(resp) {
-  var stack = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-  var m = resp.status + " " + resp.statusText;
-};
-
 var _Util_API = function () {
   function _Util_API() {
     var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
@@ -537,7 +530,7 @@ var _Util_API = function () {
 
       return fetch(url, parms).then(function _fetch_then(resp) {
         if (!resp.ok) {
-          throw Util.ResponseError(resp);
+          Util.Throw(Error, url + ": " + resp.status + " " + resp.statusText);
         } else {
           return resp.json();
         }
@@ -637,6 +630,19 @@ Util.API = _Util_API;
 
 /* End URL and URI handling 0}}} */
 
+/* Error handling {{{0 */
+
+Util.Throw = function _Util_Throw(type, msg) {
+  var e = new type(msg + "\n" + Util.GetStack());
+  e._stack_raw = e.stack;
+  e._stack = Util.GetStack();
+  e._stacktrace = Util.ParseStack(Util.GetStack()) || [];
+  e._stacktrace.shift();
+  throw e;
+};
+
+/* End error handling 0}}} */
+
 /* Logging {{{0 */
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
@@ -710,8 +716,15 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     for (var _iterator10 = lines[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
       var line = _step10.value;
 
-      var frame = {};
-      if (Util.Browser.Get() == Util.Browser.CHROME) {
+      var frame = {
+        text: line,
+        name: '???',
+        file: window.location.pathname,
+        line: 0,
+        column: 0
+      };
+      frame.text = line;
+      if (Util.Browser.IsChrome) {
         // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
         var m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
         if (m == null) {
@@ -736,7 +749,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
         frame.file = _m[2];
         frame.line = parseInt(_m[3]);
         frame.column = parseInt(_m[4]);
-      }
+      } else if (Util.Browser.IsOBS) {} else if (Util.Browser.IsTesla) {}
       frames.push(frame);
     }
   } catch (err) {
@@ -1344,7 +1357,7 @@ var ColorParser = function () {
       this._e.style.color = null;
       this._e.style.color = color;
       if (this._e.style.color.length === 0) {
-        throw new Error("ColorParser: Invalid color " + color);
+        Util.Throw(TypeError, "ColorParser: Invalid color " + color);
       }
       var rgbstr = getComputedStyle(this._e).color;
       var rgbtuple = [];
@@ -1353,7 +1366,7 @@ var ColorParser = function () {
         rgbtuple = m.slice(1);
       } else {
         /* Shouldn't ever happen */
-        throw new Error("Failed to parse computed color", rgbstr);
+        Util.Throw("Failed to parse computed color " + rgbstr);
       }
       var r = Number(rgbtuple[0]);r = Number.isNaN(r) ? 0 : r;
       var g = Number(rgbtuple[1]);g = Number.isNaN(g) ? 0 : g;
@@ -1585,7 +1598,7 @@ var _Util_Color = function () {
         this.b = _ref2[2];
         this.a = _ref2[3];
       } else {
-        throw new TypeError("Invalid argument \"" + arg + "\" to Color()");
+        Util.Throw(TypeError, "Invalid argument \"" + arg + "\" to Color()");
       }
     } else if (args.length >= 3 && args.length <= 4) {
       var _args = args;
@@ -1599,7 +1612,7 @@ var _Util_Color = function () {
 
       if (args.length == 4) this.a = args[3];
     } else if (args.length > 0) {
-      throw new TypeError("Invalid arguments \"" + args + "\" to Color()");
+      Util.Throw("Invalid arguments \"" + args + "\" to Color()");
     }
   }
 
