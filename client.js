@@ -29,9 +29,8 @@
 /* Event classes {{{0 */
 
 /* Base Event object for Twitch events */
-class TwitchEvent extends Event {
+class TwitchEvent {
   constructor(type, raw_line, parsed) {
-    super("twitch-" + type.toLowerCase());
     this._cmd = type;
     this._raw = !!raw_line ? raw_line : "";
     this._parsed = !!parsed ? parsed : {};
@@ -70,6 +69,7 @@ class TwitchEvent extends Event {
       OTHER: "OTHER"
     };
   }
+  get type() { return "twitch-" + this._cmd.toLowerCase(); }
   get command() { return this._cmd; }
   get raw_line() { return this._raw; }
   get values() { return this._parsed; }
@@ -344,13 +344,13 @@ function _TwitchClient_SetDebug(val) {
 /* Bind a function to the event specified (wraps document.addEventListener) */
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
-  document.addEventListener(event, callback);
+  Util.Bind(event, callback);
 }
 
 /* Unbind a function from the TwitchChat event specified */
 TwitchClient.prototype.unbind =
 function _TwitchClient_unbind(event, callback) {
-  document.removeEventListener(event, callback);
+  Util.Unbind(event, callback);
 }
 
 /* End event handling 0}}} */

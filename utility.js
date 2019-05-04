@@ -1219,14 +1219,44 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
   return Array.of.apply(Array, argobj);
 }
 
+/* Event handling {{{0 */
+
+Util._events = {};
+
+Util.Bind = function _Util_Bind(evname, evcallback) {
+  if (!Util._events[evname]) Util._events[evname] = [];
+  Util._events[evname].push(evcallback);
+}
+
+Util.Unbind = function _Util_Unbind(evname, evcallback) {
+  if (Util._events[evname]) {
+    let i = Util._events[evname].indexOf(evcallback);
+    if (i > -1) {
+      Util._events[evname] = Util._events[evname].filter((e) => e != evcallback);
+      return true;
+    }
+  }
+  return false;
+}
+
 /* Fire an event: dispatchEvent with a _stacktrace attribute  */
 Util.FireEvent = function _Util_FireEvent(e) {
   /* Add a stacktrace to the event for debugging reasons */
   e._stacktrace = Util.ParseStack(Util.GetStack());
   /* Discard the Util.FireEvent stack frame */
   e._stacktrace.shift();
-  document.dispatchEvent(e);
+  /* Fire the event across all the bound functions */
+  if (Util._events[e.type]) {
+    for (var f of Util._events[e.type]) {
+      f(e);
+    }
+  }
+  if (e instanceof Event) {
+    document.dispatchEvent(e);
+  }
 }
+
+/* End event handling 0}}} */
 
 /* Zip two (or more) sequences together */
 Util.Zip = function _Util_Zip(...sequences) {

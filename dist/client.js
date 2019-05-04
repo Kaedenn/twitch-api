@@ -34,27 +34,22 @@ var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = [
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var TwitchEvent = function (_Event) {
-  _inherits(TwitchEvent, _Event);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+var TwitchEvent = function () {
   function TwitchEvent(type, raw_line, parsed) {
     _classCallCheck(this, TwitchEvent);
 
-    var _this = _possibleConstructorReturn(this, (TwitchEvent.__proto__ || Object.getPrototypeOf(TwitchEvent)).call(this, "twitch-" + type.toLowerCase()));
-
-    _this._cmd = type;
-    _this._raw = !!raw_line ? raw_line : "";
-    _this._parsed = !!parsed ? parsed : {};
-    if (!TwitchEvent.COMMANDS.hasOwnProperty(_this._cmd)) {
-      Util.Error("Command " + _this._cmd + " not enumerated in this.COMMANDS");
+    this._cmd = type;
+    this._raw = !!raw_line ? raw_line : "";
+    this._parsed = !!parsed ? parsed : {};
+    if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
+      Util.Error("Command " + this._cmd + " not enumerated in this.COMMANDS");
     }
-    return _this;
   }
 
   _createClass(TwitchEvent, [{
@@ -88,6 +83,11 @@ var TwitchEvent = function (_Event) {
       var cls = Object.getPrototypeOf(this).constructor.name;
       var args = [this._cmd, this._raw, this._parsed];
       return "new " + cls + "(" + JSON.stringify(args) + ")";
+    }
+  }, {
+    key: "type",
+    get: function get() {
+      return "twitch-" + this._cmd.toLowerCase();
     }
   }, {
     key: "command",
@@ -165,7 +165,7 @@ var TwitchEvent = function (_Event) {
   }]);
 
   return TwitchEvent;
-}(Event);
+}();
 
 /* Event object for chat events */
 
@@ -176,10 +176,10 @@ var TwitchChatEvent = function (_TwitchEvent) {
   function TwitchChatEvent(raw_line, parsed) {
     _classCallCheck(this, TwitchChatEvent);
 
-    var _this2 = _possibleConstructorReturn(this, (TwitchChatEvent.__proto__ || Object.getPrototypeOf(TwitchChatEvent)).call(this, "CHAT", raw_line, parsed));
+    var _this = _possibleConstructorReturn(this, (TwitchChatEvent.__proto__ || Object.getPrototypeOf(TwitchChatEvent)).call(this, "CHAT", raw_line, parsed));
 
-    _this2._id = parsed.flags.id;
-    return _this2;
+    _this._id = parsed.flags.id;
+    return _this;
   }
 
   _createClass(TwitchChatEvent, [{
@@ -490,12 +490,12 @@ TwitchClient.prototype.SetDebug = function _TwitchClient_SetDebug(val) {
 
 /* Bind a function to the event specified (wraps document.addEventListener) */
 TwitchClient.prototype.bind = function _TwitchClient_bind(event, callback) {
-  document.addEventListener(event, callback);
+  Util.Bind(event, callback);
 };
 
 /* Unbind a function from the TwitchChat event specified */
 TwitchClient.prototype.unbind = function _TwitchClient_unbind(event, callback) {
-  document.removeEventListener(event, callback);
+  Util.Unbind(event, callback);
 };
 
 /* End event handling 0}}} */
@@ -1673,7 +1673,7 @@ TwitchClient.prototype.OnWebsocketOpen = function _TwitchClient_OnWebsocketOpen(
 
 /* Callback: called when the websocket receives a message */
 TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMessage(ws_event) {
-  var _this3 = this;
+  var _this2 = this;
 
   var lines = ws_event.data.split("\r\n");
   var _iteratorNormalCompletion23 = true;
@@ -1704,7 +1704,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
       /* Make sure the room is tracked */
       if (result.channel && result.channel.channel) {
-        _this3._ensureRoom(result.channel);
+        _this2._ensureRoom(result.channel);
       }
 
       /* Don't handle messages with NULL commands */
@@ -1722,10 +1722,10 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       var room = null;
       var roomid = null;
       if (result.channel) {
-        _this3._ensureRoom(result.channel);
+        _this2._ensureRoom(result.channel);
         cname = result.channel.channel;
         cstr = Twitch.FormatChannel(result.channel);
-        room = _this3._rooms[cname];
+        room = _this2._rooms[cname];
         if (result.flags && result.flags["room-id"]) {
           roomid = result.flags["room-id"];
         }
@@ -1734,11 +1734,11 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       /* Handle each command that could be returned */
       switch (result.cmd) {
         case "PING":
-          _this3.send("PONG :" + result.server);
+          _this2.send("PONG :" + result.server);
           break;
         case "ACK":
-          _this3._connected = true;
-          _this3._capabilities = result.flags;
+          _this2._connected = true;
+          _this2._capabilities = result.flags;
           break;
         case "TOPIC":
           break;
@@ -1751,7 +1751,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
             for (var _iterator24 = result.usernames[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
               var user = _step24.value;
 
-              _this3._onJoin(result.channel, user);
+              _this2._onJoin(result.channel, user);
             }
           } catch (err) {
             _didIteratorError24 = true;
@@ -1770,16 +1770,16 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
           break;
         case "JOIN":
-          _this3._onJoin(result.channel, result.user);
+          _this2._onJoin(result.channel, result.user);
           break;
         case "PART":
-          _this3._onPart(result.channel, result.user);
+          _this2._onPart(result.channel, result.user);
           break;
         case "MODE":
           if (result.modeflag == "+o") {
-            _this3._onOp(result.channel, result.user);
+            _this2._onOp(result.channel, result.user);
           } else if (result.modeflag == "-o") {
-            _this3._onDeOp(result.channel, result.user);
+            _this2._onDeOp(result.channel, result.user);
           }
           break;
         case "PRIVMSG":
@@ -1788,13 +1788,13 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
             room.userInfo[result.user] = {};
           }
           if (!event.flags.badges) event.flags.badges = [];
-          if (_this3._enable_ffz) {
+          if (_this2._enable_ffz) {
             var _iteratorNormalCompletion25 = true;
             var _didIteratorError25 = false;
             var _iteratorError25 = undefined;
 
             try {
-              for (var _iterator25 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+              for (var _iterator25 = Object.entries(_this2._ffz_badge_users)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
                 var _step25$value = _slicedToArray(_step25.value, 2),
                     badge_nr = _step25$value[0],
                     users = _step25$value[1];
@@ -1802,7 +1802,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                 if (users.indexOf(result.user) > -1) {
                   var ffz_badges = event.flags['ffz-badges'];
                   if (ffz_badges === undefined) ffz_badges = [];
-                  ffz_badges.push(_this3._ffz_badges[badge_nr]);
+                  ffz_badges.push(_this2._ffz_badges[badge_nr]);
                   event.flags['ffz-badges'] = ffz_badges;
                 }
               }
@@ -1833,8 +1833,8 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
         case "WHISPER":
           break;
         case "USERSTATE":
-          if (!_this3._self_userstate.hasOwnProperty(cstr)) {
-            _this3._self_userstate[cstr] = {};
+          if (!_this2._self_userstate.hasOwnProperty(cstr)) {
+            _this2._self_userstate[cstr] = {};
           }
           var _iteratorNormalCompletion26 = true;
           var _didIteratorError26 = false;
@@ -1846,7 +1846,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                   key = _step26$value[0],
                   val = _step26$value[1];
 
-              _this3._self_userstate[cstr][key] = val;
+              _this2._self_userstate[cstr][key] = val;
             }
           } catch (err) {
             _didIteratorError26 = true;
@@ -1867,20 +1867,20 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
         case "ROOMSTATE":
           room.id = roomid;
           room.channel = result.channel;
-          if (_this3._authed) {
-            _this3._getRooms(cname, roomid);
+          if (_this2._authed) {
+            _this2._getRooms(cname, roomid);
           }
-          if (!_this3._no_assets) {
-            _this3._getChannelBadges(cname, roomid);
-            _this3._getChannelCheers(cname, roomid);
-            if (_this3._enable_ffz) {
-              _this3._getFFZEmotes(cname, roomid);
+          if (!_this2._no_assets) {
+            _this2._getChannelBadges(cname, roomid);
+            _this2._getChannelCheers(cname, roomid);
+            if (_this2._enable_ffz) {
+              _this2._getFFZEmotes(cname, roomid);
             }
-            if (_this3._enable_bttv) {
-              _this3._getBTTVEmotes(cname, roomid);
+            if (_this2._enable_bttv) {
+              _this2._getBTTVEmotes(cname, roomid);
             }
           }
-          _this3._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
+          _this2._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
             if (resp.streams && resp.streams.length > 0) {
               room.stream = resp.streams[0];
               room.streams = resp.streams;
@@ -1891,7 +1891,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
               room.online = false;
             }
             Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-          }.bind(_this3));
+          }.bind(_this2));
           break;
         case "USERNOTICE":
           if (result.sub_kind == "SUB") {
@@ -1905,7 +1905,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
           }
           break;
         case "GLOBALUSERSTATE":
-          _this3._self_userid = result.flags['user-id'];
+          _this2._self_userid = result.flags['user-id'];
           break;
         case "CLEARCHAT":
           break;
@@ -1927,7 +1927,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       /* Obtain emotes the client is able to use */
       if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
         if (result.flags && result.flags["emote-sets"]) {
-          _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
+          _this2._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
             var _iteratorNormalCompletion27 = true;
             var _didIteratorError27 = false;
             var _iteratorError27 = undefined;
@@ -1974,7 +1974,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                 }
               }
             }
-          }.bind(_this3));
+          }.bind(_this2));
         }
       }
     };
