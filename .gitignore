@@ -9,6 +9,7 @@ assets/3rdparty/
 # Ignore supporting material
 Makefile
 *.html
+libkae-js
 
 # Re-include delivered tests
 !tests/*
