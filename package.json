@@ -1,0 +1,38 @@
+{
+  "name": "twitch-api",
+  "version": "1.0.0",
+  "description": "Twitch Chat API",
+  "main": "client.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Kaedenn/twitch-api.git"
+  },
+  "keywords": [
+    "twitch",
+    "api",
+    "client",
+    "javascript",
+    "utility"
+  ],
+  "author": "Kaedenn",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Kaedenn/twitch-api/issues"
+  },
+  "homepage": "https://github.com/Kaedenn/twitch-api#readme",
+  "dependencies": {
+    "babel": "^6.23.0",
+    "babel-preset-env": "^1.7.0",
+    "babel-preset-es2015": "^6.24.1",
+    "eslint": "^5.16.0"
+  },
+  "devDependencies": {
+    "babel-cli": "^6.26.0"
+  }
+}
