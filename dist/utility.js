@@ -1855,11 +1855,11 @@ Util.Color = _Util_Color;
 
 /* Parse a CSS color.
  * Overloads
- *  Util.ParseColor('css color spec')
- *  Util.ParseColor([r, g, b])
- *  Util.ParseColor([r, g, b, a])
- *  Util.ParseColor(r, g, b[, a]) */
-Util.ParseCSSColor = function _Util_ParseColor() {
+ *  Util.ParseCSSColor('css color spec')
+ *  Util.ParseCSSColor([r, g, b])
+ *  Util.ParseCSSColor([r, g, b, a])
+ *  Util.ParseCSSColor(r, g, b[, a]) */
+Util.ParseCSSColor = function _Util_ParseCSSColor() {
   for (var _len15 = arguments.length, color = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
     color[_key15] = arguments[_key15];
   }
@@ -2932,6 +2932,36 @@ Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
     styles.push(rule.style[i]);
   }
   return styles;
+};
+
+/* Obtain the value of the given property
+ * Overloads
+ *  Util.CSS.GetProperty(prop)
+ *  Util.CSS.GetProperty(elem, prop) */
+Util.CSS.GetProperty = function _Util_CSS_GetProperty() {
+  var e = document.documentElement;
+  var p = arguments.length <= 0 ? undefined : arguments[0];
+  if (arguments.length > 1) {
+    e = arguments.length <= 0 ? undefined : arguments[0];
+    p = arguments.length <= 1 ? undefined : arguments[1];
+  }
+  return getComputedStyle(e).getPropertyValue(p).trim();
+};
+
+/* Set the property to the value giveni
+ * Overloads
+ *  Util.CSS.SetProperty(prop, value)
+ *  Util.CSS.SetProperty(elem, prop, value) */
+Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
+  var e = document.documentElement;
+  var p = arguments.length <= 0 ? undefined : arguments[0];
+  var v = arguments.length <= 1 ? undefined : arguments[1];
+  if (arguments.length > 2) {
+    e = arguments.length <= 0 ? undefined : arguments[0];
+    p = arguments.length <= 1 ? undefined : arguments[1];
+    v = arguments.length <= 2 ? undefined : arguments[2];
+  }
+  e.style.setProperty(p, v);
 };
 
 /* End CSS functions 0}}} */

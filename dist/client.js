@@ -17,23 +17,31 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
+ *    Sub plans:
+ *      Prime
+ *      1000 (tier 1)
+ *      2000 (tier 2)
+ *      3000 (tier 3)
  *  Implement the following features:
  *    Clip information
  *      https://api.twitch.tv/kraken/clips/<string>
  *    USERNOTICEs:
  *      submysterygift
- *      giftpaidupgrade
  *      rewardgift
+ *      giftpaidupgrade
+ *        msg-param-promo-gift-total
+ *        msg-param-promo-name
  *      anongiftpaidupgrade
+ *        msg-param-promo-gift-total
+ *        msg-param-promo-name
  *      raid
  *        msg-param-viewerCount (raid size)
  *        msg-param-displayName (raider's name)
  *        msg-param-login (raider's login)
  *      unraid
  *      ritual
+ *        msg-id: new_chatter
  *      bitsbadgetier
- *  Implement the following commands:
- *    RECONNECT
  */
 
 /* Event classes {{{0 */
@@ -150,6 +158,7 @@ var TwitchEvent = function () {
         NAMES: "NAMES",
         JOIN: "JOIN",
         PART: "PART",
+        RECONNECT: "RECONNECT",
         MODE: "MODE",
         PRIVMSG: "PRIVMSG",
         WHISPER: "WHISPER",
@@ -272,6 +281,127 @@ var TwitchChatEvent = function (_TwitchEvent) {
   }]);
 
   return TwitchChatEvent;
+}(TwitchEvent);
+
+/* Event object for subscription events */
+
+
+var TwitchSubEvent = function (_TwitchEvent2) {
+  _inherits(TwitchSubEvent, _TwitchEvent2);
+
+  function TwitchSubEvent(sub_kind, raw_line, parsed) {
+    _classCallCheck(this, TwitchSubEvent);
+
+    var _this2 = _possibleConstructorReturn(this, (TwitchSubEvent.__proto__ || Object.getPrototypeOf(TwitchSubEvent)).call(this, sub_kind, raw_line, parsed));
+
+    _this2._sub_kind = sub_kind;
+    return _this2;
+  }
+
+  _createClass(TwitchSubEvent, [{
+    key: "kind",
+    get: function get() {
+      return this._sub_kind;
+    }
+  }, {
+    key: "user",
+
+
+    /* Apply to all sub kinds */
+    get: function get() {
+      return this.flags['msg-param-login'];
+    }
+  }, {
+    key: "plan",
+    get: function get() {
+      return this.flags['msg-param-sub-plan-name'];
+    }
+  }, {
+    key: "plan_id",
+    get: function get() {
+      return this.flags['msg-param-sub-plan'];
+    }
+  }, {
+    key: "months",
+    get: function get() {
+      return this.flags['msg-param-months'] || 0;
+    }
+  }, {
+    key: "total_months",
+    get: function get() {
+      return this.flags['msg-param-cumulative-months'] || 0;
+    }
+  }, {
+    key: "share_streak",
+    get: function get() {
+      return this.flags['msg-param-should-share-streak'];
+    }
+  }, {
+    key: "streak_months",
+    get: function get() {
+      return this.flags['msg-param-streak-months'] || 0;
+    }
+
+    /* Apply only to gift subs */
+
+  }, {
+    key: "recipient",
+    get: function get() {
+      return this.flags['msg-param-recipient-user-name'];
+    }
+  }, {
+    key: "recipient_id",
+    get: function get() {
+      return this.flags['msg-param-recipient-id'];
+    }
+  }, {
+    key: "recipient_name",
+    get: function get() {
+      return this.flags['msg-param-recipient-display-name'];
+    }
+  }], [{
+    key: "SUB",
+    get: function get() {
+      return "SUB";
+    }
+  }, {
+    key: "RESUB",
+    get: function get() {
+      return "RESUB";
+    }
+  }, {
+    key: "GIFTSUB",
+    get: function get() {
+      return "GISTSUB";
+    }
+  }, {
+    key: "ANONGIFTSUB",
+    get: function get() {
+      return "ANONGIFTSUB";
+    }
+  }, {
+    key: "PLAN_PRIME",
+    get: function get() {
+      return "Prime";
+    }
+  }, {
+    key: "PLAN_TIER1",
+    get: function get() {
+      return "1000";
+    }
+  }, {
+    key: "PLAN_TIER2",
+    get: function get() {
+      return "2000";
+    }
+  }, {
+    key: "PLAN_TIER3",
+    get: function get() {
+      return "3000";
+    }
+  }]);
+
+  return TwitchSubEvent;
 }(TwitchEvent);
 
 /* End of event classes section 0}}} */
@@ -1684,7 +1814,7 @@ TwitchClient.prototype.OnWebsocketOpen = function _TwitchClient_OnWebsocketOpen(
 
 /* Callback: called when the websocket receives a message */
 TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMessage(ws_event) {
-  var _this2 = this;
+  var _this3 = this;
 
   var lines = ws_event.data.split("\r\n");
   var _iteratorNormalCompletion23 = true;
@@ -1715,7 +1845,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
       /* Make sure the room is tracked */
       if (result.channel && result.channel.channel) {
-        _this2._ensureRoom(result.channel);
+        _this3._ensureRoom(result.channel);
       }
 
       /* Don't handle messages with NULL commands */
@@ -1733,10 +1863,10 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       var room = null;
       var roomid = null;
       if (result.channel) {
-        _this2._ensureRoom(result.channel);
+        _this3._ensureRoom(result.channel);
         cname = result.channel.channel;
         cstr = Twitch.FormatChannel(result.channel);
-        room = _this2._rooms[cname];
+        room = _this3._rooms[cname];
         if (result.flags && result.flags["room-id"]) {
           roomid = result.flags["room-id"];
         }
@@ -1745,11 +1875,11 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       /* Handle each command that could be returned */
       switch (result.cmd) {
         case "PING":
-          _this2.send("PONG :" + result.server);
+          _this3.send("PONG :" + result.server);
           break;
         case "ACK":
-          _this2._connected = true;
-          _this2._capabilities = result.flags;
+          _this3._connected = true;
+          _this3._capabilities = result.flags;
           break;
         case "TOPIC":
           break;
@@ -1762,7 +1892,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
             for (var _iterator24 = result.usernames[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
               var user = _step24.value;
 
-              _this2._onJoin(result.channel, user);
+              _this3._onJoin(result.channel, user);
             }
           } catch (err) {
             _didIteratorError24 = true;
@@ -1781,16 +1911,20 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
           break;
         case "JOIN":
-          _this2._onJoin(result.channel, result.user);
+          _this3._onJoin(result.channel, result.user);
           break;
         case "PART":
-          _this2._onPart(result.channel, result.user);
+          _this3._onPart(result.channel, result.user);
+          break;
+        case "RECONNECT":
+          /* TODO: Reconnect (or schedule to reconnect) client */
+          Util.Error("Reconnect needed");
           break;
         case "MODE":
           if (result.modeflag == "+o") {
-            _this2._onOp(result.channel, result.user);
+            _this3._onOp(result.channel, result.user);
           } else if (result.modeflag == "-o") {
-            _this2._onDeOp(result.channel, result.user);
+            _this3._onDeOp(result.channel, result.user);
           }
           break;
         case "PRIVMSG":
@@ -1799,13 +1933,13 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
             room.userInfo[result.user] = {};
           }
           if (!event.flags.badges) event.flags.badges = [];
-          if (_this2._enable_ffz) {
+          if (_this3._enable_ffz) {
             var _iteratorNormalCompletion25 = true;
             var _didIteratorError25 = false;
             var _iteratorError25 = undefined;
 
             try {
-              for (var _iterator25 = Object.entries(_this2._ffz_badge_users)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+              for (var _iterator25 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
                 var _step25$value = _slicedToArray(_step25.value, 2),
                     badge_nr = _step25$value[0],
                     users = _step25$value[1];
@@ -1813,7 +1947,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                 if (users.indexOf(result.user) > -1) {
                   var ffz_badges = event.flags['ffz-badges'];
                   if (ffz_badges === undefined) ffz_badges = [];
-                  ffz_badges.push(_this2._ffz_badges[badge_nr]);
+                  ffz_badges.push(_this3._ffz_badges[badge_nr]);
                   event.flags['ffz-badges'] = ffz_badges;
                 }
               }
@@ -1844,8 +1978,8 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
         case "WHISPER":
           break;
         case "USERSTATE":
-          if (!_this2._self_userstate.hasOwnProperty(cstr)) {
-            _this2._self_userstate[cstr] = {};
+          if (!_this3._self_userstate.hasOwnProperty(cstr)) {
+            _this3._self_userstate[cstr] = {};
           }
           var _iteratorNormalCompletion26 = true;
           var _didIteratorError26 = false;
@@ -1857,7 +1991,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                   key = _step26$value[0],
                   val = _step26$value[1];
 
-              _this2._self_userstate[cstr][key] = val;
+              _this3._self_userstate[cstr][key] = val;
             }
           } catch (err) {
             _didIteratorError26 = true;
@@ -1878,20 +2012,20 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
         case "ROOMSTATE":
           room.id = roomid;
           room.channel = result.channel;
-          if (_this2._authed) {
-            _this2._getRooms(cname, roomid);
+          if (_this3._authed) {
+            _this3._getRooms(cname, roomid);
           }
-          if (!_this2._no_assets) {
-            _this2._getChannelBadges(cname, roomid);
-            _this2._getChannelCheers(cname, roomid);
-            if (_this2._enable_ffz) {
-              _this2._getFFZEmotes(cname, roomid);
+          if (!_this3._no_assets) {
+            _this3._getChannelBadges(cname, roomid);
+            _this3._getChannelCheers(cname, roomid);
+            if (_this3._enable_ffz) {
+              _this3._getFFZEmotes(cname, roomid);
             }
-            if (_this2._enable_bttv) {
-              _this2._getBTTVEmotes(cname, roomid);
+            if (_this3._enable_bttv) {
+              _this3._getBTTVEmotes(cname, roomid);
             }
           }
-          _this2._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
+          _this3._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
             if (resp.streams && resp.streams.length > 0) {
               room.stream = resp.streams[0];
               room.streams = resp.streams;
@@ -1902,21 +2036,21 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
               room.online = false;
             }
             Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-          }.bind(_this2));
+          }.bind(_this3));
           break;
         case "USERNOTICE":
           if (result.sub_kind == "SUB") {
-            Util.FireEvent(new TwitchEvent("SUB", line, result));
+            Util.FireEvent(new TwitchSubEvent("SUB", line, result));
           } else if (result.sub_kind == "RESUB") {
-            Util.FireEvent(new TwitchEvent("RESUB", line, result));
+            Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
           } else if (result.sub_kind == "GIFTSUB") {
-            Util.FireEvent(new TwitchEvent("GIFTSUB", line, result));
+            Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
           } else if (result.sub_kind == "ANONGIFTSUB") {
-            Util.FireEvent(new TwitchEvent("ANONGIFTSUB", line, result));
+            Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
           }
           break;
         case "GLOBALUSERSTATE":
-          _this2._self_userid = result.flags['user-id'];
+          _this3._self_userid = result.flags['user-id'];
           break;
         case "CLEARCHAT":
           break;
@@ -1938,7 +2072,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
       /* Obtain emotes the client is able to use */
       if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
         if (result.flags && result.flags["emote-sets"]) {
-          _this2._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
+          _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
             var _iteratorNormalCompletion27 = true;
             var _didIteratorError27 = false;
             var _iteratorError27 = undefined;
@@ -1985,7 +2119,7 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
                 }
               }
             }
-          }.bind(_this2));
+          }.bind(_this3));
         }
       }
     };

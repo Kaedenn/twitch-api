@@ -17,23 +17,31 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
+ *    Sub plans:
+ *      Prime
+ *      1000 (tier 1)
+ *      2000 (tier 2)
+ *      3000 (tier 3)
  *  Implement the following features:
  *    Clip information
  *      https://api.twitch.tv/kraken/clips/<string>
  *    USERNOTICEs:
  *      submysterygift
- *      giftpaidupgrade
  *      rewardgift
+ *      giftpaidupgrade
+ *        msg-param-promo-gift-total
+ *        msg-param-promo-name
  *      anongiftpaidupgrade
+ *        msg-param-promo-gift-total
+ *        msg-param-promo-name
  *      raid
  *        msg-param-viewerCount (raid size)
  *        msg-param-displayName (raider's name)
  *        msg-param-login (raider's login)
  *      unraid
  *      ritual
+ *        msg-id: new_chatter
  *      bitsbadgetier
- *  Implement the following commands:
- *    RECONNECT
  */
 
 /* Event classes {{{0 */
@@ -57,6 +65,7 @@ class TwitchEvent {
       NAMES: "NAMES",
       JOIN: "JOIN",
       PART: "PART",
+      RECONNECT: "RECONNECT",
       MODE: "MODE",
       PRIVMSG: "PRIVMSG",
       WHISPER: "WHISPER",
@@ -154,6 +163,38 @@ class TwitchChatEvent extends TwitchEvent {
     ].join(",");
     return `new ${cls}(${args})`;
   }
+}
+
+/* Event object for subscription events */
+class TwitchSubEvent extends TwitchEvent {
+  constructor(sub_kind, raw_line, parsed) {
+    super(sub_kind, raw_line, parsed);
+    this._sub_kind = sub_kind;
+  }
+  get kind() { return this._sub_kind; }
+  static get SUB() { return "SUB"; }
+  static get RESUB() { return "RESUB"; }
+  static get GIFTSUB() { return "GISTSUB"; }
+  static get ANONGIFTSUB() { return "ANONGIFTSUB"; }
+
+  static get PLAN_PRIME() { return "Prime"; }
+  static get PLAN_TIER1() { return "1000"; }
+  static get PLAN_TIER2() { return "2000"; }
+  static get PLAN_TIER3() { return "3000"; }
+
+  /* Apply to all sub kinds */
+  get user() { return this.flags['msg-param-login']; }
+  get plan() { return this.flags['msg-param-sub-plan-name']; }
+  get plan_id() { return this.flags['msg-param-sub-plan']; }
+  get months() { return this.flags['msg-param-months'] || 0; }
+  get total_months() { return this.flags['msg-param-cumulative-months'] || 0; }
+  get share_streak() { return this.flags['msg-param-should-share-streak']; }
+  get streak_months() { return this.flags['msg-param-streak-months'] || 0; }
+
+  /* Apply only to gift subs */
+  get recipient() { return this.flags['msg-param-recipient-user-name']; }
+  get recipient_id() { return this.flags['msg-param-recipient-id']; }
+  get recipient_name() { return this.flags['msg-param-recipient-display-name']; }
 }
 
 /* End of event classes section 0}}} */
@@ -1215,6 +1256,10 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
       case "PART":
         this._onPart(result.channel, result.user);
         break;
+      case "RECONNECT":
+        /* TODO: Reconnect (or schedule to reconnect) client */
+        Util.Error("Reconnect needed");
+        break;
       case "MODE":
         if (result.modeflag == "+o") {
           this._onOp(result.channel, result.user);
@@ -1289,13 +1334,13 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         break;
       case "USERNOTICE":
         if (result.sub_kind == "SUB") {
-          Util.FireEvent(new TwitchEvent("SUB", line, result));
+          Util.FireEvent(new TwitchSubEvent("SUB", line, result));
         } else if (result.sub_kind == "RESUB") {
-          Util.FireEvent(new TwitchEvent("RESUB", line, result));
+          Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
         } else if (result.sub_kind == "GIFTSUB") {
-          Util.FireEvent(new TwitchEvent("GIFTSUB", line, result));
+          Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
         } else if (result.sub_kind == "ANONGIFTSUB") {
-          Util.FireEvent(new TwitchEvent("ANONGIFTSUB", line, result));
+          Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
         }
         break;
       case "GLOBALUSERSTATE":

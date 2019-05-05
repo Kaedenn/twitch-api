@@ -1032,11 +1032,11 @@ Util.Color = _Util_Color;
 
 /* Parse a CSS color.
  * Overloads
- *  Util.ParseColor('css color spec')
- *  Util.ParseColor([r, g, b])
- *  Util.ParseColor([r, g, b, a])
- *  Util.ParseColor(r, g, b[, a]) */
-Util.ParseCSSColor = function _Util_ParseColor(...color) {
+ *  Util.ParseCSSColor('css color spec')
+ *  Util.ParseCSSColor([r, g, b])
+ *  Util.ParseCSSColor([r, g, b, a])
+ *  Util.ParseCSSColor(r, g, b[, a]) */
+Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
   let r = 0, g = 0, b = 0, a = 0;
   if (color.length == 1) { color = color[0]; }
   if (typeof(color) == "string") {
@@ -1653,6 +1653,36 @@ Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
     styles.push(rule.style[i]);
   }
   return styles;
+}
+
+/* Obtain the value of the given property
+ * Overloads
+ *  Util.CSS.GetProperty(prop)
+ *  Util.CSS.GetProperty(elem, prop) */
+Util.CSS.GetProperty = function _Util_CSS_GetProperty(...args) {
+  let e = document.documentElement;
+  let p = args[0];
+  if (args.length > 1) {
+    e = args[0];
+    p = args[1];
+  }
+  return getComputedStyle(e).getPropertyValue(p).trim();
+}
+
+/* Set the property to the value giveni
+ * Overloads
+ *  Util.CSS.SetProperty(prop, value)
+ *  Util.CSS.SetProperty(elem, prop, value) */
+Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
+  let e = document.documentElement;
+  let p = args[0];
+  let v = args[1];
+  if (args.length > 2) {
+    e = args[0];
+    p = args[1];
+    v = args[2];
+  }
+  e.style.setProperty(p, v);
 }
 
 /* End CSS functions 0}}} */
