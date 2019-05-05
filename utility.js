@@ -1626,7 +1626,7 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
 
 Util.CSS = {};
 
-/* Get a stylesheet by filename */
+/* Get a stylesheet by filename or partial pathname */
 Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
   for (let ss of document.styleSheets) {
     if (ss.href.endsWith(`/${filename.trimStart('/')}`)) {

@@ -1,16 +1,21 @@
 
-.PHONY: all lint babel dist-lint
+SRCS = $(wildcard *.js)
+DIST = dist
+DISTS = $(patsubst %,$(DIST)/%,$(SRCS))
 
-all: lint
+.PHONY: all lint dist-list
+
+all: lint dist dist-lint
 
 lint:
 	npx eslint --env browser --env es6 *.js
 
-dist-lint:
-	npx eslint --env browser --env es6 dist/*.js
+dist: $(DISTS)
 
-babel:
-	npx babel --presets babel-preset-es2015 client.js -d dist/
-	npx babel --presets babel-preset-es2015 utility.js -d dist/
-	npx babel --presets babel-preset-es2015 twitch-utility.js -d dist/
-	npx babel --presets babel-preset-es2015 colors.js -d dist/
+dist/%.js: %.js
+	test -d dist || mkdir dist
+	npx babel --presets babel-preset-es2015 $< -d dist/
+
+dist-lint: dist
+	npx eslint --env browser $(DISTS)
+
