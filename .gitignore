@@ -7,7 +7,6 @@ plugins/dwangoAC.js
 assets/3rdparty/
 
 # Ignore supporting material
-Makefile
 *.html
 libkae-js
 
@@ -17,7 +16,6 @@ libkae-js
 # Ignore Node.js files
 node_modules/
 package-lock.json
-package.json
 .eslintrc*
 
 # Ignore compiled Python files

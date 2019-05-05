@@ -18,10 +18,20 @@
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
  *  Implement the following features:
- *    Raid messages
- *      msg-param-viewerCount (raid size)
- *      msg-param-displayName (raider's name)
- *      msg-param-login (raider's login)
+ *    Clip information
+ *      https://api.twitch.tv/kraken/clips/<string>
+ *    USERNOTICEs:
+ *      submysterygift
+ *      giftpaidupgrade
+ *      rewardgift
+ *      anongiftpaidupgrade
+ *      raid
+ *        msg-param-viewerCount (raid size)
+ *        msg-param-displayName (raider's name)
+ *        msg-param-login (raider's login)
+ *      unraid
+ *      ritual
+ *      bitsbadgetier
  *  Implement the following commands:
  *    RECONNECT
  */
