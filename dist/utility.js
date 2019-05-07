@@ -480,9 +480,12 @@ var _Util_API = function () {
 
       try {
         for (var _iterator7 = Object.entries(this._args)[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var _step7$value = _slicedToArray(_step7.value, 2),
-              k = _step7$value[0],
-              v = _step7$value[1];
+          var _ref = _step7.value;
+
+          var _ref2 = _slicedToArray(_ref, 2);
+
+          var k = _ref2[0];
+          var v = _ref2[1];
 
           init[k] = v;
         }
@@ -507,11 +510,14 @@ var _Util_API = function () {
 
       try {
         for (var _iterator8 = Object.entries(this._headers)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-          var _step8$value = _slicedToArray(_step8.value, 2),
-              k = _step8$value[0],
-              v = _step8$value[1];
+          var _ref3 = _step8.value;
 
-          init.headers[k] = v;
+          var _ref4 = _slicedToArray(_ref3, 2);
+
+          var _k = _ref4[0];
+          var _v = _ref4[1];
+
+          init.headers[_k] = _v;
         }
       } catch (err) {
         _didIteratorError8 = true;
@@ -561,9 +567,12 @@ var _Util_API = function () {
 
         try {
           for (var _iterator9 = Object.entries(this._headers)[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
-            var _step9$value = _slicedToArray(_step9.value, 2),
-                k = _step9$value[0],
-                v = _step9$value[1];
+            var _ref5 = _step9.value;
+
+            var _ref6 = _slicedToArray(_ref5, 2);
+
+            var k = _ref6[0];
+            var v = _ref6[1];
 
             r.setRequestHeader(k, v);
           }
@@ -876,8 +885,8 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
 
         try {
           for (var _iterator13 = pieces[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-            var piece = _step13.value;
-            piece[0] = piece[0].slice(1);
+            var _piece = _step13.value;
+            _piece[0] = _piece[0].slice(1);
           }
         } catch (err) {
           _didIteratorError13 = true;
@@ -1053,9 +1062,12 @@ var LoggerUtility = function () {
 
       try {
         for (var _iterator16 = Object.entries(this._filters)[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-          var _step16$value = _slicedToArray(_step16.value, 2),
-              key = _step16$value[0],
-              filters = _step16$value[1];
+          var _ref7 = _step16.value;
+
+          var _ref8 = _slicedToArray(_ref7, 2);
+
+          var key = _ref8[0];
+          var filters = _ref8[1];
 
           if (key >= sev) {
             var _iteratorNormalCompletion17 = true;
@@ -1577,11 +1589,11 @@ var _Util_Color = function () {
       /* Handle Color(Color) and Color("string") */
       var arg = args[0];
       if (arg instanceof Util.Color) {
-        var _ref = [arg.r, arg.g, arg.b, arg.a];
-        this.r = _ref[0];
-        this.g = _ref[1];
-        this.b = _ref[2];
-        this.a = _ref[3];
+        var _ref9 = [arg.r, arg.g, arg.b, arg.a];
+        this.r = _ref9[0];
+        this.g = _ref9[1];
+        this.b = _ref9[2];
+        this.a = _ref9[3];
 
         this.scale = arg.scale;
       } else if (typeof arg == "string" || arg instanceof String) {
@@ -1592,11 +1604,11 @@ var _Util_Color = function () {
             b = _ColorParser$parse2[2],
             _a2 = _ColorParser$parse2[3];
 
-        var _ref2 = [r, g, b, _a2];
-        this.r = _ref2[0];
-        this.g = _ref2[1];
-        this.b = _ref2[2];
-        this.a = _ref2[3];
+        var _ref10 = [r, g, b, _a2];
+        this.r = _ref10[0];
+        this.g = _ref10[1];
+        this.b = _ref10[2];
+        this.a = _ref10[3];
       } else {
         Util.Throw(TypeError, "Invalid argument \"" + arg + "\" to Color()");
       }
@@ -2175,10 +2187,10 @@ Util.RandomGenerator = function () {
       var h = this.bytesToHex(a);
       var parts = [[0, 8], [8, 4], [12, 4], [16, 4], [20, 12]];
       var result = [];
-      parts.forEach(function (_ref3) {
-        var _ref4 = _slicedToArray(_ref3, 2),
-            s = _ref4[0],
-            l = _ref4[1];
+      parts.forEach(function (_ref11) {
+        var _ref12 = _slicedToArray(_ref11, 2),
+            s = _ref12[0],
+            l = _ref12[1];
 
         return result.push(h.substr(s, l));
       });
@@ -2374,14 +2386,14 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
 
 /* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
 Util.FormatDate = function _Util_FormatDate(date) {
-  var _ref5 = [date.getFullYear(), date.getMonth(), date.getDay()],
-      y = _ref5[0],
-      m = _ref5[1],
-      d = _ref5[2];
-  var _ref6 = [date.getHours(), date.getMinutes(), date.getSeconds()],
-      h = _ref6[0],
-      mi = _ref6[1],
-      s = _ref6[2];
+  var _ref13 = [date.getFullYear(), date.getMonth(), date.getDay()],
+      y = _ref13[0],
+      m = _ref13[1],
+      d = _ref13[2];
+  var _ref14 = [date.getHours(), date.getMinutes(), date.getSeconds()],
+      h = _ref14[0],
+      mi = _ref14[1],
+      s = _ref14[2];
 
   var ms = date.getMilliseconds();
   var p = [y, Util.Pad(m, 2), Util.Pad(d, 2), Util.Pad(h, 2), Util.Pad(mi, 2), Util.Pad(s, 2), Util.Pad(ms, 3)];
@@ -2441,9 +2453,12 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 
   try {
     for (var _iterator24 = Util.Zip(Util.StringToCodes(str), str)[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-      var _step24$value = _slicedToArray(_step24.value, 2),
-          cn = _step24$value[0],
-          ch = _step24$value[1];
+      var _ref15 = _step24.value;
+
+      var _ref16 = _slicedToArray(_ref15, 2);
+
+      var cn = _ref16[0];
+      var ch = _ref16[1];
 
       if (cn < 0x20) result = result.concat(Util.EscapeCharCode(cn));else if (ch == '\\') result = result.concat('\\\\');else result = result.concat(ch);
     }
@@ -2603,9 +2618,12 @@ var ConfigStore = function () {
 
       try {
         for (var _iterator26 = array[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-          var _step26$value = _slicedToArray(_step26.value, 2),
-              k = _step26$value[0],
-              v = _step26$value[1];
+          var _ref17 = _step26.value;
+
+          var _ref18 = _slicedToArray(_ref17, 2);
+
+          var k = _ref18[0];
+          var v = _ref18[1];
 
           this.addValue(k, v);
         }
@@ -2678,9 +2696,12 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
 
         try {
           for (var _iterator28 = Object.entries(Util.ParseQueryString(atob(val)))[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-            var _step28$value = _slicedToArray(_step28.value, 2),
-                k = _step28$value[0],
-                v = _step28$value[1];
+            var _ref19 = _step28.value;
+
+            var _ref20 = _slicedToArray(_ref19, 2);
+
+            var k = _ref20[0];
+            var v = _ref20[1];
 
             obj[k] = v;
           }
@@ -2733,9 +2754,12 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
   try {
     for (var _iterator29 = Object.entries(query)[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-      var _step29$value = _slicedToArray(_step29.value, 2),
-          k = _step29$value[0],
-          v = _step29$value[1];
+      var _ref21 = _step29.value;
+
+      var _ref22 = _slicedToArray(_ref21, 2);
+
+      var k = _ref22[0];
+      var v = _ref22[1];
 
       var key = encodeURIComponent(k);
       var val = encodeURIComponent(v);
