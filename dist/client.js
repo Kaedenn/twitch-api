@@ -76,7 +76,7 @@ var TwitchEvent = function () {
       return this._parsed[key];
     }
 
-    /* Event-specific methods */
+    /* Methods available for certain Twitch commands */
 
   }, {
     key: "flag",
@@ -87,10 +87,13 @@ var TwitchEvent = function () {
       return undefined;
     }
 
-    /* Extra attributes */
+    /* Methods specifically for the Twitch USERNOTICE command */
 
   }, {
     key: "repr",
+
+
+    /* Extra attributes */
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
@@ -99,6 +102,10 @@ var TwitchEvent = function () {
     }
   }, {
     key: "type",
+
+
+    /* Methods available for all Twitch commands */
+
     get: function get() {
       return "twitch-" + this._cmd.toLowerCase();
     }
@@ -141,6 +148,112 @@ var TwitchEvent = function () {
     key: "flags",
     get: function get() {
       return this._parsed.flags;
+    }
+  }, {
+    key: "usernotice_msgid",
+    get: function get() {
+      if (this._cmd === "USERNOTICE") {
+        if (typeof this.flags["msg-id"] === "string") {
+          return this.flags["msg-id"];
+        }
+      }
+      return null;
+    }
+  }, {
+    key: "usernotice_class",
+    get: function get() {
+      var msgid = this.usernotice_msgid;
+      if (typeof msgid === "string") {
+        return msgid.split('_')[0];
+      }
+      return null;
+    }
+  }, {
+    key: "usernotice_severity",
+    get: function get() {
+      /* TODO: Move to a separate module */
+      var msgid = this.usernotice_msgid;
+      var msgclass = this.usernotice_class;
+      var sevs = {
+        trace: LoggerUtility.SEVERITIES.TRACE,
+        debug: LoggerUtility.SEVERITIES.DEBUG,
+        info: LoggerUtility.SEVERITIES.INFO,
+        warn: LoggerUtility.SEVERITIES.WARN,
+        error: LoggerUtility.SEVERITIES.ERROR
+      };
+      var sev = sevs.warn;
+      if (typeof msgid === "string") {
+        switch (msgclass) {
+          case "already":
+            break;
+          case "bad":
+            break;
+          case "ban":
+            break;
+          case "cmds":
+            break;
+          case "color":
+            break;
+          case "commercial":
+            break;
+          case "delete":
+            break;
+          case "emote":
+            break;
+          case "followers":
+            break;
+          case "host":
+            break;
+          case "hosts":
+            break;
+          case "invalid":
+            break;
+          case "mod":
+            break;
+          case "msg":
+            break;
+          case "no":
+            break;
+          case "not":
+            break;
+          case "r9k":
+            break;
+          case "raid":
+            break;
+          case "room":
+            break;
+          case "slow":
+            break;
+          case "subs":
+            break;
+          case "timeout":
+            break;
+          case "tos":
+            break;
+          case "turbo":
+            break;
+          case "unban":
+            break;
+          case "unmod":
+            break;
+          case "unraid":
+            break;
+          case "unrecognized":
+            break;
+          case "unsupported":
+            break;
+          case "untimeout":
+            break;
+          case "usage":
+            sev = sevs.info;
+            break;
+          case "whisper":
+            break;
+          default:
+            break;
+        }
+      }
+      return sev;
     }
   }], [{
     key: "COMMANDS",

@@ -83,6 +83,9 @@ class TwitchEvent {
       OTHER: "OTHER"
     };
   }
+
+  /* Methods available for all Twitch commands */
+
   get type() { return "twitch-" + this._cmd.toLowerCase(); }
   get command() { return this._cmd; }
   get raw_line() { return this._raw; }
@@ -90,7 +93,8 @@ class TwitchEvent {
   has_value(key) { return this._parsed.hasOwnProperty(key); }
   value(key) { return this._parsed[key]; }
 
-  /* Event-specific methods */
+  /* Methods available for certain Twitch commands */
+
   get channel() { return this._parsed.channel; }
   get message() { return this._parsed.message; }
   get user() { return this._parsed.user; }
@@ -101,6 +105,111 @@ class TwitchEvent {
       return this._parsed.flags[flag];
     }
     return undefined;
+  }
+
+  /* Methods specifically for the Twitch USERNOTICE command */
+
+  get usernotice_msgid() {
+    if (this._cmd === "USERNOTICE") {
+      if (typeof(this.flags["msg-id"]) === "string") {
+        return this.flags["msg-id"];
+      }
+    }
+    return null;
+  }
+
+  get usernotice_class() {
+    let msgid = this.usernotice_msgid;
+    if (typeof(msgid) === "string") {
+      return msgid.split('_')[0];
+    }
+    return null;
+  }
+
+  get usernotice_severity() {
+    /* TODO: Move to a separate module */
+    let msgid = this.usernotice_msgid;
+    let msgclass = this.usernotice_class;
+    const sevs = {
+      trace: LoggerUtility.SEVERITIES.TRACE,
+      debug: LoggerUtility.SEVERITIES.DEBUG,
+      info: LoggerUtility.SEVERITIES.INFO,
+      warn: LoggerUtility.SEVERITIES.WARN,
+      error: LoggerUtility.SEVERITIES.ERROR
+    };
+    let sev = sevs.warn;
+    if (typeof(msgid) === "string") {
+      switch (msgclass) {
+        case "already":
+          break;
+        case "bad":
+          break;
+        case "ban":
+          break;
+        case "cmds":
+          break;
+        case "color":
+          break;
+        case "commercial":
+          break;
+        case "delete":
+          break;
+        case "emote":
+          break;
+        case "followers":
+          break;
+        case "host":
+          break;
+        case "hosts":
+          break;
+        case "invalid":
+          break;
+        case "mod":
+          break;
+        case "msg":
+          break;
+        case "no":
+          break;
+        case "not":
+          break;
+        case "r9k":
+          break;
+        case "raid":
+          break;
+        case "room":
+          break;
+        case "slow":
+          break;
+        case "subs":
+          break;
+        case "timeout":
+          break;
+        case "tos":
+          break;
+        case "turbo":
+          break;
+        case "unban":
+          break;
+        case "unmod":
+          break;
+        case "unraid":
+          break;
+        case "unrecognized":
+          break;
+        case "unsupported":
+          break;
+        case "untimeout":
+          break;
+        case "usage":
+          sev = sevs.info;
+          break;
+        case "whisper":
+          break;
+        default:
+          break;
+      }
+    }
+    return sev;
   }
 
   /* Extra attributes */
