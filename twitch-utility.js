@@ -28,36 +28,37 @@ class _Twitch_DebugCache {
 Twitch.DebugCache = new _Twitch_DebugCache();
 
 /* API URLs {{{0 */
+
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
+
 /* Store URLs to specific asset APIs */
 Twitch.URL = {};
-/* Twitch rooms */
+
 Twitch.URL.Rooms = (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`;
-/* Twitch streams */
 Twitch.URL.Stream = (cid) => `${Twitch.Kraken}/streams?channel=${cid}`;
-/* Twitch badges */
+Twitch.URL.Clip = (str) => `${Twitch.Kraken}/clips/${str}`;
+
 Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
-/* Twitch cheers */
 Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
 Twitch.URL.Cheers = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
 Twitch.URL.AllCheers = () => `${Twitch.Kraken}/bits/actions`;
-/* Twitch emotes */
 Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
 Twitch.URL.EmoteSet = (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`;
-/* FFZ emotes */
+
 Twitch.URL.FFZAllEmotes = () => `${Twitch.FFZ}/emoticons`;
 Twitch.URL.FFZEmotes = (cid) => `${Twitch.FFZ}/room/id/${cid}`;
 Twitch.URL.FFZEmote = (eid) => `${Twitch.FFZ}/emote/${eid}`;
 Twitch.URL.FFZBadges = () => `${Twitch.FFZ}/_badges`;
 Twitch.URL.FFZBadgeUsers = () => `${Twitch.FFZ}/badges`;
-/* BTTV emotes */
+
 Twitch.URL.BTTVAllEmotes = () => `${Twitch.BTTV}/emotes`;
 Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
+
 /* End of API URLs 0}}} */
 
 /* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */

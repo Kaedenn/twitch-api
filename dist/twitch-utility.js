@@ -49,28 +49,31 @@ var _Twitch_DebugCache = function () {
 Twitch.DebugCache = new _Twitch_DebugCache();
 
 /* API URLs {{{0 */
+
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
+
 /* Store URLs to specific asset APIs */
 Twitch.URL = {};
-/* Twitch rooms */
+
 Twitch.URL.Rooms = function (cid) {
   return Twitch.Kraken + "/chat/" + cid + "/rooms";
 };
-/* Twitch streams */
 Twitch.URL.Stream = function (cid) {
   return Twitch.Kraken + "/streams?channel=" + cid;
 };
-/* Twitch badges */
+Twitch.URL.Clip = function (str) {
+  return Twitch.Kraken + "/clips/" + str;
+};
+
 Twitch.URL.Badges = function (cid) {
   return Twitch.Kraken + "/chat/" + cid + "/badges";
 };
 Twitch.URL.AllBadges = function () {
   return "https://badges.twitch.tv/v1/badges/global/display";
 };
-/* Twitch cheers */
 Twitch.URL.Cheer = function (prefix, tier) {
   var scheme = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "dark";
   var size = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : 1;
@@ -82,7 +85,6 @@ Twitch.URL.Cheers = function (cid) {
 Twitch.URL.AllCheers = function () {
   return Twitch.Kraken + "/bits/actions";
 };
-/* Twitch emotes */
 Twitch.URL.Emote = function (eid) {
   var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '1.0';
   return Twitch.JTVNW + "/emoticons/v1/" + eid + "/" + size;
@@ -90,7 +92,7 @@ Twitch.URL.Emote = function (eid) {
 Twitch.URL.EmoteSet = function (eset) {
   return Twitch.Kraken + "/chat/emoticon_images?emotesets=" + eset;
 };
-/* FFZ emotes */
+
 Twitch.URL.FFZAllEmotes = function () {
   return Twitch.FFZ + "/emoticons";
 };
@@ -106,7 +108,7 @@ Twitch.URL.FFZBadges = function () {
 Twitch.URL.FFZBadgeUsers = function () {
   return Twitch.FFZ + "/badges";
 };
-/* BTTV emotes */
+
 Twitch.URL.BTTVAllEmotes = function () {
   return Twitch.BTTV + "/emotes";
 };
@@ -116,6 +118,7 @@ Twitch.URL.BTTVEmotes = function (cname) {
 Twitch.URL.BTTVEmote = function (eid) {
   return Twitch.BTTV + "/emote/" + eid + "/1x";
 };
+
 /* End of API URLs 0}}} */
 
 /* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */
