@@ -244,7 +244,7 @@ String.prototype.split_n = function _String_split_n(sep, num) {
 /* Ensure String.trimStart is present */
 if (typeof(("").trimStart) != "function") {
   String.prototype.trimStart = function() {
-    var i = 0;
+    let i = 0;
     while (i < this.length && this[i] == ' ') {
       i += 1;
     }
@@ -255,7 +255,7 @@ if (typeof(("").trimStart) != "function") {
 /* Ensure String.trimEnd is present */
 if (typeof(("").trimEnd) != "function") {
   String.prototype.trimEnd = function() {
-    var i = this.length-1;
+    let i = this.length-1;
     while (i > 0 && this[i] == ' ') {
       i -= 1;
     }
@@ -1288,7 +1288,7 @@ Util.FireEvent = function _Util_FireEvent(e) {
   e._stacktrace.shift();
   /* Fire the event across all the bound functions */
   if (Util._events[e.type]) {
-    for (var f of Util._events[e.type]) {
+    for (let f of Util._events[e.type]) {
       f(e);
     }
   }

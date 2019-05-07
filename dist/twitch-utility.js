@@ -180,9 +180,9 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
     try {
       for (var _iterator = Object.keys(global_headers)[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-        var _key = _step.value;
+        var key = _step.value;
 
-        req.setRequestHeader(_key, global_headers[_key]);
+        req.setRequestHeader(key, global_headers[key]);
       }
     } catch (err) {
       _didIteratorError = true;
@@ -205,9 +205,9 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
     try {
       for (var _iterator2 = Object.keys(headers)[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-        var _key2 = _step2.value;
+        var _key = _step2.value;
 
-        req.setRequestHeader(_key2, headers[_key2]);
+        req.setRequestHeader(_key, headers[_key]);
       }
     } catch (err) {
       _didIteratorError2 = true;
@@ -231,9 +231,9 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
       try {
         for (var _iterator3 = Object.keys(private_headers)[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
-          var key = _step3.value;
+          var _key2 = _step3.value;
 
-          req.setRequestHeader(key, private_headers[key]);
+          req.setRequestHeader(_key2, private_headers[_key2]);
         }
       } catch (err) {
         _didIteratorError3 = true;
@@ -765,9 +765,12 @@ Twitch.IRC = {
 
     try {
       for (var _iterator11 = Object.entries(Twitch.IRC.Messages)[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-        var _step11$value = _slicedToArray(_step11.value, 2),
-            pn = _step11$value[0],
-            pr = _step11$value[1];
+        var _ref = _step11.value;
+
+        var _ref2 = _slicedToArray(_ref, 2);
+
+        var pn = _ref2[0];
+        var pr = _ref2[1];
 
         var _pr = _slicedToArray(pr, 2),
             pat = _pr[0],
@@ -818,9 +821,12 @@ Twitch.IRC = {
 
     try {
       for (var _iterator12 = Object.entries(rules)[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-        var _step12$value = _slicedToArray(_step12.value, 2),
-            fn = _step12$value[0],
-            fi = _step12$value[1];
+        var _ref3 = _step12.value;
+
+        var _ref4 = _slicedToArray(_ref3, 2);
+
+        var fn = _ref4[0];
+        var fi = _ref4[1];
 
         /* Perform special parsing on specific items */
         if (["username", "user", "login"].includes(fn)) {
@@ -1108,9 +1114,12 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
 
   try {
     for (var _iterator14 = pats[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-      var _step14$value = _slicedToArray(_step14.value, 2),
-          name = _step14$value[0],
-          pat = _step14$value[1];
+      var _ref5 = _step14.value;
+
+      var _ref6 = _slicedToArray(_ref5, 2);
+
+      var name = _ref6[0];
+      var pat = _ref6[1];
 
       if (msg.search(pat)) {
         msg = msg.replace(pat, name + "<removed>");
