@@ -14,7 +14,7 @@ dist: $(DISTS)
 
 dist/%.js: %.js
 	test -d dist || mkdir dist
-	npx babel --presets babel-preset-es2015 $< -d dist/
+	npx babel --presets babel-preset-env $< -d dist/
 
 dist-lint: dist
 	npx eslint --env browser $(DISTS)
