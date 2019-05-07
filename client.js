@@ -17,11 +17,6 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
- *    Sub plans:
- *      Prime
- *      1000 (tier 1)
- *      2000 (tier 2)
- *      3000 (tier 3)
  *  Implement the following features:
  *    Clip information
  *      https://api.twitch.tv/kraken/clips/<string>
@@ -99,7 +94,7 @@ class TwitchEvent {
   get channel() { return this._parsed.channel; }
   get message() { return this._parsed.message; }
   get user() { return this._parsed.user; }
-  get name() { return this._parsed.flags["display-name"]; }
+  get name() { return this._parsed.flags["display-name"] || this._parsed.user; }
   get flags() { return this._parsed.flags; }
   flag(flag) {
     if (!!this._parsed.flags) {
@@ -249,6 +244,7 @@ function TwitchClient(opts) {
   this._ffz_badges = {};
   this._ffz_badge_users = {};
   this._bttv_badges = {}; /* If BTTV adds badges */
+  this._bttv_global_emotes = {};
   this._bttv_channel_emotes = {};
 
   /* Let the client be used as an arbitrary key-value store */
@@ -369,7 +365,7 @@ function _TwitchClient_debug() {
   }
 }
 
-/* Obtain the current client debug level (*not* logger debug level) */
+/* Obtain the current client debug level */
 TwitchClient.prototype.GetDebug =
 function _TwitchClient_GetDebug() {
   return this._debug;
@@ -393,7 +389,7 @@ function _TwitchClient_SetDebug(val) {
 
 /* Event handling {{{0 */
 
-/* Bind a function to the event specified (wraps document.addEventListener) */
+/* Bind a function to the event specified */
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
   Util.Bind(event, callback);
@@ -617,11 +613,30 @@ TwitchClient.prototype._getBTTVEmotes =
 function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')),
-                        (function _bttv_emotes_cb(json) {
+                        (function _bttv_global_emotes_cb(json) {
     let bttv = this._bttv_channel_emotes[cname];
     bttv.emotes = {};
     for (let emote of json.emotes) {
       bttv.emotes[emote.code] = {
+        'id': emote.id,
+        'code': emote.code,
+        'channel': emote.channel,
+        'image-type': emote.imageType,
+        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id)
+                                        .replace('{{image}}', '1x'))
+      };
+    }
+  }).bind(this), (function _bttve_onerror(resp) {
+    if (resp.status == 404) {
+      Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
+    }
+  }));
+
+  this._bttv_global_emotes = {};
+  this._api.GetSimpleCB(Twitch.URL.BTTVAllEmotes(),
+                        (function _bttv_all_emotes_cb(json) {
+    for (let emote of json.emotes) {
+      this._bttv_global_emotes[emote.code] = {
         'id': emote.id,
         'code': emote.code,
         'channel': emote.channel,
@@ -944,7 +959,15 @@ function _TwitchClient_GetFFZEmotes(channel) {
 /* Obtain the BTTV emotes for a channel */
 TwitchClient.prototype.GetBTTVEmotes =
 function _TwitchClient_GetBTTVEmotes(channel) {
-  return this._bttv_channel_emotes[Twitch.FormatChannel(channel)];
+  let emotes = {};
+  let ch = Twitch.FormatChannel(channel);
+  for (let [k, v] of Object.entries(this._bttv_global_emotes)) {
+    emotes[k] = v;
+  }
+  for (let [k, v] of Object.entries(this._bttv_channel_emotes[ch])) {
+    emotes[k] = v;
+  }
+  return emotes;
 }
 
 /* End of functions related to cheers and emotes 0}}} */

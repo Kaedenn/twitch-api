@@ -17,11 +17,6 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
- *    Sub plans:
- *      Prime
- *      1000 (tier 1)
- *      2000 (tier 2)
- *      3000 (tier 3)
  *  Implement the following features:
  *    Clip information
  *      https://api.twitch.tv/kraken/clips/<string>
@@ -140,7 +135,7 @@ var TwitchEvent = function () {
   }, {
     key: "name",
     get: function get() {
-      return this._parsed.flags["display-name"];
+      return this._parsed.flags["display-name"] || this._parsed.user;
     }
   }, {
     key: "flags",
@@ -213,9 +208,12 @@ var TwitchChatEvent = function (_TwitchEvent) {
 
       try {
         for (var _iterator = this.flags.badges[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-          var _step$value = _slicedToArray(_step.value, 2),
-              badge_name = _step$value[0],
-              badge_rev = _step$value[1];
+          var _ref = _step.value;
+
+          var _ref2 = _slicedToArray(_ref, 2);
+
+          var badge_name = _ref2[0];
+          var badge_rev = _ref2[1];
 
           if (badge_name == badge) {
             if (rev !== undefined) {
@@ -458,6 +456,7 @@ function TwitchClient(opts) {
   this._ffz_badges = {};
   this._ffz_badge_users = {};
   this._bttv_badges = {}; /* If BTTV adds badges */
+  this._bttv_global_emotes = {};
   this._bttv_channel_emotes = {};
 
   /* Let the client be used as an arbitrary key-value store */
@@ -610,7 +609,7 @@ TwitchClient.prototype.debug = function _TwitchClient_debug() {
   }
 };
 
-/* Obtain the current client debug level (*not* logger debug level) */
+/* Obtain the current client debug level */
 TwitchClient.prototype.GetDebug = function _TwitchClient_GetDebug() {
   return this._debug;
 };
@@ -629,7 +628,7 @@ TwitchClient.prototype.SetDebug = function _TwitchClient_SetDebug(val) {
 
 /* Event handling {{{0 */
 
-/* Bind a function to the event specified (wraps document.addEventListener) */
+/* Bind a function to the event specified */
 TwitchClient.prototype.bind = function _TwitchClient_bind(event, callback) {
   Util.Bind(event, callback);
 };
@@ -870,9 +869,12 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 
       try {
         for (var _iterator6 = Object.entries(json.room.mod_urls)[Symbol.iterator](), _step6; !(_iteratorNormalCompletion6 = (_step6 = _iterator6.next()).done); _iteratorNormalCompletion6 = true) {
-          var _step6$value = _slicedToArray(_step6.value, 2),
-              k = _step6$value[0],
-              v = _step6$value[1];
+          var _ref3 = _step6.value;
+
+          var _ref4 = _slicedToArray(_ref3, 2);
+
+          var k = _ref4[0];
+          var v = _ref4[1];
 
           if (!!v) {
             ffz.mod_urls[k] = Util.URL(v);
@@ -910,23 +912,29 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 
       try {
         for (var _iterator7 = Object.entries(set_def.emoticons)[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var _step7$value = _slicedToArray(_step7.value, 2),
-              k = _step7$value[0],
-              v = _step7$value[1];
+          var _ref5 = _step7.value;
 
-          if (v.hidden) continue;
-          ffz.emotes[v.name] = v;
+          var _ref6 = _slicedToArray(_ref5, 2);
+
+          var _k = _ref6[0];
+          var _v = _ref6[1];
+
+          if (_v.hidden) continue;
+          ffz.emotes[_v.name] = _v;
           var _iteratorNormalCompletion8 = true;
           var _didIteratorError8 = false;
           var _iteratorError8 = undefined;
 
           try {
-            for (var _iterator8 = Object.entries(v.urls)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-              var _step8$value = _slicedToArray(_step8.value, 2),
-                  size = _step8$value[0],
-                  url = _step8$value[1];
+            for (var _iterator8 = Object.entries(_v.urls)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
+              var _ref7 = _step8.value;
 
-              ffz.emotes[v.name].urls[size] = Util.URL(url);
+              var _ref8 = _slicedToArray(_ref7, 2);
+
+              var size = _ref8[0];
+              var url = _ref8[1];
+
+              ffz.emotes[_v.name].urls[size] = Util.URL(url);
             }
           } catch (err) {
             _didIteratorError8 = true;
@@ -968,7 +976,7 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 /* Private: Load in the global and per-channel BTTV emotes */
 TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
-  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')), function _bttv_emotes_cb(json) {
+  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')), function _bttv_global_emotes_cb(json) {
     var bttv = this._bttv_channel_emotes[cname];
     bttv.emotes = {};
     var _iteratorNormalCompletion9 = true;
@@ -1006,22 +1014,24 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
       Util.Log("Channel " + cname + ":" + cid + " has no BTTV emotes");
     }
   });
-};
 
-/* Private: Load in the global badges  */
-TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadges() {
-  this._global_badges = {};
-  if (this._no_assets) return;
-  this._api.GetCB(Twitch.URL.AllBadges(), function _badges_cb(json) {
+  this._bttv_global_emotes = {};
+  this._api.GetSimpleCB(Twitch.URL.BTTVAllEmotes(), function _bttv_all_emotes_cb(json) {
     var _iteratorNormalCompletion10 = true;
     var _didIteratorError10 = false;
     var _iteratorError10 = undefined;
 
     try {
-      for (var _iterator10 = Object.keys(json["badge_sets"])[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
-        var badge_name = _step10.value;
+      for (var _iterator10 = json.emotes[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
+        var emote = _step10.value;
 
-        this._global_badges[badge_name] = json["badge_sets"][badge_name];
+        this._bttv_global_emotes[emote.code] = {
+          'id': emote.id,
+          'code': emote.code,
+          'channel': emote.channel,
+          'image-type': emote.imageType,
+          'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id).replace('{{image}}', '1x'))
+        };
       }
     } catch (err) {
       _didIteratorError10 = true;
@@ -1037,45 +1047,54 @@ TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadge
         }
       }
     }
+  }.bind(this), function _bttve_onerror(resp) {
+    if (resp.status == 404) {
+      Util.Log("Channel " + cname + ":" + cid + " has no BTTV emotes");
+    }
+  });
+};
+
+/* Private: Load in the global badges  */
+TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadges() {
+  this._global_badges = {};
+  if (this._no_assets) return;
+  this._api.GetCB(Twitch.URL.AllBadges(), function _badges_cb(json) {
+    var _iteratorNormalCompletion11 = true;
+    var _didIteratorError11 = false;
+    var _iteratorError11 = undefined;
+
+    try {
+      for (var _iterator11 = Object.keys(json["badge_sets"])[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+        var badge_name = _step11.value;
+
+        this._global_badges[badge_name] = json["badge_sets"][badge_name];
+      }
+    } catch (err) {
+      _didIteratorError11 = true;
+      _iteratorError11 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion11 && _iterator11.return) {
+          _iterator11.return();
+        }
+      } finally {
+        if (_didIteratorError11) {
+          throw _iteratorError11;
+        }
+      }
+    }
   }.bind(this), {}, false);
   if (this._enable_ffz) {
     this._api.GetSimpleCB(Twitch.URL.FFZBadgeUsers(), function _ffz_bades_cb(resp) {
-      var _iteratorNormalCompletion11 = true;
-      var _didIteratorError11 = false;
-      var _iteratorError11 = undefined;
-
-      try {
-        for (var _iterator11 = Object.values(resp.badges)[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-          var badge = _step11.value;
-
-          this._ffz_badges[badge.id] = badge;
-        }
-      } catch (err) {
-        _didIteratorError11 = true;
-        _iteratorError11 = err;
-      } finally {
-        try {
-          if (!_iteratorNormalCompletion11 && _iterator11.return) {
-            _iterator11.return();
-          }
-        } finally {
-          if (_didIteratorError11) {
-            throw _iteratorError11;
-          }
-        }
-      }
-
       var _iteratorNormalCompletion12 = true;
       var _didIteratorError12 = false;
       var _iteratorError12 = undefined;
 
       try {
-        for (var _iterator12 = Object.entries(resp.users)[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-          var _step12$value = _slicedToArray(_step12.value, 2),
-              badge_nr = _step12$value[0],
-              users = _step12$value[1];
+        for (var _iterator12 = Object.values(resp.badges)[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+          var badge = _step12.value;
 
-          this._ffz_badge_users[badge_nr] = users;
+          this._ffz_badges[badge.id] = badge;
         }
       } catch (err) {
         _didIteratorError12 = true;
@@ -1088,6 +1107,36 @@ TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadge
         } finally {
           if (_didIteratorError12) {
             throw _iteratorError12;
+          }
+        }
+      }
+
+      var _iteratorNormalCompletion13 = true;
+      var _didIteratorError13 = false;
+      var _iteratorError13 = undefined;
+
+      try {
+        for (var _iterator13 = Object.entries(resp.users)[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+          var _ref9 = _step13.value;
+
+          var _ref10 = _slicedToArray(_ref9, 2);
+
+          var badge_nr = _ref10[0];
+          var users = _ref10[1];
+
+          this._ffz_badge_users[badge_nr] = users;
+        }
+      } catch (err) {
+        _didIteratorError13 = true;
+        _iteratorError13 = err;
+      } finally {
+        try {
+          if (!_iteratorNormalCompletion13 && _iterator13.return) {
+            _iterator13.return();
+          }
+        } finally {
+          if (_didIteratorError13) {
+            throw _iteratorError13;
           }
         }
       }
@@ -1124,29 +1173,32 @@ TwitchClient.prototype._build_privmsg = function _TwitchClient__build_privmsg(ch
   flag_str += "badges=";
   if (flag_obj["badges"]) {
     var badges = [];
-    var _iteratorNormalCompletion13 = true;
-    var _didIteratorError13 = false;
-    var _iteratorError13 = undefined;
+    var _iteratorNormalCompletion14 = true;
+    var _didIteratorError14 = false;
+    var _iteratorError14 = undefined;
 
     try {
-      for (var _iterator13 = flag_obj["badges"][Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-        var _step13$value = _slicedToArray(_step13.value, 2),
-            b = _step13$value[0],
-            r = _step13$value[1];
+      for (var _iterator14 = flag_obj["badges"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+        var _ref11 = _step14.value;
+
+        var _ref12 = _slicedToArray(_ref11, 2);
+
+        var b = _ref12[0];
+        var r = _ref12[1];
 
         badges.push(b + "/" + r);
       }
     } catch (err) {
-      _didIteratorError13 = true;
-      _iteratorError13 = err;
+      _didIteratorError14 = true;
+      _iteratorError14 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion13 && _iterator13.return) {
-          _iterator13.return();
+        if (!_iteratorNormalCompletion14 && _iterator14.return) {
+          _iterator14.return();
         }
       } finally {
-        if (_didIteratorError13) {
-          throw _iteratorError13;
+        if (_didIteratorError14) {
+          throw _iteratorError14;
         }
       }
     }
@@ -1328,29 +1380,29 @@ TwitchClient.prototype.GetChannelInfo = function _TwitchClient_GetChannelInfo(ch
 /* Return whether or not the given word is a cheer for the given channel */
 TwitchClient.prototype.IsCheer = function _TwitchClient_IsCheer(cname, word) {
   if (this._channel_cheers.hasOwnProperty(cname)) {
-    var _iteratorNormalCompletion14 = true;
-    var _didIteratorError14 = false;
-    var _iteratorError14 = undefined;
+    var _iteratorNormalCompletion15 = true;
+    var _didIteratorError15 = false;
+    var _iteratorError15 = undefined;
 
     try {
-      for (var _iterator14 = Object.keys(this._channel_cheers[cname])[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-        var name = _step14.value;
+      for (var _iterator15 = Object.keys(this._channel_cheers[cname])[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+        var name = _step15.value;
 
         if (word.match(this._channel_cheers[cname][name].word_pattern)) {
           return true;
         }
       }
     } catch (err) {
-      _didIteratorError14 = true;
-      _iteratorError14 = err;
+      _didIteratorError15 = true;
+      _iteratorError15 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion14 && _iterator14.return) {
-          _iterator14.return();
+        if (!_iteratorNormalCompletion15 && _iterator15.return) {
+          _iterator15.return();
         }
       } finally {
-        if (_didIteratorError14) {
-          throw _iteratorError14;
+        if (_didIteratorError15) {
+          throw _iteratorError15;
         }
       }
     }
@@ -1364,24 +1416,27 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
   var parts = message.split(" ");
   var offset = 0;
   if (this._channel_cheers.hasOwnProperty(cname)) {
-    var _iteratorNormalCompletion15 = true;
-    var _didIteratorError15 = false;
-    var _iteratorError15 = undefined;
+    var _iteratorNormalCompletion16 = true;
+    var _didIteratorError16 = false;
+    var _iteratorError16 = undefined;
 
     try {
-      for (var _iterator15 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-        var _step15$value = _slicedToArray(_step15.value, 2),
-            name = _step15$value[0],
-            cheer = _step15$value[1];
+      for (var _iterator16 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+        var _ref13 = _step16.value;
+
+        var _ref14 = _slicedToArray(_ref13, 2);
+
+        var name = _ref14[0];
+        var cheer = _ref14[1];
 
         if (message.search(cheer.line_pattern) > -1) {
-          var _iteratorNormalCompletion16 = true;
-          var _didIteratorError16 = false;
-          var _iteratorError16 = undefined;
+          var _iteratorNormalCompletion17 = true;
+          var _didIteratorError17 = false;
+          var _iteratorError17 = undefined;
 
           try {
-            for (var _iterator16 = parts[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-              var token = _step16.value;
+            for (var _iterator17 = parts[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+              var token = _step17.value;
 
               var m = token.match(cheer.word_pattern);
               if (m) {
@@ -1397,32 +1452,32 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
               offset += token.length + 1;
             }
           } catch (err) {
-            _didIteratorError16 = true;
-            _iteratorError16 = err;
+            _didIteratorError17 = true;
+            _iteratorError17 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion16 && _iterator16.return) {
-                _iterator16.return();
+              if (!_iteratorNormalCompletion17 && _iterator17.return) {
+                _iterator17.return();
               }
             } finally {
-              if (_didIteratorError16) {
-                throw _iteratorError16;
+              if (_didIteratorError17) {
+                throw _iteratorError17;
               }
             }
           }
         }
       }
     } catch (err) {
-      _didIteratorError15 = true;
-      _iteratorError15 = err;
+      _didIteratorError16 = true;
+      _iteratorError16 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion15 && _iterator15.return) {
-          _iterator15.return();
+        if (!_iteratorNormalCompletion16 && _iterator16.return) {
+          _iterator16.return();
         }
       } finally {
-        if (_didIteratorError15) {
-          throw _iteratorError15;
+        if (_didIteratorError16) {
+          throw _iteratorError16;
         }
       }
     }
@@ -1453,7 +1508,69 @@ TwitchClient.prototype.GetFFZEmotes = function _TwitchClient_GetFFZEmotes(channe
 
 /* Obtain the BTTV emotes for a channel */
 TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(channel) {
-  return this._bttv_channel_emotes[Twitch.FormatChannel(channel)];
+  var emotes = {};
+  var ch = Twitch.FormatChannel(channel);
+  var _iteratorNormalCompletion18 = true;
+  var _didIteratorError18 = false;
+  var _iteratorError18 = undefined;
+
+  try {
+    for (var _iterator18 = Object.entries(this._bttv_global_emotes)[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+      var _ref15 = _step18.value;
+
+      var _ref16 = _slicedToArray(_ref15, 2);
+
+      var k = _ref16[0];
+      var v = _ref16[1];
+
+      emotes[k] = v;
+    }
+  } catch (err) {
+    _didIteratorError18 = true;
+    _iteratorError18 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion18 && _iterator18.return) {
+        _iterator18.return();
+      }
+    } finally {
+      if (_didIteratorError18) {
+        throw _iteratorError18;
+      }
+    }
+  }
+
+  var _iteratorNormalCompletion19 = true;
+  var _didIteratorError19 = false;
+  var _iteratorError19 = undefined;
+
+  try {
+    for (var _iterator19 = Object.entries(this._bttv_channel_emotes[ch])[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+      var _ref17 = _step19.value;
+
+      var _ref18 = _slicedToArray(_ref17, 2);
+
+      var _k2 = _ref18[0];
+      var _v2 = _ref18[1];
+
+      emotes[_k2] = _v2;
+    }
+  } catch (err) {
+    _didIteratorError19 = true;
+    _iteratorError19 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion19 && _iterator19.return) {
+        _iterator19.return();
+      }
+    } finally {
+      if (_didIteratorError19) {
+        throw _iteratorError19;
+      }
+    }
+  }
+
+  return emotes;
 };
 
 /* End of functions related to cheers and emotes 0}}} */
@@ -1463,29 +1580,29 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
  * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership
  */
 TwitchClient.prototype.HasCapability = function _TwitchClient_HasCapability(test_cap) {
-  var _iteratorNormalCompletion17 = true;
-  var _didIteratorError17 = false;
-  var _iteratorError17 = undefined;
+  var _iteratorNormalCompletion20 = true;
+  var _didIteratorError20 = false;
+  var _iteratorError20 = undefined;
 
   try {
-    for (var _iterator17 = this._capabilities[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-      var cap = _step17.value;
+    for (var _iterator20 = this._capabilities[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+      var cap = _step20.value;
 
       if (test_cap == cap || cap.endsWith('/' + test_cap.lstrip('/'))) {
         return true;
       }
     }
   } catch (err) {
-    _didIteratorError17 = true;
-    _iteratorError17 = err;
+    _didIteratorError20 = true;
+    _iteratorError20 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion17 && _iterator17.return) {
-        _iterator17.return();
+      if (!_iteratorNormalCompletion20 && _iterator20.return) {
+        _iterator20.return();
       }
     } finally {
-      if (_didIteratorError17) {
-        throw _iteratorError17;
+      if (_didIteratorError20) {
+        throw _iteratorError20;
       }
     }
   }
@@ -1530,27 +1647,27 @@ TwitchClient.prototype.SendMessage = function _TwitchClient_SendMessage(channel,
 /* Send a message to every connected channel */
 TwitchClient.prototype.SendMessageToAll = function _TwitchClient_SendMessageToAll(message) {
   if (this._connected) {
-    var _iteratorNormalCompletion18 = true;
-    var _didIteratorError18 = false;
-    var _iteratorError18 = undefined;
+    var _iteratorNormalCompletion21 = true;
+    var _didIteratorError21 = false;
+    var _iteratorError21 = undefined;
 
     try {
-      for (var _iterator18 = this._channels[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-        var ch = _step18.value;
+      for (var _iterator21 = this._channels[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+        var ch = _step21.value;
 
         this.SendMessage(ch, message);
       }
     } catch (err) {
-      _didIteratorError18 = true;
-      _iteratorError18 = err;
+      _didIteratorError21 = true;
+      _iteratorError21 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion18 && _iterator18.return) {
-          _iterator18.return();
+        if (!_iteratorNormalCompletion21 && _iterator21.return) {
+          _iterator21.return();
         }
       } finally {
-        if (_didIteratorError18) {
-          throw _iteratorError18;
+        if (_didIteratorError21) {
+          throw _iteratorError21;
         }
       }
     }
@@ -1609,78 +1726,81 @@ TwitchClient.prototype.GetHistoryLength = function _TwitchClient_GetHistoryLengt
 /* Get an object containing all of the known badges */
 TwitchClient.prototype.GetAllBadges = function _TwitchClient_GetAllBadges() {
   var result = { global: {} };
-  var _iteratorNormalCompletion19 = true;
-  var _didIteratorError19 = false;
-  var _iteratorError19 = undefined;
+  var _iteratorNormalCompletion22 = true;
+  var _didIteratorError22 = false;
+  var _iteratorError22 = undefined;
 
   try {
-    for (var _iterator19 = Object.keys(this._channel_badges)[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-      var cname = _step19.value;
+    for (var _iterator22 = Object.keys(this._channel_badges)[Symbol.iterator](), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
+      var cname = _step22.value;
 
       result[cname] = {};
-      var _iteratorNormalCompletion21 = true;
-      var _didIteratorError21 = false;
-      var _iteratorError21 = undefined;
+      var _iteratorNormalCompletion24 = true;
+      var _didIteratorError24 = false;
+      var _iteratorError24 = undefined;
 
       try {
-        for (var _iterator21 = Object.entries(this._channel_badges[cname])[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-          var _step21$value = _slicedToArray(_step21.value, 2),
-              name = _step21$value[0],
-              val = _step21$value[1];
+        for (var _iterator24 = Object.entries(this._channel_badges[cname])[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
+          var _ref19 = _step24.value;
 
-          result[cname][name] = val;
+          var _ref20 = _slicedToArray(_ref19, 2);
+
+          var _name = _ref20[0];
+          var val = _ref20[1];
+
+          result[cname][_name] = val;
         }
       } catch (err) {
-        _didIteratorError21 = true;
-        _iteratorError21 = err;
+        _didIteratorError24 = true;
+        _iteratorError24 = err;
       } finally {
         try {
-          if (!_iteratorNormalCompletion21 && _iterator21.return) {
-            _iterator21.return();
+          if (!_iteratorNormalCompletion24 && _iterator24.return) {
+            _iterator24.return();
           }
         } finally {
-          if (_didIteratorError21) {
-            throw _iteratorError21;
+          if (_didIteratorError24) {
+            throw _iteratorError24;
           }
         }
       }
     }
   } catch (err) {
-    _didIteratorError19 = true;
-    _iteratorError19 = err;
+    _didIteratorError22 = true;
+    _iteratorError22 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion19 && _iterator19.return) {
-        _iterator19.return();
+      if (!_iteratorNormalCompletion22 && _iterator22.return) {
+        _iterator22.return();
       }
     } finally {
-      if (_didIteratorError19) {
-        throw _iteratorError19;
+      if (_didIteratorError22) {
+        throw _iteratorError22;
       }
     }
   }
 
-  var _iteratorNormalCompletion20 = true;
-  var _didIteratorError20 = false;
-  var _iteratorError20 = undefined;
+  var _iteratorNormalCompletion23 = true;
+  var _didIteratorError23 = false;
+  var _iteratorError23 = undefined;
 
   try {
-    for (var _iterator20 = Object.keys(this._global_badges)[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
-      var name = _step20.value;
+    for (var _iterator23 = Object.keys(this._global_badges)[Symbol.iterator](), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
+      var name = _step23.value;
 
       result.global[name] = this._global_badges[name];
     }
   } catch (err) {
-    _didIteratorError20 = true;
-    _iteratorError20 = err;
+    _didIteratorError23 = true;
+    _iteratorError23 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion20 && _iterator20.return) {
-        _iterator20.return();
+      if (!_iteratorNormalCompletion23 && _iterator23.return) {
+        _iterator23.return();
       }
     } finally {
-      if (_didIteratorError20) {
-        throw _iteratorError20;
+      if (_didIteratorError23) {
+        throw _iteratorError23;
       }
     }
   }
@@ -1782,27 +1902,27 @@ TwitchClient.prototype.OnWebsocketOpen = function _TwitchClient_OnWebsocketOpen(
   } else {
     this.send("NICK " + this._username);
   }
-  var _iteratorNormalCompletion22 = true;
-  var _didIteratorError22 = false;
-  var _iteratorError22 = undefined;
+  var _iteratorNormalCompletion25 = true;
+  var _didIteratorError25 = false;
+  var _iteratorError25 = undefined;
 
   try {
-    for (var _iterator22 = this._pending_channels[Symbol.iterator](), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
-      var i = _step22.value;
+    for (var _iterator25 = this._pending_channels[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
+      var i = _step25.value;
 
       this.JoinChannel(i);
     }
   } catch (err) {
-    _didIteratorError22 = true;
-    _iteratorError22 = err;
+    _didIteratorError25 = true;
+    _iteratorError25 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion22 && _iterator22.return) {
-        _iterator22.return();
+      if (!_iteratorNormalCompletion25 && _iterator25.return) {
+        _iterator25.return();
       }
     } finally {
-      if (_didIteratorError22) {
-        throw _iteratorError22;
+      if (_didIteratorError25) {
+        throw _iteratorError25;
       }
     }
   }
@@ -1817,329 +1937,336 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
   var _this3 = this;
 
   var lines = ws_event.data.split("\r\n");
-  var _iteratorNormalCompletion23 = true;
-  var _didIteratorError23 = false;
-  var _iteratorError23 = undefined;
+
+  var _loop = function _loop(line) {
+    /* Ignore empty lines */
+    if (line.trim() == '') {
+      return "continue";
+    }
+
+    /* Parse the message (TODO: Use Twitch.IRC.Parse()) */
+    var result = Twitch.ParseIRCMessage(line);
+    Util.Trace('result1:', result);
+    try {
+      var result2 = Twitch.IRC.Parse(line);
+      Util.Trace('result2:', result2);
+    } catch (e) {
+      Util.Error(e);
+    }
+
+    /* Fire twitch-message for every line received */
+    Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
+
+    /* Make sure the room is tracked */
+    if (result.channel && result.channel.channel) {
+      _this3._ensureRoom(result.channel);
+    }
+
+    /* Don't handle messages with NULL commands */
+    if (!result.cmd) {
+      Util.Error('result.cmd is NULL for', result, line);
+      return "continue";
+    }
+
+    /* Fire top-level event */
+    Util.FireEvent(new TwitchEvent(result.cmd, line, result));
+
+    /* Parse and handle result.channel to simplify code below */
+    var cname = null;
+    var cstr = null;
+    var room = null;
+    var roomid = null;
+    if (result.channel) {
+      _this3._ensureRoom(result.channel);
+      cname = result.channel.channel;
+      cstr = Twitch.FormatChannel(result.channel);
+      room = _this3._rooms[cname];
+      if (result.flags && result.flags["room-id"]) {
+        roomid = result.flags["room-id"];
+      }
+    }
+
+    /* Handle each command that could be returned */
+    switch (result.cmd) {
+      case "PING":
+        _this3.send("PONG :" + result.server);
+        break;
+      case "ACK":
+        _this3._connected = true;
+        _this3._capabilities = result.flags;
+        break;
+      case "TOPIC":
+        break;
+      case "NAMES":
+        var _iteratorNormalCompletion27 = true;
+        var _didIteratorError27 = false;
+        var _iteratorError27 = undefined;
+
+        try {
+          for (var _iterator27 = result.usernames[Symbol.iterator](), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
+            var user = _step27.value;
+
+            _this3._onJoin(result.channel, user);
+          }
+        } catch (err) {
+          _didIteratorError27 = true;
+          _iteratorError27 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion27 && _iterator27.return) {
+              _iterator27.return();
+            }
+          } finally {
+            if (_didIteratorError27) {
+              throw _iteratorError27;
+            }
+          }
+        }
+
+        break;
+      case "JOIN":
+        _this3._onJoin(result.channel, result.user);
+        break;
+      case "PART":
+        _this3._onPart(result.channel, result.user);
+        break;
+      case "RECONNECT":
+        /* TODO: Reconnect (or schedule to reconnect) client */
+        Util.Error("Reconnect needed");
+        break;
+      case "MODE":
+        if (result.modeflag == "+o") {
+          _this3._onOp(result.channel, result.user);
+        } else if (result.modeflag == "-o") {
+          _this3._onDeOp(result.channel, result.user);
+        }
+        break;
+      case "PRIVMSG":
+        var event = new TwitchChatEvent(line, result);
+        if (!room.userInfo.hasOwnProperty(result.user)) {
+          room.userInfo[result.user] = {};
+        }
+        if (!event.flags.badges) event.flags.badges = [];
+        if (_this3._enable_ffz) {
+          var _iteratorNormalCompletion28 = true;
+          var _didIteratorError28 = false;
+          var _iteratorError28 = undefined;
+
+          try {
+            for (var _iterator28 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
+              var _ref21 = _step28.value;
+
+              var _ref22 = _slicedToArray(_ref21, 2);
+
+              var badge_nr = _ref22[0];
+              var users = _ref22[1];
+
+              if (users.indexOf(result.user) > -1) {
+                var ffz_badges = event.flags['ffz-badges'];
+                if (ffz_badges === undefined) ffz_badges = [];
+                ffz_badges.push(_this3._ffz_badges[badge_nr]);
+                event.flags['ffz-badges'] = ffz_badges;
+              }
+            }
+          } catch (err) {
+            _didIteratorError28 = true;
+            _iteratorError28 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion28 && _iterator28.return) {
+                _iterator28.return();
+              }
+            } finally {
+              if (_didIteratorError28) {
+                throw _iteratorError28;
+              }
+            }
+          }
+        }
+        var ui = room.userInfo[result.user];
+        ui.ismod = event.ismod;
+        ui.issub = event.issub;
+        ui.isvip = event.isvip;
+        ui.userid = event.flags['user-id'];
+        ui.uuid = event.flags['id'];
+        ui.badges = event.flags['badges'];
+        Util.FireEvent(event);
+        break;
+      case "WHISPER":
+        break;
+      case "USERSTATE":
+        if (!_this3._self_userstate.hasOwnProperty(cstr)) {
+          _this3._self_userstate[cstr] = {};
+        }
+        var _iteratorNormalCompletion29 = true;
+        var _didIteratorError29 = false;
+        var _iteratorError29 = undefined;
+
+        try {
+          for (var _iterator29 = Object.entries(result.flags)[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
+            var _ref23 = _step29.value;
+
+            var _ref24 = _slicedToArray(_ref23, 2);
+
+            var key = _ref24[0];
+            var val = _ref24[1];
+
+            _this3._self_userstate[cstr][key] = val;
+          }
+        } catch (err) {
+          _didIteratorError29 = true;
+          _iteratorError29 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion29 && _iterator29.return) {
+              _iterator29.return();
+            }
+          } finally {
+            if (_didIteratorError29) {
+              throw _iteratorError29;
+            }
+          }
+        }
+
+        break;
+      case "ROOMSTATE":
+        room.id = roomid;
+        room.channel = result.channel;
+        if (_this3._authed) {
+          _this3._getRooms(cname, roomid);
+        }
+        if (!_this3._no_assets) {
+          _this3._getChannelBadges(cname, roomid);
+          _this3._getChannelCheers(cname, roomid);
+          if (_this3._enable_ffz) {
+            _this3._getFFZEmotes(cname, roomid);
+          }
+          if (_this3._enable_bttv) {
+            _this3._getBTTVEmotes(cname, roomid);
+          }
+        }
+        _this3._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
+          if (resp.streams && resp.streams.length > 0) {
+            room.stream = resp.streams[0];
+            room.streams = resp.streams;
+            room.online = true;
+          } else {
+            room.stream = {};
+            room.streams = [];
+            room.online = false;
+          }
+          Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
+        }.bind(_this3));
+        break;
+      case "USERNOTICE":
+        if (result.sub_kind == "SUB") {
+          Util.FireEvent(new TwitchSubEvent("SUB", line, result));
+        } else if (result.sub_kind == "RESUB") {
+          Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
+        } else if (result.sub_kind == "GIFTSUB") {
+          Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
+        } else if (result.sub_kind == "ANONGIFTSUB") {
+          Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
+        }
+        break;
+      case "GLOBALUSERSTATE":
+        _this3._self_userid = result.flags['user-id'];
+        break;
+      case "CLEARCHAT":
+        break;
+      case "CLEARMSG":
+        break;
+      case "HOSTTARGET":
+        break;
+      case "NOTICE":
+        break;
+      case "ERROR":
+        break;
+      case "OTHER":
+        break;
+      default:
+        Util.Warn("Unhandled event:", result);
+        break;
+    }
+
+    /* Obtain emotes the client is able to use */
+    if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
+      if (result.flags && result.flags["emote-sets"]) {
+        _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
+          var _iteratorNormalCompletion30 = true;
+          var _didIteratorError30 = false;
+          var _iteratorError30 = undefined;
+
+          try {
+            for (var _iterator30 = Object.keys(json["emoticon_sets"])[Symbol.iterator](), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
+              var eset = _step30.value;
+              var _iteratorNormalCompletion31 = true;
+              var _didIteratorError31 = false;
+              var _iteratorError31 = undefined;
+
+              try {
+                for (var _iterator31 = json["emoticon_sets"][eset][Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
+                  var edef = _step31.value;
+
+                  this._self_emotes[edef.id] = edef.code;
+                }
+              } catch (err) {
+                _didIteratorError31 = true;
+                _iteratorError31 = err;
+              } finally {
+                try {
+                  if (!_iteratorNormalCompletion31 && _iterator31.return) {
+                    _iterator31.return();
+                  }
+                } finally {
+                  if (_didIteratorError31) {
+                    throw _iteratorError31;
+                  }
+                }
+              }
+            }
+          } catch (err) {
+            _didIteratorError30 = true;
+            _iteratorError30 = err;
+          } finally {
+            try {
+              if (!_iteratorNormalCompletion30 && _iterator30.return) {
+                _iterator30.return();
+              }
+            } finally {
+              if (_didIteratorError30) {
+                throw _iteratorError30;
+              }
+            }
+          }
+        }.bind(_this3));
+      }
+    }
+  };
+
+  var _iteratorNormalCompletion26 = true;
+  var _didIteratorError26 = false;
+  var _iteratorError26 = undefined;
 
   try {
-    var _loop = function _loop() {
-      var line = _step23.value;
+    for (var _iterator26 = lines[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
+      var line = _step26.value;
 
-      /* Ignore empty lines */
-      if (line.trim() == '') {
-        return "continue";
-      }
-
-      /* Parse the message (TODO: Use Twitch.IRC.Parse()) */
-      var result = Twitch.ParseIRCMessage(line);
-      Util.Trace('result1:', result);
-      try {
-        var result2 = Twitch.IRC.Parse(line);
-        Util.Trace('result2:', result2);
-      } catch (e) {
-        Util.Error(e);
-      }
-
-      /* Fire twitch-message for every line received */
-      Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
-
-      /* Make sure the room is tracked */
-      if (result.channel && result.channel.channel) {
-        _this3._ensureRoom(result.channel);
-      }
-
-      /* Don't handle messages with NULL commands */
-      if (!result.cmd) {
-        Util.Error('result.cmd is NULL for', result, line);
-        return "continue";
-      }
-
-      /* Fire top-level event */
-      Util.FireEvent(new TwitchEvent(result.cmd, line, result));
-
-      /* Parse and handle result.channel to simplify code below */
-      var cname = null;
-      var cstr = null;
-      var room = null;
-      var roomid = null;
-      if (result.channel) {
-        _this3._ensureRoom(result.channel);
-        cname = result.channel.channel;
-        cstr = Twitch.FormatChannel(result.channel);
-        room = _this3._rooms[cname];
-        if (result.flags && result.flags["room-id"]) {
-          roomid = result.flags["room-id"];
-        }
-      }
-
-      /* Handle each command that could be returned */
-      switch (result.cmd) {
-        case "PING":
-          _this3.send("PONG :" + result.server);
-          break;
-        case "ACK":
-          _this3._connected = true;
-          _this3._capabilities = result.flags;
-          break;
-        case "TOPIC":
-          break;
-        case "NAMES":
-          var _iteratorNormalCompletion24 = true;
-          var _didIteratorError24 = false;
-          var _iteratorError24 = undefined;
-
-          try {
-            for (var _iterator24 = result.usernames[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-              var user = _step24.value;
-
-              _this3._onJoin(result.channel, user);
-            }
-          } catch (err) {
-            _didIteratorError24 = true;
-            _iteratorError24 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion24 && _iterator24.return) {
-                _iterator24.return();
-              }
-            } finally {
-              if (_didIteratorError24) {
-                throw _iteratorError24;
-              }
-            }
-          }
-
-          break;
-        case "JOIN":
-          _this3._onJoin(result.channel, result.user);
-          break;
-        case "PART":
-          _this3._onPart(result.channel, result.user);
-          break;
-        case "RECONNECT":
-          /* TODO: Reconnect (or schedule to reconnect) client */
-          Util.Error("Reconnect needed");
-          break;
-        case "MODE":
-          if (result.modeflag == "+o") {
-            _this3._onOp(result.channel, result.user);
-          } else if (result.modeflag == "-o") {
-            _this3._onDeOp(result.channel, result.user);
-          }
-          break;
-        case "PRIVMSG":
-          var event = new TwitchChatEvent(line, result);
-          if (!room.userInfo.hasOwnProperty(result.user)) {
-            room.userInfo[result.user] = {};
-          }
-          if (!event.flags.badges) event.flags.badges = [];
-          if (_this3._enable_ffz) {
-            var _iteratorNormalCompletion25 = true;
-            var _didIteratorError25 = false;
-            var _iteratorError25 = undefined;
-
-            try {
-              for (var _iterator25 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-                var _step25$value = _slicedToArray(_step25.value, 2),
-                    badge_nr = _step25$value[0],
-                    users = _step25$value[1];
-
-                if (users.indexOf(result.user) > -1) {
-                  var ffz_badges = event.flags['ffz-badges'];
-                  if (ffz_badges === undefined) ffz_badges = [];
-                  ffz_badges.push(_this3._ffz_badges[badge_nr]);
-                  event.flags['ffz-badges'] = ffz_badges;
-                }
-              }
-            } catch (err) {
-              _didIteratorError25 = true;
-              _iteratorError25 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion25 && _iterator25.return) {
-                  _iterator25.return();
-                }
-              } finally {
-                if (_didIteratorError25) {
-                  throw _iteratorError25;
-                }
-              }
-            }
-          }
-          var ui = room.userInfo[result.user];
-          ui.ismod = event.ismod;
-          ui.issub = event.issub;
-          ui.isvip = event.isvip;
-          ui.userid = event.flags['user-id'];
-          ui.uuid = event.flags['id'];
-          ui.badges = event.flags['badges'];
-          Util.FireEvent(event);
-          break;
-        case "WHISPER":
-          break;
-        case "USERSTATE":
-          if (!_this3._self_userstate.hasOwnProperty(cstr)) {
-            _this3._self_userstate[cstr] = {};
-          }
-          var _iteratorNormalCompletion26 = true;
-          var _didIteratorError26 = false;
-          var _iteratorError26 = undefined;
-
-          try {
-            for (var _iterator26 = Object.entries(result.flags)[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-              var _step26$value = _slicedToArray(_step26.value, 2),
-                  key = _step26$value[0],
-                  val = _step26$value[1];
-
-              _this3._self_userstate[cstr][key] = val;
-            }
-          } catch (err) {
-            _didIteratorError26 = true;
-            _iteratorError26 = err;
-          } finally {
-            try {
-              if (!_iteratorNormalCompletion26 && _iterator26.return) {
-                _iterator26.return();
-              }
-            } finally {
-              if (_didIteratorError26) {
-                throw _iteratorError26;
-              }
-            }
-          }
-
-          break;
-        case "ROOMSTATE":
-          room.id = roomid;
-          room.channel = result.channel;
-          if (_this3._authed) {
-            _this3._getRooms(cname, roomid);
-          }
-          if (!_this3._no_assets) {
-            _this3._getChannelBadges(cname, roomid);
-            _this3._getChannelCheers(cname, roomid);
-            if (_this3._enable_ffz) {
-              _this3._getFFZEmotes(cname, roomid);
-            }
-            if (_this3._enable_bttv) {
-              _this3._getBTTVEmotes(cname, roomid);
-            }
-          }
-          _this3._api.GetCB(Twitch.URL.Stream(result.flags['room-id']), function _stream_cb(resp) {
-            if (resp.streams && resp.streams.length > 0) {
-              room.stream = resp.streams[0];
-              room.streams = resp.streams;
-              room.online = true;
-            } else {
-              room.stream = {};
-              room.streams = [];
-              room.online = false;
-            }
-            Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-          }.bind(_this3));
-          break;
-        case "USERNOTICE":
-          if (result.sub_kind == "SUB") {
-            Util.FireEvent(new TwitchSubEvent("SUB", line, result));
-          } else if (result.sub_kind == "RESUB") {
-            Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
-          } else if (result.sub_kind == "GIFTSUB") {
-            Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
-          } else if (result.sub_kind == "ANONGIFTSUB") {
-            Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
-          }
-          break;
-        case "GLOBALUSERSTATE":
-          _this3._self_userid = result.flags['user-id'];
-          break;
-        case "CLEARCHAT":
-          break;
-        case "CLEARMSG":
-          break;
-        case "HOSTTARGET":
-          break;
-        case "NOTICE":
-          break;
-        case "ERROR":
-          break;
-        case "OTHER":
-          break;
-        default:
-          Util.Warn("Unhandled event:", result);
-          break;
-      }
-
-      /* Obtain emotes the client is able to use */
-      if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
-        if (result.flags && result.flags["emote-sets"]) {
-          _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
-            var _iteratorNormalCompletion27 = true;
-            var _didIteratorError27 = false;
-            var _iteratorError27 = undefined;
-
-            try {
-              for (var _iterator27 = Object.keys(json["emoticon_sets"])[Symbol.iterator](), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
-                var eset = _step27.value;
-                var _iteratorNormalCompletion28 = true;
-                var _didIteratorError28 = false;
-                var _iteratorError28 = undefined;
-
-                try {
-                  for (var _iterator28 = json["emoticon_sets"][eset][Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
-                    var edef = _step28.value;
-
-                    this._self_emotes[edef.id] = edef.code;
-                  }
-                } catch (err) {
-                  _didIteratorError28 = true;
-                  _iteratorError28 = err;
-                } finally {
-                  try {
-                    if (!_iteratorNormalCompletion28 && _iterator28.return) {
-                      _iterator28.return();
-                    }
-                  } finally {
-                    if (_didIteratorError28) {
-                      throw _iteratorError28;
-                    }
-                  }
-                }
-              }
-            } catch (err) {
-              _didIteratorError27 = true;
-              _iteratorError27 = err;
-            } finally {
-              try {
-                if (!_iteratorNormalCompletion27 && _iterator27.return) {
-                  _iterator27.return();
-                }
-              } finally {
-                if (_didIteratorError27) {
-                  throw _iteratorError27;
-                }
-              }
-            }
-          }.bind(_this3));
-        }
-      }
-    };
-
-    for (var _iterator23 = lines[Symbol.iterator](), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-      var _ret = _loop();
+      var _ret = _loop(line);
 
       if (_ret === "continue") continue;
     }
   } catch (err) {
-    _didIteratorError23 = true;
-    _iteratorError23 = err;
+    _didIteratorError26 = true;
+    _iteratorError26 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion23 && _iterator23.return) {
-        _iterator23.return();
+      if (!_iteratorNormalCompletion26 && _iterator26.return) {
+        _iterator26.return();
       }
     } finally {
-      if (_didIteratorError23) {
-        throw _iteratorError23;
+      if (_didIteratorError26) {
+        throw _iteratorError26;
       }
     }
   }
@@ -2153,29 +2280,29 @@ TwitchClient.prototype.OnWebsocketError = function _TwitchClient_OnWebsocketErro
 
 /* Callback: called when the websocket is closed */
 TwitchClient.prototype.OnWebsocketClose = function _TwitchClient_OnWebsocketClose(event) {
-  var _iteratorNormalCompletion29 = true;
-  var _didIteratorError29 = false;
-  var _iteratorError29 = undefined;
+  var _iteratorNormalCompletion32 = true;
+  var _didIteratorError32 = false;
+  var _iteratorError32 = undefined;
 
   try {
-    for (var _iterator29 = this._channels[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-      var chobj = _step29.value;
+    for (var _iterator32 = this._channels[Symbol.iterator](), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
+      var chobj = _step32.value;
 
       if (this._pending_channels.indexOf(chobj) == -1) {
         this._pending_channels.push(chobj);
       }
     }
   } catch (err) {
-    _didIteratorError29 = true;
-    _iteratorError29 = err;
+    _didIteratorError32 = true;
+    _iteratorError32 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion29 && _iterator29.return) {
-        _iterator29.return();
+      if (!_iteratorNormalCompletion32 && _iterator32.return) {
+        _iterator32.return();
       }
     } finally {
-      if (_didIteratorError29) {
-        throw _iteratorError29;
+      if (_didIteratorError32) {
+        throw _iteratorError32;
       }
     }
   }
