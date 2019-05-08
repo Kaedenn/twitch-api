@@ -78,7 +78,38 @@ Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
 
 /* End of browser identification 0}}} */
 
-/* Escape characters */
+/* Portability considerations {{{0 */
+
+Util.Defined = function _Util_Defined(identifier) {
+  if (identifier.match(/^[$\w]+$/)) {
+    try {
+      (new Function(`return ${identifier}`))();
+      return true;
+    }
+    catch (e) {
+      return false;
+    }
+  }
+  return false;
+}
+
+if (!Util.Defined("KeyEvent")) {
+  if (Util.Defined("KeyboardEvent")) {
+    window.KeyEvent = KeyboardEvent;
+  } else {
+    /* NOTE: Values are extremely system-dependent */
+    window.KeyEvent = {
+      DOM_VK_LEFT: 37,
+      DOM_VK_UP: 38,
+      DOM_VK_RIGHT: 39,
+      DOM_VK_DOWN: 40,
+      DOM_VK_RETURN: 13
+    };
+  }
+}
+
+/* End portability code 0}}} */
+
 Util.EscapeChars = {
   "<": "&lt;",
   ">": "&gt;",
