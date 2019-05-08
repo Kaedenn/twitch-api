@@ -1114,16 +1114,16 @@ Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
 Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
   let l1 = Util.RelativeLuminance(c1);
   let l2 = Util.RelativeLuminance(c2);
-  return (l1 + 0.05) / (l2 + 0.05);
+  return (l1 < l2 ? (l2 + 0.05) / (l1 + 0.05) : (l1 + 0.05) / (l2 + 0.05));
 }
 
 /* Determine which color contrasts the best with the given color
  * Overloads:
  *  Util.GetMaxContrast(color, c1, c2, c3, ...)
  *  Util.GetMaxContrast(color, [c1, c2, c3, ...]) */
-Util.GetMaxConstrast = function _Util_GetMaxContrast(c1, ...colors) {
+Util.GetMaxContrast = function _Util_GetMaxContrast(c1, ...colors) {
   let best_color = null;
-  let best_contast = null;
+  let best_contrast = null;
   if (colors.length == 1 && Util.IsArray(colors[0])) {
     colors = colors[0];
   }

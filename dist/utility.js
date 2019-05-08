@@ -1968,20 +1968,20 @@ Util.RelativeLuminance = function _Util_RelativeLuminance() {
 Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
   var l1 = Util.RelativeLuminance(c1);
   var l2 = Util.RelativeLuminance(c2);
-  return (l1 + 0.05) / (l2 + 0.05);
+  return l1 < l2 ? (l2 + 0.05) / (l1 + 0.05) : (l1 + 0.05) / (l2 + 0.05);
 };
 
 /* Determine which color contrasts the best with the given color
  * Overloads:
  *  Util.GetMaxContrast(color, c1, c2, c3, ...)
  *  Util.GetMaxContrast(color, [c1, c2, c3, ...]) */
-Util.GetMaxConstrast = function _Util_GetMaxContrast(c1) {
+Util.GetMaxContrast = function _Util_GetMaxContrast(c1) {
   for (var _len17 = arguments.length, colors = Array(_len17 > 1 ? _len17 - 1 : 0), _key17 = 1; _key17 < _len17; _key17++) {
     colors[_key17 - 1] = arguments[_key17];
   }
 
   var best_color = null;
-  var best_contast = null;
+  var best_contrast = null;
   if (colors.length == 1 && Util.IsArray(colors[0])) {
     colors = colors[0];
   }
