@@ -104,21 +104,12 @@ if (!Util.Defined('console')) {
   };
 }
 
-if (!Util.Defined("KeyEvent")) {
-  if (Util.Defined("KeyboardEvent")) {
-    window.KeyEvent = KeyboardEvent;
-  } else {
-    window.KeyEvent = {}
-    console.error("KeyboardEvent and KeyEvent are undefined!");
-  }
-}
-
-/* NOTE: Values are extremely system-dependent */
-if (typeof(KeyEvent.DOM_VK_LEFT) === "undefined") KeyEvent.DOM_VK_LEFT = 37;
-if (typeof(KeyEvent.DOM_VK_UP) === "undefined") KeyEvent.DOM_VK_UP = 38;
-if (typeof(KeyEvent.DOM_VK_RIGHT) === "undefined") KeyEvent.DOM_VK_RIGHT = 39;
-if (typeof(KeyEvent.DOM_VK_DOWN) === "undefined") KeyEvent.DOM_VK_DOWN = 40;
-if (typeof(KeyEvent.DOM_VK_RETURN) === "undefined") KeyEvent.DOM_VK_RETURN = 13;
+Util.Key = {};
+Util.Key.RETURN = 13;
+Util.Key.LEFT = 37;
+Util.Key.UP = 38;
+Util.Key.RIGHT = 39;
+Util.Key.DOWN = 40;
 
 /* End portability code 0}}} */
 
