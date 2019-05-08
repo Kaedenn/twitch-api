@@ -97,20 +97,32 @@ Util.Defined = function _Util_Defined(identifier) {
   return false;
 };
 
+if (!Util.Defined('console')) {
+  window.console = {
+    debug: function debug() {},
+    log: function log() {},
+    info: function info() {},
+    warn: function warn() {},
+    error: function error() {},
+    trace: function trace() {}
+  };
+}
+
 if (!Util.Defined("KeyEvent")) {
   if (Util.Defined("KeyboardEvent")) {
     window.KeyEvent = KeyboardEvent;
   } else {
-    /* NOTE: Values are extremely system-dependent */
-    window.KeyEvent = {
-      DOM_VK_LEFT: 37,
-      DOM_VK_UP: 38,
-      DOM_VK_RIGHT: 39,
-      DOM_VK_DOWN: 40,
-      DOM_VK_RETURN: 13
-    };
+    window.KeyEvent = {};
+    console.error("KeyboardEvent and KeyEvent are undefined!");
   }
 }
+
+/* NOTE: Values are extremely system-dependent */
+if (typeof KeyEvent.DOM_VK_LEFT === "undefined") KeyEvent.DOM_VK_LEFT = 37;
+if (typeof KeyEvent.DOM_VK_UP === "undefined") KeyEvent.DOM_VK_UP = 38;
+if (typeof KeyEvent.DOM_VK_RIGHT === "undefined") KeyEvent.DOM_VK_RIGHT = 39;
+if (typeof KeyEvent.DOM_VK_DOWN === "undefined") KeyEvent.DOM_VK_DOWN = 40;
+if (typeof KeyEvent.DOM_VK_RETURN === "undefined") KeyEvent.DOM_VK_RETURN = 13;
 
 /* End portability code 0}}} */
 
