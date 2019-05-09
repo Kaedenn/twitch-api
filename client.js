@@ -107,10 +107,10 @@ class TwitchEvent {
     return undefined;
   }
 
-  /* Methods specifically for the Twitch USERNOTICE command */
+  /* Methods specifically for the Twitch NOTICE command */
 
-  get usernotice_msgid() {
-    if (this._cmd === "USERNOTICE") {
+  get notice_msgid() {
+    if (this._cmd === "NOTICE") {
       if (typeof(this.flags["msg-id"]) === "string") {
         return this.flags["msg-id"];
       }
@@ -118,18 +118,18 @@ class TwitchEvent {
     return null;
   }
 
-  get usernotice_class() {
-    let msgid = this.usernotice_msgid;
+  get notice_class() {
+    let msgid = this.notice_msgid;
     if (typeof(msgid) === "string") {
       return msgid.split('_')[0];
     }
     return null;
   }
 
-  get usernotice_severity() {
+  get notice_severity() {
     /* TODO: Move to a separate module */
-    let msgid = this.usernotice_msgid;
-    let msgclass = this.usernotice_class;
+    let msgid = this.notice_msgid;
+    let msgclass = this.notice_class;
     const sevs = {
       trace: LoggerUtility.SEVERITIES.TRACE,
       debug: LoggerUtility.SEVERITIES.DEBUG,
