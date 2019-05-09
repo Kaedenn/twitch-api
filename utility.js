@@ -1410,6 +1410,32 @@ Util.FormatInterval = function _Util_FormatInterval(time) {
   return parts.join(" ");
 }
 
+/* Decode flags ("0101" or "5d" little endian) into an array of bits */
+Util.DecodeFlags = function _Util_DecodeFlags(f, nbits=null) {
+  let bits = [];
+  if (f.match(/^[01]+$/)) {
+    for (let c of f) {
+      bits.push(c == "1");
+    }
+  } else if (f.match(/^[1-9][0-9]*d$/)) {
+    let num = Number.parseInt(f.substr(0, f.length-1));
+    for (let n = 0; (1 << n) < num; ++n) {
+      bits.push(((1 << n) & num) != 0);
+    }
+  }
+  if (nbits !== null) {
+    while (bits.length < nbits) {
+      bits.push(false);
+    }
+  }
+  return bits;
+}
+
+/* Encode an array of bits into a flag string ("0101") */
+Util.EncodeFlags = function _Util_EncodeFlags(bits) {
+  return bits.map((b) => (!!b ? "1" : "0")).join("");
+}
+
 /* Special escaping {{{0 */
 
 /* Build a character escape sequence for the code given */
