@@ -45,8 +45,8 @@
 class TwitchEvent {
   constructor(type, raw_line, parsed) {
     this._cmd = type;
-    this._raw = !!raw_line ? raw_line : "";
-    this._parsed = !!parsed ? parsed : {};
+    this._raw = raw_line ? raw_line : "";
+    this._parsed = parsed ? parsed : {};
     if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
       Util.Error(`Command ${this._cmd} not enumerated in this.COMMANDS`);
     }
@@ -117,7 +117,7 @@ class TwitchEvent {
   get name() { return this._parsed.flags["display-name"] || this._parsed.user; }
   get flags() { return this._parsed.flags; }
   flag(flag) {
-    if (!!this._parsed.flags) {
+    if (this._parsed.flags) {
       return this._parsed.flags[flag];
     }
     return undefined;
@@ -341,7 +341,8 @@ function TwitchClient(opts) {
   this._is_open = false;
   this._connected = false;
   this._username = null;
-  this._debug = opts.Debug || 0;
+  this._debug = opts.Debug ? 1 : 0;
+
   /* Channels/rooms presently connected to */
   this._channels = [];
   /* Channels/rooms about to be connected to */
@@ -360,15 +361,16 @@ function TwitchClient(opts) {
   this._self_userid = null;
   /* Emotes the TwitchClient is allowed to use */
   this._self_emotes = {}; /* {eid: ename} */
+
   /* Extension support */
   this._enable_ffz = !opts.NoFFZ;
   this._enable_bttv = !opts.NoBTTV;
 
   /* Whether or not we were given a clientid */
-  this._has_clientid = !!cfg_clientid && cfg_clientid.length > 0;
+  this._has_clientid = cfg_clientid && cfg_clientid.length > 0;
 
   /* Don't load assets (for small testing) */
-  this._no_assets = !!opts.NoAssets;
+  this._no_assets = opts.NoAssets ? true : false;
 
   /* Badge, emote, cheermote definitions */
   this._channel_badges = {};
@@ -390,7 +392,7 @@ function TwitchClient(opts) {
   this.has = function _Client_has(k) { return this._kv.hasOwnProperty(k); }
 
   /* Handle authentication and password management */
-  this._authed = !!cfg_pass;
+  this._authed = cfg_pass ? true : false;
   let oauth, oauth_header;
   if (this._authed) {
     if (cfg_pass.indexOf("oauth:") != 0) {
@@ -513,7 +515,7 @@ function _TwitchClient_SetDebug(val) {
   if (val === false || val === 0) this._debug = 0;
   else if (val === true || val === 1) this._debug = 1;
   else if (val === 2) this._debug = 2;
-  else if (!!val) {
+  else if (val) {
     this._debug = 1;
   } else {
     this._debug = 0;
@@ -529,6 +531,12 @@ function _TwitchClient_SetDebug(val) {
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
   Util.Bind(event, callback);
+}
+
+/* Bind a function to catch events not bound */
+TwitchClient.prototype.bindDefault =
+function _TwitchClient_bindDefault(callback) {
+  Util.BindDefault(callback);
 }
 
 /* Unbind a function from the TwitchChat event specified */
@@ -713,7 +721,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
     ffz.mod_urls = {};
     if (json.room.mod_urls) {
       for (let [k, v] of Object.entries(json.room.mod_urls)) {
-        if (!!v) {
+        if (v) {
           ffz.mod_urls[k] = Util.URL(v);
         }
       }
@@ -1243,7 +1251,7 @@ function _TwitchClient_IsGlobalBadge(badge_name, badge_version=null) {
     if (badge_version === null) {
       return Object.keys(this._global_badges[badge_name].versions).length > 0;
     } else if (badge_version in this._global_badges[badge_name].versions) {
-      if (!!this._global_badges[badge_name].versions[badge_version]) {
+      if (this._global_badges[badge_name].versions[badge_version]) {
         return true;
       }
     }
@@ -1257,7 +1265,7 @@ function _TwitchClient_IsChannelBadge(channel, badge_name) {
   channel = this._ensureChannel(channel);
   if (channel.channel in this._channel_badges) {
     if (badge_name in this._channel_badges[channel.channel]) {
-      if (!!this._channel_badges[channel.channel][badge_name]) {
+      if (this._channel_badges[channel.channel][badge_name]) {
         return true;
       }
     }
@@ -1327,7 +1335,7 @@ function _TwitchClient_OnWebsocketOpen(name, pass) {
   } else {
     this._username = `justinfan${Math.floor(Math.random() * 999999)}`;
   }
-  if (!!pass) {
+  if (pass) {
     this.send(`PASS ${pass.indexOf("oauth:") == 0 ? "" : "oauth:"}${pass}`);
     this.send(`NICK ${name}`);
   } else {

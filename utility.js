@@ -64,7 +64,7 @@ Util.Browser.Get = function _Util_Browser_Get() {
     return Util.Browser.CHROME;
   } else if (navigator.userAgent.match(p_tesla)) {
     return Util.Browser.TESLA;
-  } else if (!!window.obssource) {
+  } else if (window.obssource) {
     return Util.Browser.OBS;
   } else {
     return Util.Browser.UNKNOWN;
@@ -130,7 +130,7 @@ Math.divmod = function _Math_divmod(n, r) {
 
 /* Return true if any of the values satisfy the function given */
 Array.prototype.any = function _Array_any(func) {
-  if (!func) func = (function _bool(x) { !!x; });
+  if (!func) func = (function _bool(x) { x ? true : false; });
   for (let e of this) {
     if (func(e)) {
       return true;
@@ -141,7 +141,7 @@ Array.prototype.any = function _Array_any(func) {
 
 /* Return true if all of the values satisfy the function given */
 Array.prototype.all = function _Array_all(func) {
-  if (!func) func = (function _bool(x) { !!x; });
+  if (!func) func = (function _bool(x) { x ? true : false; });
   for (let e of this) {
     if (!func(e)) {
       return false;
@@ -1297,12 +1297,20 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* Event handling {{{0 */
 
 Util._events = {};
+Util._events_default = null;
 
+/* Bind a function to an event by name */
 Util.Bind = function _Util_Bind(evname, evcallback) {
   if (!Util._events[evname]) Util._events[evname] = [];
   Util._events[evname].push(evcallback);
 }
 
+/* Call a function if an event is unbound */
+Util.BindDefault = function _Util_BindDefault(callback) {
+  Util._events_default = callback;
+}
+
+/* Unbind a callback from an event */
 Util.Unbind = function _Util_Unbind(evname, evcallback) {
   if (Util._events[evname]) {
     let i = Util._events[evname].indexOf(evcallback);
@@ -1316,6 +1324,7 @@ Util.Unbind = function _Util_Unbind(evname, evcallback) {
 
 /* Fire an event: dispatchEvent with a _stacktrace attribute  */
 Util.FireEvent = function _Util_FireEvent(e) {
+  let fired = false;
   /* Add a stacktrace to the event for debugging reasons */
   e._stacktrace = Util.ParseStack(Util.GetStack());
   /* Discard the Util.FireEvent stack frame */
@@ -1325,9 +1334,15 @@ Util.FireEvent = function _Util_FireEvent(e) {
     for (let f of Util._events[e.type]) {
       f(e);
     }
+    fired = true;
   }
+  /* Allow overloading of Event objects */
   if (e instanceof Event) {
     document.dispatchEvent(e);
+    fired = true;
+  }
+  if (!fired && Util._events_default) {
+    Util._events_default(e);
   }
 }
 
@@ -1433,7 +1448,7 @@ Util.DecodeFlags = function _Util_DecodeFlags(f, nbits=null) {
 
 /* Encode an array of bits into a flag string ("0101") */
 Util.EncodeFlags = function _Util_EncodeFlags(bits) {
-  return bits.map((b) => (!!b ? "1" : "0")).join("");
+  return bits.map((b) => (b ? "1" : "0")).join("");
 }
 
 /* Special escaping {{{0 */

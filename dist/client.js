@@ -60,8 +60,8 @@ var TwitchEvent = function () {
     _classCallCheck(this, TwitchEvent);
 
     this._cmd = type;
-    this._raw = !!raw_line ? raw_line : "";
-    this._parsed = !!parsed ? parsed : {};
+    this._raw = raw_line ? raw_line : "";
+    this._parsed = parsed ? parsed : {};
     if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
       Util.Error("Command " + this._cmd + " not enumerated in this.COMMANDS");
     }
@@ -98,7 +98,7 @@ var TwitchEvent = function () {
   }, {
     key: "flag",
     value: function flag(_flag) {
-      if (!!this._parsed.flags) {
+      if (this._parsed.flags) {
         return this._parsed.flags[_flag];
       }
       return undefined;
@@ -569,7 +569,8 @@ function TwitchClient(opts) {
   this._is_open = false;
   this._connected = false;
   this._username = null;
-  this._debug = opts.Debug || 0;
+  this._debug = opts.Debug ? 1 : 0;
+
   /* Channels/rooms presently connected to */
   this._channels = [];
   /* Channels/rooms about to be connected to */
@@ -588,15 +589,16 @@ function TwitchClient(opts) {
   this._self_userid = null;
   /* Emotes the TwitchClient is allowed to use */
   this._self_emotes = {}; /* {eid: ename} */
+
   /* Extension support */
   this._enable_ffz = !opts.NoFFZ;
   this._enable_bttv = !opts.NoBTTV;
 
   /* Whether or not we were given a clientid */
-  this._has_clientid = !!cfg_clientid && cfg_clientid.length > 0;
+  this._has_clientid = cfg_clientid && cfg_clientid.length > 0;
 
   /* Don't load assets (for small testing) */
-  this._no_assets = !!opts.NoAssets;
+  this._no_assets = opts.NoAssets ? true : false;
 
   /* Badge, emote, cheermote definitions */
   this._channel_badges = {};
@@ -624,7 +626,7 @@ function TwitchClient(opts) {
   };
 
   /* Handle authentication and password management */
-  this._authed = !!cfg_pass;
+  this._authed = cfg_pass ? true : false;
   var oauth = void 0,
       oauth_header = void 0;
   if (this._authed) {
@@ -768,7 +770,7 @@ TwitchClient.prototype.GetDebug = function _TwitchClient_GetDebug() {
 
 /* Update both client and logger debug level */
 TwitchClient.prototype.SetDebug = function _TwitchClient_SetDebug(val) {
-  if (val === false || val === 0) this._debug = 0;else if (val === true || val === 1) this._debug = 1;else if (val === 2) this._debug = 2;else if (!!val) {
+  if (val === false || val === 0) this._debug = 0;else if (val === true || val === 1) this._debug = 1;else if (val === 2) this._debug = 2;else if (val) {
     this._debug = 1;
   } else {
     this._debug = 0;
@@ -783,6 +785,11 @@ TwitchClient.prototype.SetDebug = function _TwitchClient_SetDebug(val) {
 /* Bind a function to the event specified */
 TwitchClient.prototype.bind = function _TwitchClient_bind(event, callback) {
   Util.Bind(event, callback);
+};
+
+/* Bind a function to catch events not bound */
+TwitchClient.prototype.bindDefault = function _TwitchClient_bindDefault(callback) {
+  Util.BindDefault(callback);
 };
 
 /* Unbind a function from the TwitchChat event specified */
@@ -1028,7 +1035,7 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
           var k = _ref6[0];
           var v = _ref6[1];
 
-          if (!!v) {
+          if (v) {
             ffz.mod_urls[k] = Util.URL(v);
           }
         }
@@ -1968,7 +1975,7 @@ TwitchClient.prototype.IsGlobalBadge = function _TwitchClient_IsGlobalBadge(badg
     if (badge_version === null) {
       return Object.keys(this._global_badges[badge_name].versions).length > 0;
     } else if (badge_version in this._global_badges[badge_name].versions) {
-      if (!!this._global_badges[badge_name].versions[badge_version]) {
+      if (this._global_badges[badge_name].versions[badge_version]) {
         return true;
       }
     }
@@ -1981,7 +1988,7 @@ TwitchClient.prototype.IsChannelBadge = function _TwitchClient_IsChannelBadge(ch
   channel = this._ensureChannel(channel);
   if (channel.channel in this._channel_badges) {
     if (badge_name in this._channel_badges[channel.channel]) {
-      if (!!this._channel_badges[channel.channel][badge_name]) {
+      if (this._channel_badges[channel.channel][badge_name]) {
         return true;
       }
     }
@@ -2048,7 +2055,7 @@ TwitchClient.prototype.OnWebsocketOpen = function _TwitchClient_OnWebsocketOpen(
   } else {
     this._username = "justinfan" + Math.floor(Math.random() * 999999);
   }
-  if (!!pass) {
+  if (pass) {
     this.send("PASS " + (pass.indexOf("oauth:") == 0 ? "" : "oauth:") + pass);
     this.send("NICK " + name);
   } else {
