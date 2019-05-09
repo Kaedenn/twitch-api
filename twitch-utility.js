@@ -173,7 +173,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
       }
       return channel;
     }
-  } else if (channel && channel.channel) {
+  } else if (channel && typeof(channel.channel) === "string") {
     return Twitch.FormatChannel(channel.channel, channel.room, channel.roomuid);
   } else {
     Util.Warn("FormatChannel: don't know how to format", channel, room, roomuid);
@@ -193,6 +193,15 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   } else {
     /* Values requiring special handling */
     switch (key) {
+      case "badge-info":
+        if (value.length > 0) {
+          result = [];
+          for (let badge of value.split(',')) {
+            let [badge_name, badge_rev] = badge.split('/');
+            result.push([badge_name, badge_rev]);
+          }
+        }
+        break;
       case "badges":
         result = [];
         for (let badge of value.split(',')) {

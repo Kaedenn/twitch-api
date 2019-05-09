@@ -50,7 +50,23 @@ class TwitchEvent {
     if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
       Util.Error(`Command ${this._cmd} not enumerated in this.COMMANDS`);
     }
+    /* Ensure certain flags have expected types */
+    if (this._parsed) {
+      if (typeof(this._parsed.message) !== "string") {
+        this._parsed.message = `${this._parsed.message}`;
+      }
+      if (typeof(this._parsed.user) !== "string") {
+        this._parsed.user = `${this._parsed.user}`;
+      }
+      if (typeof(this._parsed.flags) !== "object") {
+        this._parsed.flags = {};
+      }
+      if (!this._parsed.channel) {
+        this._parsed.channel = {channel: "GLOBAL", room: null, roomuid: null};
+      }
+    }
   }
+
   static get COMMANDS() {
     return {
       CHAT: "CHAT",
@@ -234,10 +250,10 @@ class TwitchChatEvent extends TwitchEvent {
     return this.has_badge("broadcaster");
   }
   get ismod() {
-    return this._parsed.flags.mod || this.has_badge("moderator") || this.iscaster;
+    return this.flags.mod || this.has_badge("moderator") || this.iscaster;
   }
   get issub() {
-    return this._parsed.flags.subscriber || this.has_badge("subscriber");
+    return this.flags.subscriber || this.has_badge("subscriber");
   }
   get isvip() {
     return this.has_badge("vip");
@@ -255,6 +271,16 @@ class TwitchChatEvent extends TwitchEvent {
       }
     }
     return false;
+  }
+  get sub_months() {
+    if (this.flags["badge-info"]) {
+      for (let [bname, brev] in this.flags["badge-info"]) {
+        if (bname == "subscriber") {
+          return brev;
+        }
+      }
+    }
+    return 0;
   }
 
   /* Extra attributes */
@@ -296,6 +322,7 @@ class TwitchSubEvent extends TwitchEvent {
   get streak_months() { return this.flags['msg-param-streak-months'] || 0; }
 
   /* Apply only to gift subs */
+  get anonymous() { return this.kind == TwitchSubEvent.ANONGIFTSUB; }
   get recipient() { return this.flags['msg-param-recipient-user-name']; }
   get recipient_id() { return this.flags['msg-param-recipient-id']; }
   get recipient_name() { return this.flags['msg-param-recipient-display-name']; }
@@ -415,7 +442,7 @@ function TwitchClient(opts) {
     }).bind(this._ws);
     this._ws.onmessage = (function _ws_onmessage(e) {
       try {
-        Util.DebugOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
+        Util.TraceOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
         self.OnWebsocketMessage(e);
       } catch (e) {
         alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
@@ -424,22 +451,22 @@ function TwitchClient(opts) {
     }).bind(this._ws);
     this._ws.onerror = (function _ws_onerror(e) {
       try {
-        Util.DebugOnly('ws error>', e);
+        Util.LogOnly('ws error>', e);
         self._connected = false;
         self.OnWebsocketError(e);
       } catch (e) {
-        alert("ws._onmessage error: " + e.toString());
+        alert("ws._onerror error: " + e.toString());
         throw e;
       }
     }).bind(this._ws);
     this._ws.onclose = (function _ws_onclose(e) {
       try {
-        Util.DebugOnly('ws close>', e);
+        Util.LogOnly('ws close>', e);
         self._connected = false;
         self._is_open = false;
         self.OnWebsocketClose(e);
       } catch (e) {
-        alert("ws._onmessage error: " + e.toString());
+        alert("ws._onclose error: " + e.toString());
         throw e;
       }
     }).bind(this._ws);
@@ -1317,7 +1344,16 @@ function _TwitchClient_OnWebsocketOpen(name, pass) {
 /* Callback: called when the websocket receives a message */
 TwitchClient.prototype.OnWebsocketMessage =
 function _TwitchClient_OnWebsocketMessage(ws_event) {
-  let lines = ws_event.data.split("\r\n");
+  let lines = ws_event.data.trim().split("\r\n");
+  /* Log the lines to the debug console */
+  if (lines.length == 1) {
+    Util.DebugOnly(`ws recv> "${lines[0]}"`);
+  } else {
+    for (let [i, l] of Object.entries(lines)) {
+      let n = Number.parseInt(i) + 1;
+      if (l.trim().length > 0) Util.DebugOnly(`ws recv/${n}> "${l}"`);
+    }
+  }
   for (let line of lines) {
     /* Ignore empty lines */
     if (line.trim() == '') {
@@ -1389,8 +1425,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         this._onPart(result.channel, result.user);
         break;
       case "RECONNECT":
-        /* TODO: Reconnect (or schedule to reconnect) client */
-        Util.Error("Reconnect needed");
+        /* Reconnect is responsibility of hooking code */
         break;
       case "MODE":
         if (result.modeflag == "+o") {
@@ -1491,7 +1526,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
       case "OTHER":
         break;
       default:
-        Util.Warn("Unhandled event:", result);
+        Util.Error("Unhandled event:", result, line);
         break;
     }
 
