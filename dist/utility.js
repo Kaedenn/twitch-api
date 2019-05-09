@@ -1418,8 +1418,8 @@ var ColorParser = function () {
       var b = Number(rgbtuple[2]);b = Number.isNaN(b) ? 0 : b;
       var res = [r, g, b];
       if (rgbtuple.length == 4 && rgbtuple[3] !== undefined) {
-        var _a = Number(rgbtuple[3]);_a = Number.isNaN(_a) ? 0 : _a;
-        res.push(_a);
+        var a = Number(rgbtuple[3]);a = Number.isNaN(a) ? 0 : a;
+        res.push(a);
       }
       this._cache[color] = res;
       return res;
@@ -1635,9 +1635,9 @@ var _Util_Color = function () {
             r = _ColorParser$parse2[0],
             g = _ColorParser$parse2[1],
             b = _ColorParser$parse2[2],
-            _a2 = _ColorParser$parse2[3];
+            a = _ColorParser$parse2[3];
 
-        var _ref10 = [r, g, b, _a2];
+        var _ref10 = [r, g, b, a];
         this.r = _ref10[0];
         this.g = _ref10[1];
         this.b = _ref10[2];
@@ -1778,7 +1778,7 @@ var _Util_Color = function () {
           g = _Util$Color$RGBToHSL2[1],
           b = _Util$Color$RGBToHSL2[2];
 
-      return [r, g, b, a];
+      return [r, g, b, this.a];
     },
     set: function set(hsla) {
       var _hsla = _slicedToArray(hsla, 4),

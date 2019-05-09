@@ -985,7 +985,7 @@ class _Util_Color {
   /* Attribute: [h, s, l, a] */
   get hsla() {
     let [r, g, b] = Util.Color.RGBToHSL(this.r, this.g, this.b);
-    return [r, g, b, a];
+    return [r, g, b, this.a];
   }
   set hsla(hsla) {
     let [h, s, l, a] = hsla;
