@@ -43,9 +43,6 @@ Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
 
-/* RegExp for matching URLs */
-Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
-
 /* Browser identification {{{0 */
 
 Util.Browser = {};
@@ -113,14 +110,6 @@ Util.Key.DOWN = 40;
 
 /* End portability code 0}}} */
 
-Util.EscapeChars = {
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&apos;",
-  "&": "&amp;"
-};
-
 /* Standard object (Math, Array, String, RegExp) additions {{{0 */
 
 /* Calculates the divmod of the values given */
@@ -151,7 +140,7 @@ Array.prototype.all = function _Array_all(func) {
 }
 
 /* Obtain the maximal element from an array */
-Array.prototype.max = function __Array_max(cmp) {
+Array.prototype.max = function _Array_max(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
@@ -167,7 +156,7 @@ Array.prototype.max = function __Array_max(cmp) {
 }
 
 /* Obtain the minimal element from an array */
-Array.prototype.min = function __Array_min(cmp) {
+Array.prototype.min = function _Array_min(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
   if (this.length == 0) { return undefined; }
   if (this.length == 1) { return this[0]; }
@@ -183,7 +172,7 @@ Array.prototype.min = function __Array_min(cmp) {
 }
 
 /* Construct an empty array with a specific number of entries */
-Array.range = function __Array_range(nelem, dflt=null) {
+Array.range = function _Array_range(nelem, dflt=null) {
   let a = [];
   for (let i = 0; i < nelem; ++i) a.push(dflt);
   return a;
@@ -249,6 +238,17 @@ String.prototype.map = function _String_map(func) {
   return result;
 };
 
+/* Implement Array.filter for strings */
+String.prototype.filter = function _String_filter(func) {
+  let result = "";
+  for (let c of this) {
+    if (func(c)) {
+      result += c;
+    }
+  }
+  return result;
+}
+
 /* Implement Array.forEach for strings */
 String.prototype.forEach = function _String_forEach(func) {
   for (let ch of this) {
@@ -264,23 +264,6 @@ String.prototype.withCharAt = function _String_withCharAt(chr, pos) {
   }
   return result;
 };
-
-/* Split a string at most N times, returning the tokens and the rest of the
- * string, such that STR.split_n(sep, n).join(sep) === STR */
-String.prototype.split_n = function _String_split_n(sep, num) {
-  let cnt = 0;
-  let results = [];
-  let temp = this;
-  while (temp.indexOf(sep) > -1 && cnt < num) {
-    cnt += 1;
-    results.push(temp.substr(0, temp.indexOf(sep)));
-    temp = temp.substr(temp.indexOf(sep) + sep.length);
-  }
-  if (temp.length > 0) {
-    results.push(temp);
-  }
-  return results;
-}
 
 /* Ensure String.trimStart is present */
 if (typeof(("").trimStart) != "function") {
@@ -311,7 +294,60 @@ RegExp.escape = function _RegExp_escape(string) {
 
 /* End standard object additions 0}}} */
 
+/* Array functions {{{0 */
+
+/* Return true if the object is an array */
+Util.IsArray = function _Util_IsArray(value) {
+  /* Values are considered "arrays" if value[Symbol.iterator] is a function
+   * and that object is not a string */
+  if (typeof(value) === "string") return false;
+  if (value && typeof(value[Symbol.iterator]) == "function") {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/* Zip two (or more) sequences together */
+Util.Zip = function _Util_Zip(...sequences) {
+  let curr = [];
+  let max_len = 0;
+  /* Make sure everything's an array, calculate the max length */
+  for (let seq of sequences) {
+    let seq_array = Array.from(seq);
+    max_len = Math.max(seq_array.length, max_len);
+    curr.push(seq_array);
+  }
+  /* Ensure all arrays have the same size */
+  for (let seq of curr) {
+    while (seq.length < max_len) {
+      seq.push(undefined);
+    }
+  }
+  let result = [];
+  /* Perform the zip operation */
+  for (let i = 0; i < max_len; ++i) {
+    let row = Array.from(curr, () => undefined);
+    for (let j = 0; j < curr.length; ++j) {
+      row[j] = curr[j][i];
+    }
+    result.push(row);
+  }
+  /* And we're done */
+  return result;
+}
+
+/* Convert an arguments object to an Array instance */
+Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
+  return Array.of.apply(Array, argobj);
+}
+
+/* End array functions 0}}} */
+
 /* URL and URI handling {{{0 */
+
+/* RegExp for matching URLs */
+Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -321,6 +357,12 @@ Util.URL = function _Util_URL(url) {
       p = 'https:';
     }
     return p + url;
+  } else if (!url.match(/^[\w-]:/)) {
+    if (window.location.protocol === "https:") {
+      return "https://" + url;
+    } else {
+      return "http://" + url;
+    }
   }
   return url;
 }
@@ -1180,28 +1222,6 @@ Util.Notification = class _Util_Notification {
 Util.Notify = new Util.Notification();
 /* End notification APIs 0}}} */
 
-/* Return true if the given object inherits from the given typename */
-Util.IsInstanceOf = function _Object_IsInstanceOf(obj, typename) {
-  for (let p = obj; p; p = p.__proto__) {
-    if (p.constructor.name == typename) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/* Return true if the object is an array */
-Util.IsArray = function _Util_IsArray(value) {
-  /* Values are considered "arrays" if value[Symbol.iterator] is a function
-   * and that object is not a string */
-  if (typeof(value) === "string") return false;
-  if (value && typeof(value[Symbol.iterator]) == "function") {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 /* PRNG (Pseudo-Random Number Generator) {{{0 */
 Util.RandomGenerator = class _Util_Random {
   constructor(disable_crypto) {
@@ -1281,26 +1301,6 @@ Util.RandomGenerator = class _Util_Random {
 Util.Random = new Util.RandomGenerator();
 /* End PRNG 0}}} */
 
-/* Escape the string and return a map of character movements */
-Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
-  let result = "";
-  let map = [];
-  let i = 0, j = 0;
-  while (i < s.length) {
-    map.push(j);
-    let r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
-    result = result + r;
-    i += 1;
-    j += r.length;
-  }
-  return [result, map];
-}
-
-/* Convert an arguments object to an Array instance */
-Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
-  return Array.of.apply(Array, argobj);
-}
-
 /* Event handling {{{0 */
 
 Util._events = {};
@@ -1355,33 +1355,30 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* End event handling 0}}} */
 
-/* Zip two (or more) sequences together */
-Util.Zip = function _Util_Zip(...sequences) {
-  let curr = [];
-  let max_len = 0;
-  /* Make sure everything's an array, calculate the max length */
-  for (let seq of sequences) {
-    let seq_array = Array.from(seq);
-    max_len = Math.max(seq_array.length, max_len);
-    curr.push(seq_array);
+/* Parsing, formatting, and escaping functions {{{0 */
+
+/* Characters requiring HTML escaping (used by String.escape) */
+Util.EscapeChars = {
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+  "&": "&amp;"
+};
+
+/* Escape the string and return a map of character movements */
+Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
+  let result = "";
+  let map = [];
+  let i = 0, j = 0;
+  while (i < s.length) {
+    map.push(j);
+    let r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
+    result = result + r;
+    i += 1;
+    j += r.length;
   }
-  /* Ensure all arrays have the same size */
-  for (let seq of curr) {
-    while (seq.length < max_len) {
-      seq.push(undefined);
-    }
-  }
-  let result = [];
-  /* Perform the zip operation */
-  for (let i = 0; i < max_len; ++i) {
-    let row = Array.from(curr, () => undefined);
-    for (let j = 0; j < curr.length; ++j) {
-      row[j] = curr[j][i];
-    }
-    result.push(row);
-  }
-  /* And we're done */
-  return result;
+  return [result, map];
 }
 
 /* Number formatting */
@@ -1458,8 +1455,6 @@ Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   return bits.map((b) => (b ? "1" : "0")).join("");
 }
 
-/* Special escaping {{{0 */
-
 /* Build a character escape sequence for the code given */
 Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
   // Handle certain special escape sequences
@@ -1488,7 +1483,28 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   return result;
 }
 
-/* End special escaping 0}}} */
+/* Split a string by the tokens given; all tokens must be present.
+ *   matchfunc: function to apply to the matched segments */
+Util.SplitByMatches = function _Util_SplitByMatches(str, matches, matchfunc=null) {
+  let result = [];
+  let pos = 0;
+  for (let match of matches) {
+    let mpos = str.indexOf(match, pos);
+    result.push(str.substr(pos, mpos - pos));
+    if (matchfunc) {
+      result.push(matchfunc(match));
+    } else {
+      result.push(match);
+    }
+    pos = mpos + match.length;
+  }
+  if (pos < str.length) {
+    result.push(str.substr(pos));
+  }
+  return result;
+}
+
+/* End parsing, formatting, and escaping functions 0}}} */
 
 /* Configuration and localStorage functions {{{0 */
 
@@ -1768,6 +1784,72 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 }
 
 /* End CSS functions 0}}} */
+
+/* DOM functions {{{0 */
+
+/* Walk a DOM tree searching for nodes matching the predicate given */
+Util.SearchTree = function _Util_SearchTree(root, pred) {
+  /* NOTE: Expects an object inheriting from Element; not a jQuery node */
+  let results = [];
+  if (pred(root)) {
+    results.push(root);
+  } else if (root.childNodes && root.childNodes.length > 0) {
+    for (let e of root.childNodes) {
+      for (let node of Util.SearchTree(e, pred)) {
+        results.push(node);
+      }
+    }
+  }
+  return results;
+}
+
+/* Convert the object given to a DOM node
+ * Accepts on the following types:
+ *   string
+ *   number
+ *   boolean
+ *   URL
+ *   Element
+ */
+Util.CreateNode = function _Util_CreateNode(obj) {
+  if (obj instanceof Element) {
+    return obj;
+  } else if (["string", "number", "boolean"].indexOf(typeof(obj)) > -1) {
+    return new Text(`${obj}`);
+  } else if (obj instanceof URL) {
+    let a = document.createElement('a');
+    a.setAttribute("href", obj.href);
+    a.setAttribute("target", "_blank");
+    a.textContent = obj.href;
+    return a;
+  } else {
+    Util.Warn("Not sure how to create a node from", obj);
+    return new Text(JSON.stringify(obj));
+  }
+}
+
+/* Obtain a node's HTML */
+Util.GetHTML = function _Util_GetHTML(node) {
+  if (node.outerHTML) {
+    return node.outerHTML;
+  } else if (node.nodeValue) {
+    return `${node.nodeValue}`.escape();
+  } else {
+    return `${node}`;
+  }
+}
+
+/* End DOM functions 0}}} */
+
+/* Return true if the given object inherits from the given typename */
+Util.IsInstanceOf = function _Object_IsInstanceOf(obj, typename) {
+  for (let p = obj; p; p = p.__proto__) {
+    if (p.constructor.name == typename) {
+      return true;
+    }
+  }
+  return false;
+}
 
 /* Mark the Utility API as loaded */
 Util.API_Loaded = true;
