@@ -182,6 +182,13 @@ Array.prototype.min = function __Array_min(cmp) {
   return min_elem;
 }
 
+/* Construct an empty array with a specific number of entries */
+Array.range = function __Array_range(nelem, dflt=null) {
+  let a = [];
+  for (let i = 0; i < nelem; ++i) a.push(dflt);
+  return a;
+}
+
 /* Strip characters from left (pos) or right (neg) */
 String.prototype._stripFrom = function _String__stripFrom(chrs, from) {
   let d = (from > 0 ? 1 : -1);

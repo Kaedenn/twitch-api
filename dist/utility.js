@@ -294,6 +294,16 @@ Array.prototype.min = function __Array_min(cmp) {
   return min_elem;
 };
 
+/* Construct an empty array with a specific number of entries */
+Array.range = function __Array_range(nelem) {
+  var dflt = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+  var a = [];
+  for (var i = 0; i < nelem; ++i) {
+    a.push(dflt);
+  }return a;
+};
+
 /* Strip characters from left (pos) or right (neg) */
 String.prototype._stripFrom = function _String__stripFrom(chrs, from) {
   var d = from > 0 ? 1 : -1;
