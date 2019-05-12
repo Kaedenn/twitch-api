@@ -558,9 +558,9 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frame.line = parseInt(m[3]);
       frame.column = parseInt(m[4]);
     } else if (Util.Browser.IsOBS) {
-
+      /* TODO: OBS stacktrace parsing */
     } else if (Util.Browser.IsTesla) {
-
+      /* TODO: Tesla stacktrace parsing */
     }
     frames.push(frame);
   }
@@ -774,6 +774,25 @@ class LoggerUtility {
           break;
       }
     }
+  }
+
+  /* Convert the arguments given to a single string */
+  static stringify(...args) {
+    let result = [];
+    for (let arg of args) {
+      if (arg === null) result.push("null");
+      else if (typeof(arg) === "undefined") result.push("undefined");
+      else if (typeof(arg) === "string") result.push(JSON.stringify(arg));
+      else if (typeof(arg) === "number") result.push(`${arg}`);
+      else if (typeof(arg) === "boolean") result.push(`${arg}`);
+      else if (typeof(arg) === "symbol") result.push(arg.toString());
+      else if (typeof(arg) === "function") {
+        result.push(`${arg}`.replace(/\n/, "\\n"));
+      } else {
+        result.push(JSON.stringify(arg));
+      }
+    }
+    return args.join(", ");
   }
 
   /* Log the arguments given with a stacktrace */
@@ -1191,38 +1210,8 @@ Util.GetMaxContrast = function _Util_GetMaxContrast(c1, ...colors) {
 
 /* End color handling 0}}} */
 
-/* Notification APIs {{{0 */
-Util.Notification = class _Util_Notification {
-  constructor() {
-    this._enabled = false;
-    this._max = 2; /* max simultaneous notifications */
-    this._active = {}; /* currently-active notifications */
-  }
-  get available() { return window.hasOwnProperty("Notification"); }
-
-  acquire() {
-    if (this.available) {
-      this._req_promise = window.Notification.requestPermission();
-      this._req_promise.then((function _notif_then(s) {
-        if (s === "granted") {
-          this._enabled = true;
-        } else {
-          this._enabled = false;
-        }
-      }).bind(this));
-    }
-  }
-
-  set max(m) { this._max = m; }
-  get max() { return this._max; }
-  closeAll() { /* TODO */ }
-  notify(msg) { /* TODO */ }
-}
-
-Util.Notify = new Util.Notification();
-/* End notification APIs 0}}} */
-
 /* PRNG (Pseudo-Random Number Generator) {{{0 */
+
 Util.RandomGenerator = class _Util_Random {
   constructor(disable_crypto) {
     this._crypto = null;
@@ -1231,9 +1220,8 @@ Util.RandomGenerator = class _Util_Random {
     }
     if (typeof(crypto) !== 'undefined' && crypto.getRandomValues) {
       this._crypto = crypto;
-    } else if (typeof(msCrypto) !== "undefined"
-               && typeof window.msCrypto.getRandomValues == 'function') {
-      this._crypto = msCrypto;
+    } else if (Util.Defined("msCrypto")) {
+      this._crypto = (Function("return msCrypto"))();
     } else {
       console.error("Failed to get secure PRNG; falling back to Math.random");
     }
@@ -1299,6 +1287,7 @@ Util.RandomGenerator = class _Util_Random {
 };
 
 Util.Random = new Util.RandomGenerator();
+
 /* End PRNG 0}}} */
 
 /* Event handling {{{0 */
@@ -1469,8 +1458,6 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
 
 /* Strip escape characters from a string */
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
-  let is_slash = (c) => c == "\\";
-  let is_ctrl = (c) => c.charCodeAt(0) < ' '.charCodeAt(0);
   let result = "";
   for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20)
@@ -1566,7 +1553,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
 }
 
 /* Class for handling configuration */
-class ConfigStore {
+class ConfigStore { /* exported ConfigStore */
   constructor(key, noPersist=null) {
     this._key = key;
     this._config = Util.GetWebStorage(this._key) || {};

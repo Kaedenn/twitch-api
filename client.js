@@ -431,7 +431,7 @@ function TwitchClient(opts) {
 
     this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
     this._ws.client = this;
-    this._ws.onopen = (function _ws_onopen(e) {
+    this._ws.onopen = (function _ws_onopen(/*event*/) {
       try {
         Util.LogOnly("ws open>", this.url);
         self._connected = false;
@@ -442,31 +442,31 @@ function TwitchClient(opts) {
         throw e;
       }
     }).bind(this._ws);
-    this._ws.onmessage = (function _ws_onmessage(e) {
+    this._ws.onmessage = (function _ws_onmessage(event) {
       try {
-        Util.TraceOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
-        self.OnWebsocketMessage(e);
+        Util.TraceOnly('ws recv>', Twitch.StripCredentials(event.data.repr()));
+        self.OnWebsocketMessage(event);
       } catch (e) {
         alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
       }
     }).bind(this._ws);
-    this._ws.onerror = (function _ws_onerror(e) {
+    this._ws.onerror = (function _ws_onerror(event) {
       try {
-        Util.LogOnly('ws error>', e);
+        Util.LogOnly('ws error>', event);
         self._connected = false;
-        self.OnWebsocketError(e);
+        self.OnWebsocketError(event);
       } catch (e) {
         alert("ws._onerror error: " + e.toString());
         throw e;
       }
     }).bind(this._ws);
-    this._ws.onclose = (function _ws_onclose(e) {
+    this._ws.onclose = (function _ws_onclose(event) {
       try {
-        Util.LogOnly('ws close>', e);
+        Util.LogOnly('ws close>', event);
         self._connected = false;
         self._is_open = false;
-        self.OnWebsocketClose(e);
+        self.OnWebsocketClose(event);
       } catch (e) {
         alert("ws._onclose error: " + e.toString());
         throw e;
@@ -737,7 +737,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
       ffz.emotes_name = set_def.title;
       ffz.emotes_desc = set_def.description || "";
       ffz.emotes = {};
-      for (let [k, v] of Object.entries(set_def.emoticons)) {
+      for (let v of Object.values(set_def.emoticons)) {
         if (v.hidden) continue;
         ffz.emotes[v.name] = v;
         for (let [size, url] of Object.entries(v.urls)) {
@@ -819,8 +819,8 @@ function _TwitchClient__getGlobalBadges() {
 }
 
 /* Private: Build a faux PRIVMSG event from the chat message given */
-TwitchClient.prototype._build_privmsg =
-function _TwitchClient__build_privmsg(chobj, message) {
+TwitchClient.prototype._buildChatEvent =
+function _TwitchClient__buildChatEvent(chobj, message) {
   /* Construct the parsed flags object */
   let flag_obj = {};
   let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
@@ -1103,6 +1103,7 @@ function _TwitchClient_FindCheers(cname, message) {
             matches.push({
               cheer: cheer,
               name: m[1],
+              cheername: name,
               bits: num_bits,
               start: offset,
               end: offset + token.length
@@ -1194,7 +1195,7 @@ function _TwitchClient_SendMessage(channel, message, bypassFaux=false) {
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
       if (this._self_userstate[Twitch.FormatChannel(channel)]) {
-        Util.FireEvent(this._build_privmsg(channel, message));
+        Util.FireEvent(this._buildChatEvent(channel, message));
       } else {
         Util.Error(`No USERSTATE given for channel ${channel}`);
       }
@@ -1482,7 +1483,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
           this._onDeOp(result.channel, result.user);
         }
         break;
-      case "PRIVMSG":
+      case "PRIVMSG": {
         let event = new TwitchChatEvent(line, result);
         if (!room.userInfo.hasOwnProperty(result.user)) {
           room.userInfo[result.user] = {};
@@ -1506,7 +1507,7 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
         ui.uuid = event.flags['id'];
         ui.badges = event.flags['badges'];
         Util.FireEvent(event);
-        break;
+      } break;
       case "WHISPER":
         break;
       case "USERSTATE":

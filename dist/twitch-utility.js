@@ -142,7 +142,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
           } else if (this._onerror) {
             this._onerror(this);
           } else {
-            console.warn(this);
+            Util.Warn(this);
           }
         }
       }
@@ -420,7 +420,6 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 Twitch.ParseData = function _Twitch_ParseData(dataString) {
   /* @key=value;key=value;... */
   dataString = dataString.lstrip('@');
-  var parts = dataString.split(';');
   var data = {};
   var _iteratorNormalCompletion6 = true;
   var _didIteratorError6 = false;
@@ -624,43 +623,43 @@ Twitch.IRC = {
     /^:([^ ]+) ((?:00[1-9])|(?:372)) ([^ ]+) :(.*)(?:\r\n)?$/, { server: 1, code: 2, username: 3, message: 4 }],
     NAMES: [
     /* ":<login> 353 <username> <modechr> <channel> :<users...>\r\n" */ /* Verified */
-    /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (\#[^ ]+) :(.*)(?:\r\n)?$/, { user: 1, modechr: 3, channel: 4, users: 5 }],
+    /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (#[^ ]+) :(.*)(?:\r\n)?$/, { user: 1, modechr: 3, channel: 4, users: 5 }],
     JOIN: [
     /* ":<name>!<user>@<user>.<host> JOIN <channel>\r\n" */ /* Verified */
-    /^:([^ ]+) JOIN (\#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
+    /^:([^ ]+) JOIN (#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
     PART: [
     /* ":<name>!<user>@<user>.<host> PART <channel>\r\n" */ /* Verified */
-    /^:([^ ]+) PART (\#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
+    /^:([^ ]+) PART (#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
     MODE: [
     /* ":<user> MODE <channel> <modeop> <users...>\r\n" */ /* Verified */
-    /^:([^ ]+) MODE (\#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/, { sender: 1, channel: 2, modeflag: 3, user: 4 }],
+    /^:([^ ]+) MODE (#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/, { sender: 1, channel: 2, modeflag: 3, user: 4 }],
     PRIVMSG: [
     /* "@<flags> :<user> PRIVMSG <channel> :<message>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) PRIVMSG (\#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, user: 2, channel: 3, message: 4 }],
+    /^@([^ ]+) :([^ ]+) PRIVMSG (#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, user: 2, channel: 3, message: 4 }],
     WHISPER: [
     /* @<flags> :<name>!<user>@<user>.<host> WHISPER <recipient> :<message>\r\n */
     /^@([^ ]+) :([^!]+)!([^@]+)@([^ ]+) WHISPER ([^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, sender: 2, recipient: 6, message: 7 }],
     USERSTATE: [
     /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) USERSTATE (\#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
+    /^@([^ ]+) :([^ ]+) USERSTATE (#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
     ROOMSTATE: [
     /* "@<flags> :<server> ROOMSTATE <channel>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) ROOMSTATE (\#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
+    /^@([^ ]+) :([^ ]+) ROOMSTATE (#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
     USERNOTICE: [
     /* "@<flags> :<server> USERNOTICE <channel>[ :<message>]\r\n" */
-    /^@([^ ]+) :([^ ]+) USERNOTICE (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
+    /^@([^ ]+) :([^ ]+) USERNOTICE (#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
     GLOBALUSERSTATE: [
     /* "@<flags> :<server> GLOBALUSERSTATE \r\n" */
     /^@([^ ]+) :([^ ]+) GLOBALUSERSTATE(?:\r\n)?$/, { flags: 1, server: 2 }],
     CLEARCHAT: [
     /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
-    /^@([^ ]+) :([^ ]+) CLEARCHAT (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, user: 4 }],
+    /^@([^ ]+) :([^ ]+) CLEARCHAT (#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, user: 4 }],
     CLEARMSG: [
     /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
-    /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
+    /^@([^ ]+) :([^ ]+) CLEARMSG (#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
     HOSTTARGET: [
     /* ":<server> HOSTTARGET <channel> :<hosting-user> -\r\n" */
-    /^([^ ]+) HOSTTARGET (\#[^ ]+) :([^ ]+).*(?:\r\n)?$/, { server: 1, channel: 2, user: 3, message: 4 }],
+    /^([^ ]+) HOSTTARGET (#[^ ]+) :([^ ]+).*(?:\r\n)?$/, { server: 1, channel: 2, user: 3, message: 4 }],
     NOTICE: [
     /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
     /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
@@ -674,7 +673,7 @@ Twitch.IRC = {
     /* End of TOPIC listing */
     /^:([^ ]+) (376) ([^ ]+) :>(?:\r\n)?$/,
     /* Start/end of TOPIC listing, end of NAMES listing */
-    /^:[^ ]+ (?:37[56]|366) [^ ]+ \#[^ ]+ :.*(?:\r\n)?$/]
+    /^:[^ ]+ (?:37[56]|366) [^ ]+ #[^ ]+ :.*(?:\r\n)?$/]
   },
 
   /* Return true if the line should be silently ignored */
@@ -1109,10 +1108,8 @@ Twitch.IRC = {
       for (var _iterator14 = result.flags.badges[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
         var badge_def = _step14.value;
 
-        var _badge_def = _slicedToArray(badge_def, 2),
-            badge_name = _badge_def[0],
-            badge_rev = _badge_def[1];
-
+        var badge_name = badge_def[0];
+        /* let badge_rev = badge_def[1]; */
         if (badge_name === "broadcaster") {
           result.flags.broadcaster = 1;
           result.flags.mod = 1;

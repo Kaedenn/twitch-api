@@ -79,7 +79,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
           } else if (this._onerror) {
             this._onerror(this);
           } else {
-            console.warn(this);
+            Util.Warn(this);
           }
         }
       }
@@ -232,7 +232,6 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 Twitch.ParseData = function _Twitch_ParseData(dataString) {
   /* @key=value;key=value;... */
   dataString = dataString.lstrip('@');
-  let parts = dataString.split(';');
   let data = {};
   for (let item of dataString.split(';')) {
     let key = item;
@@ -321,27 +320,27 @@ Twitch.IRC = {
     ],
     NAMES: [
       /* ":<login> 353 <username> <modechr> <channel> :<users...>\r\n" */ /* Verified */
-      /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (#[^ ]+) :(.*)(?:\r\n)?$/,
       {user: 1, modechr: 3, channel: 4, users: 5}
     ],
     JOIN: [
       /* ":<name>!<user>@<user>.<host> JOIN <channel>\r\n" */ /* Verified */
-      /^:([^ ]+) JOIN (\#[^ ]+)(?:\r\n)?$/,
+      /^:([^ ]+) JOIN (#[^ ]+)(?:\r\n)?$/,
       {user: 1, channel: 2}
     ],
     PART: [
       /* ":<name>!<user>@<user>.<host> PART <channel>\r\n" */ /* Verified */
-      /^:([^ ]+) PART (\#[^ ]+)(?:\r\n)?$/,
+      /^:([^ ]+) PART (#[^ ]+)(?:\r\n)?$/,
       {user: 1, channel: 2}
     ],
     MODE: [
       /* ":<user> MODE <channel> <modeop> <users...>\r\n" */ /* Verified */
-      /^:([^ ]+) MODE (\#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/,
+      /^:([^ ]+) MODE (#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/,
       {sender: 1, channel: 2, modeflag: 3, user: 4},
     ],
     PRIVMSG: [
       /* "@<flags> :<user> PRIVMSG <channel> :<message>\r\n" */ /* Verified */
-      /^@([^ ]+) :([^ ]+) PRIVMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) PRIVMSG (#[^ ]+) :(.*)(?:\r\n)?$/,
       {flags: 1, user: 2, channel: 3, message: 4}
     ],
     WHISPER: [
@@ -351,17 +350,17 @@ Twitch.IRC = {
     ],
     USERSTATE: [
       /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
-      /^@([^ ]+) :([^ ]+) USERSTATE (\#[^ ]+)(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) USERSTATE (#[^ ]+)(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3}
     ],
     ROOMSTATE: [
       /* "@<flags> :<server> ROOMSTATE <channel>\r\n" */ /* Verified */
-      /^@([^ ]+) :([^ ]+) ROOMSTATE (\#[^ ]+)(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) ROOMSTATE (#[^ ]+)(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3}
     ],
     USERNOTICE: [
       /* "@<flags> :<server> USERNOTICE <channel>[ :<message>]\r\n" */
-      /^@([^ ]+) :([^ ]+) USERNOTICE (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) USERNOTICE (#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3, message: 4}
     ],
     GLOBALUSERSTATE: [
@@ -371,17 +370,17 @@ Twitch.IRC = {
     ],
     CLEARCHAT: [
       /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
-      /^@([^ ]+) :([^ ]+) CLEARCHAT (\#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) CLEARCHAT (#[^ ]+)(?: :(.*))?(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3, user: 4}
     ],
     CLEARMSG: [
       /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
-      /^@([^ ]+) :([^ ]+) CLEARMSG (\#[^ ]+) :(.*)(?:\r\n)?$/,
+      /^@([^ ]+) :([^ ]+) CLEARMSG (#[^ ]+) :(.*)(?:\r\n)?$/,
       {flags: 1, server: 2, channel: 3, message: 4}
     ],
     HOSTTARGET: [
       /* ":<server> HOSTTARGET <channel> :<hosting-user> -\r\n" */
-      /^([^ ]+) HOSTTARGET (\#[^ ]+) :([^ ]+).*(?:\r\n)?$/,
+      /^([^ ]+) HOSTTARGET (#[^ ]+) :([^ ]+).*(?:\r\n)?$/,
       {server: 1, channel: 2, user: 3, message: 4}
     ],
     NOTICE: [
@@ -401,7 +400,7 @@ Twitch.IRC = {
       /* End of TOPIC listing */
       /^:([^ ]+) (376) ([^ ]+) :>(?:\r\n)?$/,
       /* Start/end of TOPIC listing, end of NAMES listing */
-      /^:[^ ]+ (?:37[56]|366) [^ ]+ \#[^ ]+ :.*(?:\r\n)?$/
+      /^:[^ ]+ (?:37[56]|366) [^ ]+ #[^ ]+ :.*(?:\r\n)?$/
     ]
   },
 
@@ -749,7 +748,8 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   /* Ensure result.flags has values defined by badges */
   if (result.flags && result.flags.badges) {
     for (let badge_def of result.flags.badges) {
-      let [badge_name, badge_rev] = badge_def;
+      let badge_name = badge_def[0];
+      /* let badge_rev = badge_def[1]; */
       if (badge_name === "broadcaster") {
         result.flags.broadcaster = 1;
         result.flags.mod = 1;

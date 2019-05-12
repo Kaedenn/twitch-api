@@ -692,7 +692,7 @@ function TwitchClient(opts) {
 
     this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
     this._ws.client = this;
-    this._ws.onopen = function _ws_onopen(e) {
+    this._ws.onopen = function _ws_onopen() /*event*/{
       try {
         Util.LogOnly("ws open>", this.url);
         self._connected = false;
@@ -703,31 +703,31 @@ function TwitchClient(opts) {
         throw e;
       }
     }.bind(this._ws);
-    this._ws.onmessage = function _ws_onmessage(e) {
+    this._ws.onmessage = function _ws_onmessage(event) {
       try {
-        Util.TraceOnly('ws recv>', Twitch.StripCredentials(e.data.repr()));
-        self.OnWebsocketMessage(e);
+        Util.TraceOnly('ws recv>', Twitch.StripCredentials(event.data.repr()));
+        self.OnWebsocketMessage(event);
       } catch (e) {
         alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
       }
     }.bind(this._ws);
-    this._ws.onerror = function _ws_onerror(e) {
+    this._ws.onerror = function _ws_onerror(event) {
       try {
-        Util.LogOnly('ws error>', e);
+        Util.LogOnly('ws error>', event);
         self._connected = false;
-        self.OnWebsocketError(e);
+        self.OnWebsocketError(event);
       } catch (e) {
         alert("ws._onerror error: " + e.toString());
         throw e;
       }
     }.bind(this._ws);
-    this._ws.onclose = function _ws_onclose(e) {
+    this._ws.onclose = function _ws_onclose(event) {
       try {
-        Util.LogOnly('ws close>', e);
+        Util.LogOnly('ws close>', event);
         self._connected = false;
         self._is_open = false;
-        self.OnWebsocketClose(e);
+        self.OnWebsocketClose(event);
       } catch (e) {
         alert("ws._onclose error: " + e.toString());
         throw e;
@@ -1070,13 +1070,8 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
       var _iteratorError7 = undefined;
 
       try {
-        for (var _iterator7 = Object.entries(set_def.emoticons)[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
-          var _ref7 = _step7.value;
-
-          var _ref8 = _slicedToArray(_ref7, 2);
-
-          var _k = _ref8[0];
-          var _v = _ref8[1];
+        for (var _iterator7 = Object.values(set_def.emoticons)[Symbol.iterator](), _step7; !(_iteratorNormalCompletion7 = (_step7 = _iterator7.next()).done); _iteratorNormalCompletion7 = true) {
+          var _v = _step7.value;
 
           if (_v.hidden) continue;
           ffz.emotes[_v.name] = _v;
@@ -1086,12 +1081,12 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 
           try {
             for (var _iterator8 = Object.entries(_v.urls)[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
-              var _ref9 = _step8.value;
+              var _ref7 = _step8.value;
 
-              var _ref10 = _slicedToArray(_ref9, 2);
+              var _ref8 = _slicedToArray(_ref7, 2);
 
-              var size = _ref10[0];
-              var url = _ref10[1];
+              var size = _ref8[0];
+              var url = _ref8[1];
 
               ffz.emotes[_v.name].urls[size] = Util.URL(url);
             }
@@ -1276,12 +1271,12 @@ TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadge
 
       try {
         for (var _iterator13 = Object.entries(resp.users)[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-          var _ref11 = _step13.value;
+          var _ref9 = _step13.value;
 
-          var _ref12 = _slicedToArray(_ref11, 2);
+          var _ref10 = _slicedToArray(_ref9, 2);
 
-          var badge_nr = _ref12[0];
-          var users = _ref12[1];
+          var badge_nr = _ref10[0];
+          var users = _ref10[1];
 
           this._ffz_badge_users[badge_nr] = users;
         }
@@ -1304,7 +1299,7 @@ TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadge
 };
 
 /* Private: Build a faux PRIVMSG event from the chat message given */
-TwitchClient.prototype._build_privmsg = function _TwitchClient__build_privmsg(chobj, message) {
+TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(chobj, message) {
   /* Construct the parsed flags object */
   var flag_obj = {};
   var emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
@@ -1338,12 +1333,12 @@ TwitchClient.prototype._build_privmsg = function _TwitchClient__build_privmsg(ch
 
     try {
       for (var _iterator14 = flag_obj["badges"][Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-        var _ref13 = _step14.value;
+        var _ref11 = _step14.value;
 
-        var _ref14 = _slicedToArray(_ref13, 2);
+        var _ref12 = _slicedToArray(_ref11, 2);
 
-        var b = _ref14[0];
-        var r = _ref14[1];
+        var b = _ref12[0];
+        var r = _ref12[1];
 
         badges.push(b + "/" + r);
       }
@@ -1616,12 +1611,12 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
 
     try {
       for (var _iterator16 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-        var _ref15 = _step16.value;
+        var _ref13 = _step16.value;
 
-        var _ref16 = _slicedToArray(_ref15, 2);
+        var _ref14 = _slicedToArray(_ref13, 2);
 
-        var name = _ref16[0];
-        var cheer = _ref16[1];
+        var name = _ref14[0];
+        var cheer = _ref14[1];
 
         if (message.search(cheer.line_pattern) > -1) {
           var _iteratorNormalCompletion17 = true;
@@ -1638,6 +1633,7 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
                 matches.push({
                   cheer: cheer,
                   name: m[1],
+                  cheername: name,
                   bits: num_bits,
                   start: offset,
                   end: offset + token.length
@@ -1710,12 +1706,12 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
 
   try {
     for (var _iterator18 = Object.entries(this._bttv_global_emotes)[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-      var _ref17 = _step18.value;
+      var _ref15 = _step18.value;
 
-      var _ref18 = _slicedToArray(_ref17, 2);
+      var _ref16 = _slicedToArray(_ref15, 2);
 
-      var k = _ref18[0];
-      var v = _ref18[1];
+      var k = _ref16[0];
+      var v = _ref16[1];
 
       emotes[k] = v;
     }
@@ -1740,14 +1736,14 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
 
   try {
     for (var _iterator19 = Object.entries(this._bttv_channel_emotes[ch])[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-      var _ref19 = _step19.value;
+      var _ref17 = _step19.value;
 
-      var _ref20 = _slicedToArray(_ref19, 2);
+      var _ref18 = _slicedToArray(_ref17, 2);
 
-      var _k2 = _ref20[0];
-      var _v2 = _ref20[1];
+      var _k = _ref18[0];
+      var _v2 = _ref18[1];
 
-      emotes[_k2] = _v2;
+      emotes[_k] = _v2;
     }
   } catch (err) {
     _didIteratorError19 = true;
@@ -1827,7 +1823,7 @@ TwitchClient.prototype.SendMessage = function _TwitchClient_SendMessage(channel,
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
       if (this._self_userstate[Twitch.FormatChannel(channel)]) {
-        Util.FireEvent(this._build_privmsg(channel, message));
+        Util.FireEvent(this._buildChatEvent(channel, message));
       } else {
         Util.Error("No USERSTATE given for channel " + channel);
       }
@@ -1935,12 +1931,12 @@ TwitchClient.prototype.GetAllBadges = function _TwitchClient_GetAllBadges() {
 
       try {
         for (var _iterator24 = Object.entries(this._channel_badges[cname])[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
-          var _ref21 = _step24.value;
+          var _ref19 = _step24.value;
 
-          var _ref22 = _slicedToArray(_ref21, 2);
+          var _ref20 = _slicedToArray(_ref19, 2);
 
-          var _name = _ref22[0];
-          var val = _ref22[1];
+          var _name = _ref20[0];
+          var val = _ref20[1];
 
           result[cname][_name] = val;
         }
@@ -2141,12 +2137,12 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
     try {
       for (var _iterator26 = Object.entries(lines)[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-        var _ref23 = _step26.value;
+        var _ref21 = _step26.value;
 
-        var _ref24 = _slicedToArray(_ref23, 2);
+        var _ref22 = _slicedToArray(_ref21, 2);
 
-        var i = _ref24[0];
-        var l = _ref24[1];
+        var i = _ref22[0];
+        var l = _ref22[1];
 
         var n = Number.parseInt(i) + 1;
         if (l.trim().length > 0) Util.DebugOnly("ws recv/" + n + "> \"" + l + "\"");
@@ -2270,56 +2266,57 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
         }
         break;
       case "PRIVMSG":
-        var event = new TwitchChatEvent(line, result);
-        if (!room.userInfo.hasOwnProperty(result.user)) {
-          room.userInfo[result.user] = {};
-        }
-        if (!event.flags.badges) event.flags.badges = [];
-        if (_this3._enable_ffz) {
-          var _iteratorNormalCompletion29 = true;
-          var _didIteratorError29 = false;
-          var _iteratorError29 = undefined;
+        {
+          var event = new TwitchChatEvent(line, result);
+          if (!room.userInfo.hasOwnProperty(result.user)) {
+            room.userInfo[result.user] = {};
+          }
+          if (!event.flags.badges) event.flags.badges = [];
+          if (_this3._enable_ffz) {
+            var _iteratorNormalCompletion29 = true;
+            var _didIteratorError29 = false;
+            var _iteratorError29 = undefined;
 
-          try {
-            for (var _iterator29 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-              var _ref25 = _step29.value;
-
-              var _ref26 = _slicedToArray(_ref25, 2);
-
-              var badge_nr = _ref26[0];
-              var users = _ref26[1];
-
-              if (users.indexOf(result.user) > -1) {
-                var ffz_badges = event.flags['ffz-badges'];
-                if (ffz_badges === undefined) ffz_badges = [];
-                ffz_badges.push(_this3._ffz_badges[badge_nr]);
-                event.flags['ffz-badges'] = ffz_badges;
-              }
-            }
-          } catch (err) {
-            _didIteratorError29 = true;
-            _iteratorError29 = err;
-          } finally {
             try {
-              if (!_iteratorNormalCompletion29 && _iterator29.return) {
-                _iterator29.return();
+              for (var _iterator29 = Object.entries(_this3._ffz_badge_users)[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
+                var _ref23 = _step29.value;
+
+                var _ref24 = _slicedToArray(_ref23, 2);
+
+                var badge_nr = _ref24[0];
+                var users = _ref24[1];
+
+                if (users.indexOf(result.user) > -1) {
+                  var ffz_badges = event.flags['ffz-badges'];
+                  if (ffz_badges === undefined) ffz_badges = [];
+                  ffz_badges.push(_this3._ffz_badges[badge_nr]);
+                  event.flags['ffz-badges'] = ffz_badges;
+                }
               }
+            } catch (err) {
+              _didIteratorError29 = true;
+              _iteratorError29 = err;
             } finally {
-              if (_didIteratorError29) {
-                throw _iteratorError29;
+              try {
+                if (!_iteratorNormalCompletion29 && _iterator29.return) {
+                  _iterator29.return();
+                }
+              } finally {
+                if (_didIteratorError29) {
+                  throw _iteratorError29;
+                }
               }
             }
           }
-        }
-        var ui = room.userInfo[result.user];
-        ui.ismod = event.ismod;
-        ui.issub = event.issub;
-        ui.isvip = event.isvip;
-        ui.userid = event.flags['user-id'];
-        ui.uuid = event.flags['id'];
-        ui.badges = event.flags['badges'];
-        Util.FireEvent(event);
-        break;
+          var ui = room.userInfo[result.user];
+          ui.ismod = event.ismod;
+          ui.issub = event.issub;
+          ui.isvip = event.isvip;
+          ui.userid = event.flags['user-id'];
+          ui.uuid = event.flags['id'];
+          ui.badges = event.flags['badges'];
+          Util.FireEvent(event);
+        }break;
       case "WHISPER":
         break;
       case "USERSTATE":
@@ -2332,12 +2329,12 @@ TwitchClient.prototype.OnWebsocketMessage = function _TwitchClient_OnWebsocketMe
 
         try {
           for (var _iterator30 = Object.entries(result.flags)[Symbol.iterator](), _step30; !(_iteratorNormalCompletion30 = (_step30 = _iterator30.next()).done); _iteratorNormalCompletion30 = true) {
-            var _ref27 = _step30.value;
+            var _ref25 = _step30.value;
 
-            var _ref28 = _slicedToArray(_ref27, 2);
+            var _ref26 = _slicedToArray(_ref25, 2);
 
-            var key = _ref28[0];
-            var val = _ref28[1];
+            var key = _ref26[0];
+            var val = _ref26[1];
 
             _this3._self_userstate[cstr][key] = val;
           }
