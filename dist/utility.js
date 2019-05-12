@@ -602,7 +602,7 @@ Util.URL = function _Util_URL(url) {
 Util.XHRError = function _Util_XHRError(obj) {
   var stack = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
-  var e = JSON.parse(JSON.stringify(obj));
+  var e = Util.JSONClone(obj);
   if (stack !== null) {
     e.stack = stack;
   }
@@ -2642,6 +2642,11 @@ Util.SplitByMatches = function _Util_SplitByMatches(str, matches) {
     result.push(str.substr(pos));
   }
   return result;
+};
+
+/* Clone an object using JSON */
+Util.JSONClone = function _Util_JSONClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
 };
 
 /* End parsing, formatting, and escaping functions 0}}} */

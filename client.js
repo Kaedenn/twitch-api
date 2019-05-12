@@ -933,7 +933,7 @@ function _TwitchClient_BTTVEnabled() {
 
 TwitchClient.prototype.SelfUserState =
 function _TwitchClient_SelfUserState() {
-  let obj = JSON.parse(JSON.stringify(this._self_userstate));
+  let obj = Util.JSONClone(this._self_userstate);
   obj.userid = this._self_userid;
   return obj;
 }

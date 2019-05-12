@@ -369,7 +369,7 @@ Util.URL = function _Util_URL(url) {
 
 /* Converts an XHR onError object to an Error object */
 Util.XHRError = function _Util_XHRError(obj, stack=null) {
-  let e = JSON.parse(JSON.stringify(obj));
+  let e = Util.JSONClone(obj);
   if (stack !== null) {
     e.stack = stack;
   }
@@ -1489,6 +1489,11 @@ Util.SplitByMatches = function _Util_SplitByMatches(str, matches, matchfunc=null
     result.push(str.substr(pos));
   }
   return result;
+}
+
+/* Clone an object using JSON */
+Util.JSONClone = function _Util_JSONClone(obj) {
+  return JSON.parse(JSON.stringify(obj));
 }
 
 /* End parsing, formatting, and escaping functions 0}}} */
