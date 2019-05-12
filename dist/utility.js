@@ -598,18 +598,6 @@ Util.URL = function _Util_URL(url) {
   return url;
 };
 
-/* Converts an XHR onError object to an Error object */
-Util.XHRError = function _Util_XHRError(obj) {
-  var stack = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-  var e = Util.JSONClone(obj);
-  if (stack !== null) {
-    e.stack = stack;
-  }
-  Object.setPrototypeOf(e, Error.prototype);
-  return e;
-};
-
 var _Util_API = function () {
   function _Util_API() {
     var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
@@ -811,6 +799,7 @@ Util.Throw = function _Util_Throw(type, msg) {
 /* End error handling 0}}} */
 
 /* Logging {{{0 */
+
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
 Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
@@ -2955,27 +2944,36 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
 /* End query string handling 0}}} */
 
-/* Loading scripts {{{0 */
+/* Point-box functions {{{0 */
 
-/* Add the javascript file to the document's <head> */
-Util.AddScript = function _Util_AddScript(src) {
-  var s = document.createElement("script");
-  s.setAttribute("type", "text/javascript");
-  s.setAttribute("src", src);
-  document.head.appendChild(s);
+/* Return whether or not the position is inside the box */
+Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
+  if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
+    return true;
+  } else {
+    return false;
+  }
 };
 
-/* Add all of the javascript files to the document's <head> */
-Util.AddScripts = function _Util_AddScripts(scripts) {
+/* Return whether or not the position is inside the given DOMRect */
+Util.RectContains = function _Util_RectContains(x, y, rect) {
+  return Util.BoxContains(x, y, rect.left, rect.top, rect.right, rect.bottom);
+};
+
+/* Return whether or not the position is over the HTML element */
+Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
+  var rects = elem.getClientRects();
   var _iteratorNormalCompletion34 = true;
   var _didIteratorError34 = false;
   var _iteratorError34 = undefined;
 
   try {
-    for (var _iterator34 = scripts[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
-      var s = _step34.value;
+    for (var _iterator34 = rects[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
+      var rect = _step34.value;
 
-      Util.AddScript(s);
+      if (Util.RectContains(x, y, rect)) {
+        return true;
+      }
     }
   } catch (err) {
     _didIteratorError34 = true;
@@ -2991,44 +2989,28 @@ Util.AddScripts = function _Util_AddScripts(scripts) {
       }
     }
   }
-};
 
-/* End loading scripts 0}}} */
-
-/* Point-box functions {{{0 */
-
-/* Return whether or not the position is inside the box */
-Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
-  if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
-    return true;
-  } else {
-    return false;
-  }
-};
-
-/* Return whether or not the position is inside the given DOMRect */
-Util.RectContains = function _Util_RectContains(x, y, rect) {
-  if (x >= rect.left && x <= rect.right) {
-    if (y >= rect.top && y <= rect.bottom) {
-      return true;
-    }
-  }
   return false;
 };
 
-/* Return whether or not the position is over the HTML element */
-Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
-  var rects = elem.getClientRects();
+/* End point-box functions 0}}} */
+
+/* CSS functions {{{0 */
+
+Util.CSS = {};
+
+/* Get a stylesheet by filename or partial pathname */
+Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
   var _iteratorNormalCompletion35 = true;
   var _didIteratorError35 = false;
   var _iteratorError35 = undefined;
 
   try {
-    for (var _iterator35 = rects[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
-      var rect = _step35.value;
+    for (var _iterator35 = document.styleSheets[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
+      var ss = _step35.value;
 
-      if (Util.RectContains(x, y, rect)) {
-        return true;
+      if (ss.href.endsWith("/" + filename.trimStart('/'))) {
+        return ss;
       }
     }
   } catch (err) {
@@ -3046,27 +3028,21 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
     }
   }
 
-  return false;
+  return null;
 };
 
-/* End point-box functions 0}}} */
-
-/* CSS functions {{{0 */
-
-Util.CSS = {};
-
-/* Get a stylesheet by filename or partial pathname */
-Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
+/* Given a stylesheet, obtain a rule definition by name */
+Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
   var _iteratorNormalCompletion36 = true;
   var _didIteratorError36 = false;
   var _iteratorError36 = undefined;
 
   try {
-    for (var _iterator36 = document.styleSheets[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-      var ss = _step36.value;
+    for (var _iterator36 = css.cssRules[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+      var rule = _step36.value;
 
-      if (ss.href.endsWith("/" + filename.trimStart('/'))) {
-        return ss;
+      if (rule.selectorText == rule_name) {
+        return rule;
       }
     }
   } catch (err) {
@@ -3080,38 +3056,6 @@ Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
     } finally {
       if (_didIteratorError36) {
         throw _iteratorError36;
-      }
-    }
-  }
-
-  return null;
-};
-
-/* Given a stylesheet, obtain a rule definition by name */
-Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
-  var _iteratorNormalCompletion37 = true;
-  var _didIteratorError37 = false;
-  var _iteratorError37 = undefined;
-
-  try {
-    for (var _iterator37 = css.cssRules[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
-      var rule = _step37.value;
-
-      if (rule.selectorText == rule_name) {
-        return rule;
-      }
-    }
-  } catch (err) {
-    _didIteratorError37 = true;
-    _iteratorError37 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion37 && _iterator37.return) {
-        _iterator37.return();
-      }
-    } finally {
-      if (_didIteratorError37) {
-        throw _iteratorError37;
       }
     }
   }
@@ -3162,6 +3106,14 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
 
 /* DOM functions {{{0 */
 
+/* Add the javascript file to the document's <head> */
+Util.AddScript = function _Util_AddScript(src) {
+  var s = document.createElement("script");
+  s.setAttribute("type", "text/javascript");
+  s.setAttribute("src", src);
+  document.head.appendChild(s);
+};
+
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
   /* NOTE: Expects an object inheriting from Element; not a jQuery node */
@@ -3169,49 +3121,49 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
   if (pred(root)) {
     results.push(root);
   } else if (root.childNodes && root.childNodes.length > 0) {
-    var _iteratorNormalCompletion38 = true;
-    var _didIteratorError38 = false;
-    var _iteratorError38 = undefined;
+    var _iteratorNormalCompletion37 = true;
+    var _didIteratorError37 = false;
+    var _iteratorError37 = undefined;
 
     try {
-      for (var _iterator38 = root.childNodes[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
-        var e = _step38.value;
-        var _iteratorNormalCompletion39 = true;
-        var _didIteratorError39 = false;
-        var _iteratorError39 = undefined;
+      for (var _iterator37 = root.childNodes[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
+        var e = _step37.value;
+        var _iteratorNormalCompletion38 = true;
+        var _didIteratorError38 = false;
+        var _iteratorError38 = undefined;
 
         try {
-          for (var _iterator39 = Util.SearchTree(e, pred)[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
-            var node = _step39.value;
+          for (var _iterator38 = Util.SearchTree(e, pred)[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
+            var node = _step38.value;
 
             results.push(node);
           }
         } catch (err) {
-          _didIteratorError39 = true;
-          _iteratorError39 = err;
+          _didIteratorError38 = true;
+          _iteratorError38 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion39 && _iterator39.return) {
-              _iterator39.return();
+            if (!_iteratorNormalCompletion38 && _iterator38.return) {
+              _iterator38.return();
             }
           } finally {
-            if (_didIteratorError39) {
-              throw _iteratorError39;
+            if (_didIteratorError38) {
+              throw _iteratorError38;
             }
           }
         }
       }
     } catch (err) {
-      _didIteratorError38 = true;
-      _iteratorError38 = err;
+      _didIteratorError37 = true;
+      _iteratorError37 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion38 && _iterator38.return) {
-          _iterator38.return();
+        if (!_iteratorNormalCompletion37 && _iterator37.return) {
+          _iterator37.return();
         }
       } finally {
-        if (_didIteratorError38) {
-          throw _iteratorError38;
+        if (_didIteratorError37) {
+          throw _iteratorError37;
         }
       }
     }
@@ -3256,16 +3208,6 @@ Util.GetHTML = function _Util_GetHTML(node) {
 };
 
 /* End DOM functions 0}}} */
-
-/* Return true if the given object inherits from the given typename */
-Util.IsInstanceOf = function _Object_IsInstanceOf(obj, typename) {
-  for (var p = obj; p; p = p.__proto__) {
-    if (p.constructor.name == typename) {
-      return true;
-    }
-  }
-  return false;
-};
 
 /* Mark the Utility API as loaded */
 Util.API_Loaded = true;

@@ -367,16 +367,6 @@ Util.URL = function _Util_URL(url) {
   return url;
 }
 
-/* Converts an XHR onError object to an Error object */
-Util.XHRError = function _Util_XHRError(obj, stack=null) {
-  let e = Util.JSONClone(obj);
-  if (stack !== null) {
-    e.stack = stack;
-  }
-  Object.setPrototypeOf(e, Error.prototype);
-  return e;
-}
-
 class _Util_API {
   constructor(headers=null, args=null) {
     this._headers = headers || {};
@@ -463,6 +453,7 @@ Util.Throw = function _Util_Throw(type, msg) {
 /* End error handling 0}}} */
 
 /* Logging {{{0 */
+
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
 Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
@@ -1659,25 +1650,6 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
 /* End query string handling 0}}} */
 
-/* Loading scripts {{{0 */
-
-/* Add the javascript file to the document's <head> */
-Util.AddScript = function _Util_AddScript(src) {
-  let s = document.createElement("script");
-  s.setAttribute("type", "text/javascript");
-  s.setAttribute("src", src);
-  document.head.appendChild(s);
-};
-
-/* Add all of the javascript files to the document's <head> */
-Util.AddScripts = function _Util_AddScripts(scripts) {
-  for (let s of scripts) {
-    Util.AddScript(s);
-  }
-};
-
-/* End loading scripts 0}}} */
-
 /* Point-box functions {{{0 */
 
 /* Return whether or not the position is inside the box */
@@ -1691,12 +1663,7 @@ Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
 
 /* Return whether or not the position is inside the given DOMRect */
 Util.RectContains = function _Util_RectContains(x, y, rect) {
-  if (x >= rect.left && x <= rect.right) {
-    if (y >= rect.top && y <= rect.bottom) {
-      return true;
-    }
-  }
-  return false;
+  return Util.BoxContains(x, y, rect.left, rect.top, rect.right, rect.bottom);
 }
 
 /* Return whether or not the position is over the HTML element */
@@ -1779,6 +1746,14 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 
 /* DOM functions {{{0 */
 
+/* Add the javascript file to the document's <head> */
+Util.AddScript = function _Util_AddScript(src) {
+  let s = document.createElement("script");
+  s.setAttribute("type", "text/javascript");
+  s.setAttribute("src", src);
+  document.head.appendChild(s);
+};
+
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
   /* NOTE: Expects an object inheriting from Element; not a jQuery node */
@@ -1832,16 +1807,6 @@ Util.GetHTML = function _Util_GetHTML(node) {
 }
 
 /* End DOM functions 0}}} */
-
-/* Return true if the given object inherits from the given typename */
-Util.IsInstanceOf = function _Object_IsInstanceOf(obj, typename) {
-  for (let p = obj; p; p = p.__proto__) {
-    if (p.constructor.name == typename) {
-      return true;
-    }
-  }
-  return false;
-}
 
 /* Mark the Utility API as loaded */
 Util.API_Loaded = true;
