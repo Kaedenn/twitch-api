@@ -1411,6 +1411,41 @@ TwitchClient.prototype._build_privmsg = function _TwitchClient__build_privmsg(ch
 
 /* End private functions section 0}}} */
 
+/* General status functions {{{0 */
+
+/* Obtain connection status information */
+TwitchClient.prototype.ConnectionStatus = function _TwitchClient_ConnectionStatus() {
+  return {
+    open: this._is_open,
+    connected: this.Connected(),
+    identified: this._has_clientid,
+    authed: this.IsAuthed()
+  };
+};
+
+/* Return whether or not we're connected to Twitch */
+TwitchClient.prototype.Connected = function _TwitchClient_Connected() {
+  return this._connected;
+};
+
+/* Return whether or not FFZ support is enabled */
+TwitchClient.prototype.FFZEnabled = function _TwitchClient_FFZEnabled() {
+  return !this._no_assets && this._enable_ffz;
+};
+
+/* Return whether or not BTTV support is enabled */
+TwitchClient.prototype.BTTVEnabled = function _TwitchClient_BTTVEnabled() {
+  return !this._no_assets && this._enable_bttv;
+};
+
+TwitchClient.prototype.SelfUserState = function _TwitchClient_SelfUserState() {
+  var obj = JSON.parse(JSON.stringify(this._self_userstate));
+  obj.userid = this._self_userid;
+  return obj;
+};
+
+/* End of general status functions 0}}} */
+
 /* Role and moderation functions {{{0 */
 
 /* Return whether or not the client is authenticated with an AuthID */
