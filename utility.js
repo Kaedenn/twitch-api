@@ -777,7 +777,7 @@ class LoggerUtility {
   }
 
   /* Convert the arguments given to a single string */
-  static stringify(...args) {
+  stringify(...args) {
     let result = [];
     for (let arg of args) {
       if (arg === null) result.push("null");
@@ -792,7 +792,7 @@ class LoggerUtility {
         result.push(JSON.stringify(arg));
       }
     }
-    return args.join(", ");
+    return result.join(" ");
   }
 
   /* Log the arguments given with a stacktrace */

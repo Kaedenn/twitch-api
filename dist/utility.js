@@ -1381,108 +1381,12 @@ var LoggerUtility = function () {
     /* Convert the arguments given to a single string */
 
   }, {
-    key: "Trace",
-
-
-    /* Log the arguments given with a stacktrace */
-    value: function Trace() {
-      for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-        args[_key3] = arguments[_key3];
-      }
-
-      this.do_log("TRACE", args, true);
-    }
-  }, {
-    key: "Debug",
-    value: function Debug() {
-      for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-        args[_key4] = arguments[_key4];
-      }
-
-      this.do_log("DEBUG", args, true);
-    }
-  }, {
-    key: "Info",
-    value: function Info() {
-      for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-        args[_key5] = arguments[_key5];
-      }
-
-      this.do_log("INFO", args, true);
-    }
-  }, {
-    key: "Warn",
-    value: function Warn() {
-      for (var _len6 = arguments.length, args = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-        args[_key6] = arguments[_key6];
-      }
-
-      this.do_log("WARN", args, true);
-    }
-  }, {
-    key: "Error",
-    value: function Error() {
-      for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-        args[_key7] = arguments[_key7];
-      }
-
-      this.do_log("ERROR", args, true);
-    }
-
-    /* Log the arguments given without a stacktrace */
-
-  }, {
-    key: "TraceOnly",
-    value: function TraceOnly() {
-      for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
-        args[_key8] = arguments[_key8];
-      }
-
-      this.do_log("TRACE", args, false);
-    }
-  }, {
-    key: "DebugOnly",
-    value: function DebugOnly() {
-      for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
-        args[_key9] = arguments[_key9];
-      }
-
-      this.do_log("DEBUG", args, false);
-    }
-  }, {
-    key: "InfoOnly",
-    value: function InfoOnly() {
-      for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
-        args[_key10] = arguments[_key10];
-      }
-
-      this.do_log("INFO", args, false);
-    }
-  }, {
-    key: "WarnOnly",
-    value: function WarnOnly() {
-      for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
-        args[_key11] = arguments[_key11];
-      }
-
-      this.do_log("WARN", args, false);
-    }
-  }, {
-    key: "ErrorOnly",
-    value: function ErrorOnly() {
-      for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
-        args[_key12] = arguments[_key12];
-      }
-
-      this.do_log("ERROR", args, false);
-    }
-  }], [{
     key: "stringify",
     value: function stringify() {
       var result = [];
 
-      for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
-        args[_key13] = arguments[_key13];
+      for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+        args[_key3] = arguments[_key3];
       }
 
       var _iteratorNormalCompletion22 = true;
@@ -1514,9 +1418,105 @@ var LoggerUtility = function () {
         }
       }
 
-      return args.join(", ");
+      return result.join(" ");
+    }
+
+    /* Log the arguments given with a stacktrace */
+
+  }, {
+    key: "Trace",
+    value: function Trace() {
+      for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+        args[_key4] = arguments[_key4];
+      }
+
+      this.do_log("TRACE", args, true);
     }
   }, {
+    key: "Debug",
+    value: function Debug() {
+      for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+        args[_key5] = arguments[_key5];
+      }
+
+      this.do_log("DEBUG", args, true);
+    }
+  }, {
+    key: "Info",
+    value: function Info() {
+      for (var _len6 = arguments.length, args = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+        args[_key6] = arguments[_key6];
+      }
+
+      this.do_log("INFO", args, true);
+    }
+  }, {
+    key: "Warn",
+    value: function Warn() {
+      for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+        args[_key7] = arguments[_key7];
+      }
+
+      this.do_log("WARN", args, true);
+    }
+  }, {
+    key: "Error",
+    value: function Error() {
+      for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
+        args[_key8] = arguments[_key8];
+      }
+
+      this.do_log("ERROR", args, true);
+    }
+
+    /* Log the arguments given without a stacktrace */
+
+  }, {
+    key: "TraceOnly",
+    value: function TraceOnly() {
+      for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
+        args[_key9] = arguments[_key9];
+      }
+
+      this.do_log("TRACE", args, false);
+    }
+  }, {
+    key: "DebugOnly",
+    value: function DebugOnly() {
+      for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
+        args[_key10] = arguments[_key10];
+      }
+
+      this.do_log("DEBUG", args, false);
+    }
+  }, {
+    key: "InfoOnly",
+    value: function InfoOnly() {
+      for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
+        args[_key11] = arguments[_key11];
+      }
+
+      this.do_log("INFO", args, false);
+    }
+  }, {
+    key: "WarnOnly",
+    value: function WarnOnly() {
+      for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
+        args[_key12] = arguments[_key12];
+      }
+
+      this.do_log("WARN", args, false);
+    }
+  }, {
+    key: "ErrorOnly",
+    value: function ErrorOnly() {
+      for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
+        args[_key13] = arguments[_key13];
+      }
+
+      this.do_log("ERROR", args, false);
+    }
+  }], [{
     key: "SEVERITIES",
     get: function get() {
       return { ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1 };
