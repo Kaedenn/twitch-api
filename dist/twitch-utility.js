@@ -970,10 +970,10 @@ Twitch.IRC = {
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
     if (msg.startsWith('\x01ACTION ')) {
-      result.action = true;
+      result.flags.action = true;
       result.message = msg.strip('\x01').substr('ACTION '.length);
     } else {
-      result.action = false;
+      result.flags.action = false;
       result.message = msg;
     }
   } else if (parts[1] == "WHISPER") {
