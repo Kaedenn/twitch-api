@@ -7,11 +7,11 @@
  */
 
 /* FIXME:
- *  OnWebsocketMessage:
+ *  Only the first channel-specific sub badge seems to appear; longer-duration
+ *  badges don't display.
+ *  _onWebsocketMessage:
  *    Use Twitch.IRC.Parse over Twitch.ParseIRCMessage. Requires significant
- *    rewrite of OnWebsocketMessage and of bound event handlers in drivers.
- *  OnWebsocketError:
- *    error seems to be lost somewhere
+ *    rewrite of _onWebsocketMessage and of bound event handlers in drivers.
  */
 
 /* TODO:
@@ -436,7 +436,7 @@ function TwitchClient(opts) {
         Util.LogOnly("ws open>", this.url);
         self._connected = false;
         self._is_open = true;
-        self.OnWebsocketOpen(cfg_name, oauth);
+        self._onWebsocketOpen(cfg_name, oauth);
       } catch (e) {
         alert("ws._onopen error: " + e.toString());
         throw e;
@@ -445,7 +445,7 @@ function TwitchClient(opts) {
     this._ws.onmessage = (function _ws_onmessage(event) {
       try {
         Util.TraceOnly('ws recv>', Twitch.StripCredentials(event.data.repr()));
-        self.OnWebsocketMessage(event);
+        self._onWebsocketMessage(event);
       } catch (e) {
         alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
@@ -455,7 +455,7 @@ function TwitchClient(opts) {
       try {
         Util.LogOnly('ws error>', event);
         self._connected = false;
-        self.OnWebsocketError(event);
+        self._onWebsocketError(event);
       } catch (e) {
         alert("ws._onerror error: " + e.toString());
         throw e;
@@ -466,7 +466,7 @@ function TwitchClient(opts) {
         Util.LogOnly('ws close>', event);
         self._connected = false;
         self._is_open = false;
-        self.OnWebsocketClose(event);
+        self._onWebsocketClose(event);
       } catch (e) {
         alert("ws._onclose error: " + e.toString());
         throw e;
@@ -1232,14 +1232,14 @@ function _TwitchClient_SendRaw(raw_msg) {
 TwitchClient.prototype.AddHistory =
 function _TwitchClient_AddHistory(message) {
   this._history.unshift(message);
-  if (this._history.length > this._hist_max) {
+  while (this.GetHistoryLength() > this.GetHistoryMax()) {
     this._history.pop();
   }
 }
 
 /* Obtain the history of sent messages */
 TwitchClient.prototype.GetHistory =
-function _TwitchClient_GetHistort() {
+function _TwitchClient_GetHistory() {
   /* Make a copy to prevent unexpected modification */
   return this._history.map((x) => x);
 }
@@ -1268,22 +1268,6 @@ function _TwitchClient_GetHistoryLength() {
 /* End of history functions 0}}} */
 
 /* Badge handling functions {{{0 */
-
-/* Get an object containing all of the known badges */
-TwitchClient.prototype.GetAllBadges =
-function _TwitchClient_GetAllBadges() {
-  let result = {global: {}};
-  for (let cname of Object.keys(this._channel_badges)) {
-    result[cname] = {};
-    for (let [name, val] of Object.entries(this._channel_badges[cname])) {
-      result[cname][name] = val;
-    }
-  }
-  for (let name of Object.keys(this._global_badges)) {
-    result.global[name] = this._global_badges[name];
-  }
-  return result;
-}
 
 /* Return true if the badge specified is a global badge */
 TwitchClient.prototype.IsGlobalBadge =
@@ -1350,7 +1334,7 @@ function _TwitchClient_GetChannelBadge(channel, badge_name) {
 /* Obtain all of the global badges */
 TwitchClient.prototype.GetGlobalBadges =
 function _TwitchClient_GetGlobalBadges() {
-  return new Object(this._global_badges);
+  return Util.JSONClone(this._global_badges);
 }
 
 /* Obtain all of the channel badges for the specified channel */
@@ -1358,7 +1342,7 @@ TwitchClient.prototype.GetChannelBadges =
 function _TwitchClient_GetChannelBadges(channel) {
   channel = this._ensureChannel(channel);
   if (this._channel_badges.hasOwnProperty(channel.channel)) {
-    return new Object(this._channel_badges[channel.channel]);
+    return Util.JSONClone(this._channel_badges[channel.channel]);
   }
   return {};
 }
@@ -1368,8 +1352,8 @@ function _TwitchClient_GetChannelBadges(channel) {
 /* Websocket callbacks {{{0 */
 
 /* Callback: called when the websocket opens */
-TwitchClient.prototype.OnWebsocketOpen =
-function _TwitchClient_OnWebsocketOpen(name, pass) {
+TwitchClient.prototype._onWebsocketOpen =
+function _TwitchClient__onWebsocketOpen(name, pass) {
   this.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
   if (name && pass) {
     this._username = name;
@@ -1391,8 +1375,8 @@ function _TwitchClient_OnWebsocketOpen(name, pass) {
 }
 
 /* Callback: called when the websocket receives a message */
-TwitchClient.prototype.OnWebsocketMessage =
-function _TwitchClient_OnWebsocketMessage(ws_event) {
+TwitchClient.prototype._onWebsocketMessage =
+function _TwitchClient__onWebsocketMessage(ws_event) {
   let lines = ws_event.data.trim().split("\r\n");
   /* Log the lines to the debug console */
   if (lines.length == 1) {
@@ -1597,15 +1581,15 @@ function _TwitchClient_OnWebsocketMessage(ws_event) {
 }
 
 /* Callback: called when the websocket receives an error */
-TwitchClient.prototype.OnWebsocketError =
-function _TwitchClient_OnWebsocketError(event) {
+TwitchClient.prototype._onWebsocketError =
+function _TwitchClient__onWebsocketError(event) {
   Util.Error(event);
   Util.FireEvent(new TwitchEvent("ERROR", event));
 }
 
 /* Callback: called when the websocket is closed */
-TwitchClient.prototype.OnWebsocketClose =
-function _TwitchClient_OnWebsocketClose(event) {
+TwitchClient.prototype._onWebsocketClose =
+function _TwitchClient__onWebsocketClose(event) {
   for (let chobj of this._channels) {
     if (this._pending_channels.indexOf(chobj) == -1) {
       this._pending_channels.push(chobj);
