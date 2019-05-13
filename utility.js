@@ -1522,9 +1522,15 @@ Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
 }
 
 /* JSON encode and store a localStorage value */
-Util.SetWebStorage = function _Util_SetWebStorage(value, key=null) {
-  if (key === null) {
+Util.SetWebStorage = function _Util_SetWebStorage(...args) {
+  let key = null;
+  let value = null;
+  if (args.length === 1) {
     key = Util.GetWebStorageKey();
+    value = args[0];
+  } else {
+    key = args[0];
+    value = args[1];
   }
   if (key === null) {
     Util.Error("Util.SetWebStorage called without a key configured");
@@ -1545,7 +1551,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
     new_v = v;
     new_v.push(value);
   }
-  Util.SetWebStorage(new_v, key);
+  Util.SetWebStorage(key, new_v);
 }
 
 /* Class for handling configuration */
@@ -1570,7 +1576,7 @@ class ConfigStore { /* exported ConfigStore */
   }
   _merge(k, v) {
     this._config[k] = v;
-    Util.SetWebStorage(this._config, this._key);
+    Util.SetWebStorage(this._key, this._config);
   }
   addValue(key, val) {
     this._merge(key, val);

@@ -2675,11 +2675,15 @@ Util.GetWebStorage = function _Util_GetWebStorage() {
 };
 
 /* JSON encode and store a localStorage value */
-Util.SetWebStorage = function _Util_SetWebStorage(value) {
-  var key = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-  if (key === null) {
+Util.SetWebStorage = function _Util_SetWebStorage() {
+  var key = null;
+  var value = null;
+  if (arguments.length === 1) {
     key = Util.GetWebStorageKey();
+    value = arguments.length <= 0 ? undefined : arguments[0];
+  } else {
+    key = arguments.length <= 0 ? undefined : arguments[0];
+    value = arguments.length <= 1 ? undefined : arguments[1];
   }
   if (key === null) {
     Util.Error("Util.SetWebStorage called without a key configured");
@@ -2700,7 +2704,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
     new_v = v;
     new_v.push(value);
   }
-  Util.SetWebStorage(new_v, key);
+  Util.SetWebStorage(key, new_v);
 };
 
 /* Class for handling configuration */
@@ -2761,7 +2765,7 @@ var ConfigStore = function () {
     key: "_merge",
     value: function _merge(k, v) {
       this._config[k] = v;
-      Util.SetWebStorage(this._config, this._key);
+      Util.SetWebStorage(this._key, this._config);
     }
   }, {
     key: "addValue",
