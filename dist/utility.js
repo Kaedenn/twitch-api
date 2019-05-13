@@ -3204,6 +3204,8 @@ Util.CreateNode = function _Util_CreateNode(obj) {
 Util.GetHTML = function _Util_GetHTML(node) {
   if (node.outerHTML) {
     return node.outerHTML;
+  } else if (typeof node.nodeValue === "string") {
+    return ("" + node.nodeValue).escape();
   } else if (node.nodeValue) {
     return ("" + node.nodeValue).escape();
   } else {
