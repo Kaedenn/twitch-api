@@ -1003,55 +1003,13 @@ Twitch.IRC = {
     result.flags = data;
     result.server = parts[0].lstrip(':');
     result.channel = Twitch.ParseChannel(parts[2]);
-    result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
-    result.issub = false;
-    result.sub_kind = null;
-    result.sub_user = null;
-    result.sub_gifting_user = null;
-    result.sub_months = null;
-    if (result.flags["msg-id"]) {
-      if (result.flags.hasOwnProperty('msg-param-cumulative-months')) {
-        result.sub_total_months = result.flags['msg-param-cumulative-months'];
-      }
-      if (result.flags.hasOwnProperty('msg-param-streak-months')) {
-        result.sub_streak_months = result.flags['msg-param-streak-months'];
-      }
-      if (result.flags.hasOwnProperty('msg-param-sub-plan-name')) {
-        result.sub_plan = result.flags['msg-param-sub-plan-name'];
-      }
-      switch (result.flags["msg-id"]) {
-        case "sub":
-          result.issub = true;
-          result.sub_kind = "SUB";
-          result.sub_user = result.flags["login"];
-          result.sub_months = result.sub_total_months;
-          result.sub_total_months = result.flags["msg-param-cumulative-months"];
-          break;
-        case "resub":
-          result.issub = true;
-          result.sub_kind = "RESUB";
-          result.sub_user = result.flags["login"];
-          result.sub_months = result.sub_total_months;
-          result.sub_total_months = result.flags["msg-param-cumulative-months"];
-          break;
-        case "subgift":
-          result.issub = true;
-          result.sub_kind = "GIFTSUB";
-          result.sub_gifting_user = result.flags["login"];
-          result.sub_user = result.flags["msg-param-recipient-user-name"];
-          result.sub_months = result.sub_total_months;
-          result.sub_total_months = result.flags["msg-param-cumulative-months"];
-          break;
-        case "anonsubgift":
-          result.issub = true;
-          result.sub_kind = "ANONGIFTSUB";
-          result.sub_gifting_user = result.flags["login"];
-          result.sub_user = result.flags["msg-param-recipient-user-name"];
-          result.sub_months = result.sub_total_months;
-          result.sub_total_months = result.flags["msg-param-cumulative-months"];
-          break;
-      }
+    if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
+      result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
+    } else {
+      result.message = "";
     }
+    result.sub_kind = TwitchSubEvent.FromMsgID(result.flags["msg-id"]);
+    result.issub = result.sub_kind !== null;
   } else if (parts[1] == "GLOBALUSERSTATE") {
     /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
     result.cmd = "GLOBALUSERSTATE";

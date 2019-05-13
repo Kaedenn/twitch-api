@@ -16,7 +16,6 @@ libkae-js
 # Ignore Node.js files
 node_modules/
 package-lock.json
-.eslintrc*
 
 # Ignore compiled Python files
 *.pyc

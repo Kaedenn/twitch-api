@@ -113,14 +113,19 @@ class TwitchEvent {
 
   get channel() { return this._parsed.channel; }
   get message() { return this._parsed.message; }
-  get user() { return this._parsed.user; }
-  get name() { return this._parsed.flags["display-name"] || this._parsed.user; }
+  get user() { return this._parsed.user || this.flags["display-name"]; }
+  get name() { return this.flags["display-name"] || this._parsed.user; }
   get flags() { return this._parsed.flags; }
-  flag(flag) {
-    if (this._parsed.flags) {
-      return this._parsed.flags[flag];
+  flag(flag) { return this._parsed.flags ? this._parsed.flags[flag] : null; }
+
+  /* Obtain the value of the first non-falsy flag */
+  first_flag(...flags) {
+    for (let flag of flags) {
+      if (this.flags[flag]) {
+        return this.flags[flag];
+      }
     }
-    return undefined;
+    return null;
   }
 
   /* Methods specifically for the Twitch NOTICE command */
@@ -304,7 +309,7 @@ class TwitchSubEvent extends TwitchEvent {
   get kind() { return this._sub_kind; }
   static get SUB() { return "SUB"; }
   static get RESUB() { return "RESUB"; }
-  static get GIFTSUB() { return "GISTSUB"; }
+  static get GIFTSUB() { return "GIFTSUB"; }
   static get ANONGIFTSUB() { return "ANONGIFTSUB"; }
 
   static get PLAN_PRIME() { return "Prime"; }
@@ -312,8 +317,36 @@ class TwitchSubEvent extends TwitchEvent {
   static get PLAN_TIER2() { return "2000"; }
   static get PLAN_TIER3() { return "3000"; }
 
-  /* Apply to all sub kinds */
-  get user() { return this.flags['msg-param-login']; }
+  static FromMsgID(msgid) {
+    if (msgid === "sub") return TwitchSubEvent.SUB;
+    if (msgid === "resub") return TwitchSubEvent.RESUB;
+    if (msgid === "subgift") return TwitchSubEvent.GIFTSUB;
+    if (msgid === "anonsubgift") return TwitchSubEvent.ANONSUBGIFT;
+    return null;
+  }
+
+  static PlanName(plan_id) {
+    if (plan_id === TwitchSubEvent.PLAN_PRIME) {
+      return "Twitch Prime";
+    } else if (plan_id == TwitchSubEvent.PLAN_TIER1) {
+      return "Tier 1";
+    } else if (plan_id == TwitchSubEvent.PLAN_TIER2) {
+      return "Tier 2";
+    } else if (plan_id == TwitchSubEvent.PLAN_TIER3) {
+      return "Tier 3";
+    } else {
+      return `"${plan_id}"`
+    }
+  }
+
+  /* Methods below apply to all sub kinds */
+  get user() {
+    return this.first_flag(
+      'msg-param-login',
+      'display-name'
+    ) || this._parsed.user;
+  }
+
   get plan() { return this.flags['msg-param-sub-plan-name']; }
   get plan_id() { return this.flags['msg-param-sub-plan']; }
   get months() { return this.flags['msg-param-months'] || 0; }
@@ -321,7 +354,7 @@ class TwitchSubEvent extends TwitchEvent {
   get share_streak() { return this.flags['msg-param-should-share-streak']; }
   get streak_months() { return this.flags['msg-param-streak-months'] || 0; }
 
-  /* Apply only to gift subs */
+  /* Methods below only apply only to gift subs */
   get anonymous() { return this.kind == TwitchSubEvent.ANONGIFTSUB; }
   get recipient() { return this.flags['msg-param-recipient-user-name']; }
   get recipient_id() { return this.flags['msg-param-recipient-id']; }
@@ -1541,6 +1574,8 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
         } else if (result.sub_kind == "ANONGIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
+        } else {
+          Util.Warn("Unknown USERNOTICE type", line, result);
         }
         break;
       case "GLOBALUSERSTATE":
