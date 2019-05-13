@@ -357,7 +357,7 @@ Util.URL = function _Util_URL(url) {
       p = 'https:';
     }
     return p + url;
-  } else if (!url.match(/^[\w-]:/)) {
+  } else if (!url.match(/^[\w-]+:/)) {
     if (window.location.protocol === "https:") {
       return "https://" + url;
     } else {
