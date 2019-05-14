@@ -178,29 +178,25 @@ Array.range = function _Array_range(nelem, dflt=null) {
   return a;
 }
 
-/* Strip characters from left (pos) or right (neg) */
-String.prototype._stripFrom = function _String__stripFrom(chrs, from) {
-  let d = (from > 0 ? 1 : -1);
-  let i = (from > 0 ? 0 : this.length - 1);
-  if (!chrs) {
-    chrs = [' ', '\r', '\n'];
-  }
-  while ((d == 1 && i < this.length) || (d == -1 && i > 0)) {
-    if (!chrs.includes(this[i])) {
-      break;
-    }
-    i += d;
-  }
-  if (d == 1) {
-    return this.substr(i);
-  } else if (d == -1) {
-    return this.substr(0, i+1);
-  }
-}
-
 /* Remove `chrs` from the beginning and end of the string */
 String.prototype.strip = function _String_strip(chrs) {
-  return this._stripFrom(chrs, 1)._stripFrom(chrs, -1);
+  let chars = [];
+  if (chrs && chrs.length > 0) {
+    for (let c of chrs) {
+      chars.push(c);
+    }
+  } else {
+    chars = [' ', '\r', '\n'];
+  }
+  let si = 0;
+  let ei = this.length - 1;
+  while (si < this.length && chars.indexOf(this[si]) > -1) {
+    si += 1;
+  }
+  while (ei > 0 && chars.indexOf(this[ei]) > -1) {
+    ei -= 1;
+  }
+  return si < ei ? this.substring(si, ei+1) : "";
 }
 
 /* Escape a string for proper HTML printing */
@@ -212,11 +208,6 @@ String.prototype.escape = function _String_escape() {
   result = result.replace(/"/g, '&quot;');
   result = result.replace(/'/g, '&apos;');
   return result;
-}
-
-/* Obtain an escaped version of the string */
-String.prototype.repr = function _String_repr() {
-  return JSON.stringify(this);
 }
 
 /* Implement Array.map for strings */
@@ -1319,7 +1310,7 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* End event handling 0}}} */
 
-/* Parsing, formatting, and escaping functions {{{0 */
+/* Parsing, formatting, escaping, and string functions {{{0 */
 
 /* Characters requiring HTML escaping (used by String.escape) */
 Util.EscapeChars = {
@@ -1471,7 +1462,7 @@ Util.JSONClone = function _Util_JSONClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
 
-/* End parsing, formatting, and escaping functions 0}}} */
+/* End parsing, formatting, escaping, and string functions 0}}} */
 
 /* Configuration and localStorage functions {{{0 */
 

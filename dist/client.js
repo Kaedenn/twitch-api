@@ -311,8 +311,9 @@ var TwitchChatEvent = function (_TwitchEvent) {
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
-      var args = [this._raw.repr(), JSON.stringify(this._parsed)].join(",");
-      return "new " + cls + "(" + args + ")";
+      var raw = JSON.stringify(this._raw);
+      var parsed = JSON.stringify(this._parsed);
+      return "new " + cls + "(" + raw + "," + parsed + ")";
     }
   }, {
     key: "id",
@@ -662,7 +663,8 @@ function TwitchClient(opts) {
     }.bind(this._ws);
     this._ws.onmessage = function _ws_onmessage(event) {
       try {
-        Util.TraceOnly('ws recv>', Twitch.StripCredentials(event.data.repr()));
+        var data = Twitch.StripCredentials(JSON.stringify(event.data));
+        Util.TraceOnly('ws recv>', data);
         self._onWebsocketMessage(event);
       } catch (e) {
         alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
@@ -693,7 +695,7 @@ function TwitchClient(opts) {
     this.send = function _TwitchClient_send(m) {
       try {
         this._ws.send(m);
-        Util.DebugOnly('ws send>', Twitch.StripCredentials(m).repr());
+        Util.DebugOnly('ws send>', JSON.stringify(Twitch.StripCredentials(m)));
       } catch (e) {
         alert("this.send error: " + e.toString());
         throw e;
