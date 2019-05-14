@@ -235,6 +235,8 @@ var TwitchEvent = function () {
         RESUB: "RESUB",
         GIFTSUB: "GIFTSUB",
         ANONGIFTSUB: "ANONGIFTSUB",
+        OTHERUSERNOTICE: "OTHERUSERNOTICE",
+        RAID: "RAID",
         OPEN: "OPEN",
         CLOSE: "CLOSE",
         MESSAGE: "MESSAGE",
@@ -2269,7 +2271,10 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
           Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
         } else if (result.sub_kind == "ANONGIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
+        } else if (result.israid) {
+          Util.FireEvent(new TwitchEvent("RAID", line, result));
         } else {
+          Util.FireEvent(new TwitchEvent("OTHERUSERNOTICE", line, result));
           Util.Warn("Unknown USERNOTICE type", line, result);
         }
         break;

@@ -960,6 +960,12 @@ Twitch.IRC = {
     }
     result.sub_kind = TwitchSubEvent.FromMsgID(result.flags["msg-id"]);
     result.issub = result.sub_kind !== null;
+    result.israid = result.flags["msg-id"] === "raid";
+    if (result.israid) {
+      result.viewer_count = result.flags["msg-param-viewerCount"];
+      result.raider = result.flags["msg-param-displayName"];
+      result.raid_user = result.flags["msg-param-login"];
+    }
   } else if (parts[1] == "GLOBALUSERSTATE") {
     /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
     result.cmd = "GLOBALUSERSTATE";
