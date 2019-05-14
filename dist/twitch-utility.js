@@ -4,49 +4,7 @@
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 var Twitch = {};
-
-/* Storage of values used for debugging */
-
-var _Twitch_DebugCache = function () {
-  function _Twitch_DebugCache() {
-    _classCallCheck(this, _Twitch_DebugCache);
-
-    this.values = {};
-  }
-
-  _createClass(_Twitch_DebugCache, [{
-    key: "add",
-    value: function add(set, key) {
-      if (!(set in this.values)) {
-        this.values[set] = {};
-      }
-      if (key in this.values[set]) {
-        this.values[set][key] += 1;
-      } else {
-        this.values[set][key] = 1;
-      }
-    }
-  }, {
-    key: "tolist",
-    value: function tolist(set) {
-      return Object.keys(this.values[set]);
-    }
-  }, {
-    key: "getall",
-    value: function getall() {
-      return this.values;
-    }
-  }]);
-
-  return _Twitch_DebugCache;
-}();
-
-Twitch.DebugCache = new _Twitch_DebugCache();
 
 /* API URLs {{{0 */
 
@@ -259,7 +217,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
-  user = user.lstrip(':');
+  user = user.replace(/^:/, "");
   return user.split('!')[0];
 };
 
@@ -417,9 +375,9 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 };
 
 /* Parse @<flags...> key,value pairs */
-Twitch.ParseData = function _Twitch_ParseData(dataString) {
+Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
   /* @key=value;key=value;... */
-  dataString = dataString.lstrip('@');
+  dataString = dataString.replace(/^@/, "");
   var data = {};
   var _iteratorNormalCompletion6 = true;
   var _didIteratorError6 = false;
@@ -440,8 +398,6 @@ Twitch.ParseData = function _Twitch_ParseData(dataString) {
         val = _item$split2[1];
       }
       val = Twitch.ParseFlag(key, val);
-      Twitch.DebugCache.add('flags', key);
-      Twitch.DebugCache.add('flag-' + key, val);
       data[key] = val;
     }
   } catch (err) {
@@ -875,13 +831,7 @@ Twitch.IRC = {
         } else if (fn == "users") {
           resp.fields[fn] = match[fi].split(" ");
         } else if (fn == "flags") {
-          resp.fields[fn] = Twitch.ParseData(match[fi]); /* FIXME: undefined */
-          /*TypeError: dataString is undefined[Learn More] twitch-utility.js:240:3
-              _Twitch_ParseData https://kaedenn.github.io/twitch-api/twitch-utility.js:240
-              _Twitch_IRC_Parse https://kaedenn.github.io/twitch-api/twitch-utility.js:547
-              _TwitchClient_OnWebsocketMessage https://kaedenn.github.io/twitch-api/client.js:1028
-              onmessage https://kaedenn.github.io/twitch-api/client.js:252
-          */
+          resp.fields[fn] = Twitch.ParseFlags(match[fi]);
         } else {
           resp.fields[fn] = match[fi];
         }
@@ -908,47 +858,47 @@ Twitch.IRC = {
     return resp;
   }
 
-  /* (TODO: REMOVE) Parse a line received through the Twitch websocket */
+  /* Parse a line received through the Twitch websocket */
 };Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   /* Try parsing with the new object */
   var result = { cmd: null };
   var parts = line.split(' ');
   var data = {};
   if (parts[0].startsWith('@')) {
-    data = Twitch.ParseData(parts[0]);
+    data = Twitch.ParseFlags(parts[0]);
     parts.shift();
   }
   if (parts[0] == "PING") {
     /* "PING :<server>" */
     result.cmd = "PING";
-    result.server = parts[1].lstrip(':');
+    result.server = parts[1].replace(/^:/, "");
   } else if (parts[1] == "CAP" && parts[2] == "*" && parts[3] == "ACK") {
     /* :<server> CAP * ACK <flags...> */
     result.cmd = "ACK";
     result.operation = "CAP";
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.flags = line.substr(line.indexOf(':', 1) + 1).split(" ");
   } else if (parts[1] == "375" || parts[1] == "376" || parts[1] == "366") {
     /* 375: Start TOPIC; 376: End TOPIC; 366: End NAMES */
     /* :<server> <code> <username> :<message> */
     result.cmd = "OTHER";
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.code = parts[1];
   } else if (parts[1].match(/00[1-9]/) || parts[1] == "372") {
     /* :<server> 00[1-4] <username> :<message> */
     result.cmd = "TOPIC";
     result.code = parts[1];
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.username = parts[2];
-    result.message = parts.slice(3).join(' ').lstrip(':');
+    result.message = parts.slice(3).join(' ').replace(/^:/, "");
   } else if (parts[1] == "353") {
     /* NAMES listing entry */
     /* :<user> 353 <username> <mode> <channel> :<username> */
     result.cmd = "NAMES";
-    result.user = Twitch.ParseUser(parts[0].lstrip(':'));
+    result.user = Twitch.ParseUser(parts[0].replace(/^:/, ""));
     result.mode = parts[3];
     result.channel = Twitch.ParseChannel(parts[4]);
-    result.usernames = parts.slice(5).join(' ').lstrip(':').split(' ');
+    result.usernames = parts.slice(5).join(' ').replace(/^:/, "").split(' ');
   } else if (parts[1] == "JOIN" || parts[1] == "PART") {
     /* ":<user> JOIN <channel> */
     /* ":<user> PART <channel> */
@@ -987,21 +937,21 @@ Twitch.IRC = {
     /* [@<flags>] :<server> USERSTATE <channel> */
     result.cmd = "USERSTATE";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.username = data["display-name"];
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "ROOMSTATE") {
     /* [@<flags>] :<server> ROOMSTATE <channel> */
     result.cmd = "ROOMSTATE";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] == "USERNOTICE") {
     /* [@<flags>] :<server> USERNOTICE <channel> */
     /* [@<flags>] :<server> USERNOTICE <channel> :<message> */
     result.cmd = "USERNOTICE";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
       result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
@@ -1014,12 +964,12 @@ Twitch.IRC = {
     /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
     result.cmd = "GLOBALUSERSTATE";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
   } else if (parts[1] == "CLEARCHAT") {
     /* "[@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
     result.cmd = "CLEARCHAT";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = null;
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
@@ -1029,7 +979,7 @@ Twitch.IRC = {
     /* "[@<flags>] :<server> CLEARMSG <channel> :<message>\r\n" */
     result.cmd = "CLEARMSG";
     result.flags = data;
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
   } else if (parts[1] == "HOSTTARGET") {
@@ -1037,19 +987,19 @@ Twitch.IRC = {
     result.cmd = "HOSTTARGET";
     result.server = parts[0];
     result.channel = Twitch.ParseChannel(parts[2]);
-    result.user = parts[3].lstrip(":");
+    result.user = parts[3].replace(/^:/, "");
   } else if (parts[1] == "NOTICE") {
     /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
     result.cmd = "NOTICE";
     result.flags = data; /* not always present */
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[2])) + 1);
   } else if (parts[1] == "421") {
     /* Error */
     /* ":<server> 421 <user> <command> :<message>\r\n" */
     result.cmd = "ERROR";
-    result.server = parts[0].lstrip(':');
+    result.server = parts[0].replace(/^:/, "");
     result.user = Twitch.ParseUser(parts[2]);
     result.command = parts[3];
     result.message = line.substr(line.indexOf(':', line.indexOf(parts[3])) + 1);

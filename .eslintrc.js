@@ -14,8 +14,7 @@ module.exports = {
         "TwitchEvent": "readonly",
         "TwitchChatEvent": "readonly",
         "TwitchSubEvent": "readonly",
-        "LoggerUtility": "readonly",
-        "ConfigStore": "readonly"
+        "LoggerUtility": "readonly"
     },
     "parserOptions": {
         "ecmaVersion": 2018

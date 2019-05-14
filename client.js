@@ -100,16 +100,12 @@ class TwitchEvent {
     };
   }
 
-  /* Methods available for all Twitch commands */
-
   get type() { return "twitch-" + this._cmd.toLowerCase(); }
   get command() { return this._cmd; }
   get raw_line() { return this._raw; }
   get values() { return this._parsed; }
   has_value(key) { return this._parsed.hasOwnProperty(key); }
   value(key) { return this._parsed[key]; }
-
-  /* Methods available for certain Twitch commands */
 
   get channel() { return this._parsed.channel; }
   get message() { return this._parsed.message; }
@@ -127,8 +123,6 @@ class TwitchEvent {
     }
     return null;
   }
-
-  /* Methods specifically for the Twitch NOTICE command */
 
   get notice_msgid() {
     if (this._cmd === "NOTICE") {
@@ -233,7 +227,6 @@ class TwitchEvent {
     return sev;
   }
 
-  /* Extra attributes */
   repr() {
     /* Return a value similar to Object.toSource() */
     let cls = Object.getPrototypeOf(this).constructor.name;
@@ -287,8 +280,6 @@ class TwitchChatEvent extends TwitchEvent {
     }
     return 0;
   }
-
-  /* Extra attributes */
   repr() {
     /* Return a value similar to Object.toSource() */
     let cls = Object.getPrototypeOf(this).constructor.name;
@@ -306,6 +297,7 @@ class TwitchSubEvent extends TwitchEvent {
     super(sub_kind, raw_line, parsed);
     this._sub_kind = sub_kind;
   }
+
   get kind() { return this._sub_kind; }
   static get SUB() { return "SUB"; }
   static get RESUB() { return "RESUB"; }
@@ -789,7 +781,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
 TwitchClient.prototype._getBTTVEmotes =
 function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
-  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')),
+  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")),
                         (function _bttv_global_emotes_cb(json) {
     let bttv = this._bttv_channel_emotes[cname];
     bttv.emotes = {};
@@ -969,6 +961,32 @@ function _TwitchClient_SelfUserState() {
   let obj = Util.JSONClone(this._self_userstate);
   obj.userid = this._self_userid;
   return obj;
+}
+
+/* Return true if the client has been granted the capability specified. Values
+ * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
+ * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership
+ */
+TwitchClient.prototype.HasCapability =
+function _TwitchClient_HasCapability(test_cap) {
+  for (let cap of this._capabilities) {
+    if (test_cap == cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/* Get the client's current username */
+TwitchClient.prototype.GetName =
+function _TwitchClient_GetName() {
+  return this._username;
+}
+
+/* Return whether or not the numeric user ID refers to the client itself */
+TwitchClient.prototype.IsUIDSelf =
+function _TwitchClient_IsUIDSelf(userid) {
+  return userid == this._self_userid;
 }
 
 /* End of general status functions 0}}} */
@@ -1189,32 +1207,6 @@ function _TwitchClient_GetBTTVEmotes(channel) {
 }
 
 /* End of functions related to cheers and emotes 0}}} */
-
-/* Return true if the client has been granted the capability specified. Values
- * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
- * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership
- */
-TwitchClient.prototype.HasCapability =
-function _TwitchClient_HasCapability(test_cap) {
-  for (let cap of this._capabilities) {
-    if (test_cap == cap || cap.endsWith('/' + test_cap.lstrip('/'))) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/* Get the client's current username */
-TwitchClient.prototype.GetName =
-function _TwitchClient_GetName() {
-  return this._username;
-}
-
-/* Return whether or not the numeric user ID refers to the client itself */
-TwitchClient.prototype.IsUIDSelf =
-function _TwitchClient_IsUIDSelf(userid) {
-  return userid == this._self_userid;
-}
 
 /* Functions for sending messages {{{0 */
 

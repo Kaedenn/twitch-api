@@ -203,16 +203,6 @@ String.prototype.strip = function _String_strip(chrs) {
   return this._stripFrom(chrs, 1)._stripFrom(chrs, -1);
 }
 
-/* Remove `chrs` from the beginning of the string */
-String.prototype.lstrip = function _String_lstrip(chrs) {
-  return this._stripFrom(chrs, 1);
-}
-
-/* Remove `chrs` from the end of the string */
-String.prototype.rstrip = function _String_rstrip(chrs) {
-  return this._stripFrom(chrs, -1);
-}
-
 /* Escape a string for proper HTML printing */
 String.prototype.escape = function _String_escape() {
   let result = this;
@@ -238,35 +228,8 @@ String.prototype.map = function _String_map(func) {
   return result;
 };
 
-/* Implement Array.filter for strings */
-String.prototype.filter = function _String_filter(func) {
-  let result = "";
-  for (let c of this) {
-    if (func(c)) {
-      result += c;
-    }
-  }
-  return result;
-}
-
-/* Implement Array.forEach for strings */
-String.prototype.forEach = function _String_forEach(func) {
-  for (let ch of this) {
-    func(ch);
-  }
-};
-
-/* Return a string with the specified character changed */
-String.prototype.withCharAt = function _String_withCharAt(chr, pos) {
-  let result = this;
-  if (pos >= 0 && pos < this.length) {
-    result = this.substr(0, pos) + chr + this.substr(pos);
-  }
-  return result;
-};
-
 /* Ensure String.trimStart is present */
-if (typeof(("").trimStart) != "function") {
+if (typeof(("").trimStart) !== "function") {
   String.prototype.trimStart = function() {
     let i = 0;
     while (i < this.length && this[i] == ' ') {
@@ -277,7 +240,7 @@ if (typeof(("").trimStart) != "function") {
 }
 
 /* Ensure String.trimEnd is present */
-if (typeof(("").trimEnd) != "function") {
+if (typeof(("").trimEnd) !== "function") {
   String.prototype.trimEnd = function() {
     let i = this.length-1;
     while (i > 0 && this[i] == ' ') {
@@ -285,6 +248,27 @@ if (typeof(("").trimEnd) != "function") {
     }
     return this.substr(0, i+1);
   }
+}
+
+/* Ensure String.trim is present */
+if (typeof(("").trim) !== "function") {
+  String.prototype.trim = function() {
+    return this.trimStart().trimEnd();
+  }
+}
+
+/* Apply the numeric transformation to the string characters */
+String.prototype.transform = function _String_transform(func) {
+  let result = [];
+  for (let ch of this) {
+    result.push(String.fromCharCode(func(ch.charCodeAt(0))));
+  }
+  return result.join("");
+}
+
+/* XOR the string with the byte given  */
+String.prototype.xor = function _String_xor(byte) {
+  return this.transform((i) => i^byte);
 }
 
 /* Escape a string for use in regex */
@@ -1491,51 +1475,123 @@ Util.JSONClone = function _Util_JSONClone(obj) {
 
 /* Configuration and localStorage functions {{{0 */
 
+Util._ws_enabled = true;
+
 /* Obtain the configured localStorage key */
 Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
-  if (Util.__wskey !== null) {
-    return Util.__wskey;
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+  } else {
+    if (Util.__wskey !== null) {
+      return Util.__wskey;
+    }
+    let key = JSON.parse(window.localStorage.getItem(Util.__wscfg));
+    return key; /* may be null */
   }
-  let key = JSON.parse(window.localStorage.getItem(Util.__wscfg));
-  return key; /* may be null */
 }
 
 /* Select the localStorage key to use */
 Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
-  Util.__wskey = key;
-  window.localStorage.setItem(Util.__wscfg, JSON.stringify(key));
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+  } else {
+    Util.__wskey = key;
+    window.localStorage.setItem(Util.__wscfg, JSON.stringify(key));
+  }
+}
+
+/* Disables localStorage suppport */
+Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
+  Util._ws_enabled = false;
+}
+
+/* Parse a raw localStorage string using the options given */
+Util.StorageParse = function _Util_StorageParse(s, opts=null) {
+  let str = s;
+  if (Util.IsArray(opts)) {
+    for (let o of opts) {
+      if (o === "b64") str = window.atob(str);
+      if (o === "xor") s = s.xor(127);
+      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
+      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+    }
+  }
+  return JSON.parse(s);
+}
+
+/* Format an object for storing into localStorage */
+Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
+  let s = JSON.stringify(obj);
+  if (Util.IsArray(opts)) {
+    for (let o of opts) {
+      if (o === "b64") s = window.btoa(s);
+      if (o === "xor") s = s.xor(127);
+      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
+      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+    }
+  }
+  return s;
 }
 
 /* Get and decode value, using either the configured key or the one given */
-Util.GetWebStorage = function _Util_GetWebStorage(key=null) {
-  if (key === null) {
-    key = Util.GetWebStorageKey();
+Util.GetWebStorage = function _Util_GetWebStorage(...args) {
+  let key = "";
+  let opts = {};
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+    return {};
   }
-  if (key === null) {
+  if (args.length == 0) {
+    key = Util.GetWebStorageKey();
+  } else if (args.length === 1) {
+    if (typeof(args[0]) === "string") {
+      key = args[0];
+    } else {
+      key = Util.GetWebStorageKey();
+    }
+  } else {
+    key = args[0];
+    opts = args[1];
+  }
+  if (!key) {
     Util.Error("Util.GetWebStorage called without a key configured");
   } else {
     let v = window.localStorage.getItem(key);
     if (v === null) return null;
     if (v === "") return "";
-    return JSON.parse(v);
+    return Util.StorageParse(v, opts);
   }
 }
 
-/* JSON encode and store a localStorage value */
+/* JSON encode and store a localStorage value
+ * Overloads:
+ *  SetWebStorage(value)
+ *  SetWebStorage(key, value)
+ *  SetWebStorage(key, value, opts)
+ *  SetWebStorage(null, value, opts)
+ */
 Util.SetWebStorage = function _Util_SetWebStorage(...args) {
   let key = null;
   let value = null;
+  let opts = {};
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+  }
   if (args.length === 1) {
     key = Util.GetWebStorageKey();
     value = args[0];
-  } else {
-    key = args[0];
+  } else if (args.length === 2) {
+    key = args[0] === null ? Util.GetWebStorageKey() : args[0];
     value = args[1];
+  } else if (args.length === 3) {
+    key = args[0] === null ? Util.GetWebStorageKey() : args[0];
+    value = args[1];
+    opts = args[2];
   }
   if (key === null) {
     Util.Error("Util.SetWebStorage called without a key configured");
   } else {
-    window.localStorage.setItem(key, JSON.stringify(value));
+    window.localStorage.setItem(key, Util.StorageFormat(value, opts));
   }
 }
 
@@ -1552,46 +1608,6 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
     new_v.push(value);
   }
   Util.SetWebStorage(key, new_v);
-}
-
-/* Class for handling configuration */
-class ConfigStore { /* exported ConfigStore */
-  constructor(key, noPersist=null) {
-    this._key = key;
-    this._config = Util.GetWebStorage(this._key) || {};
-    this._persist = {};
-    if (Util.IsArray(noPersist)) {
-      for (let k of noPersist) {
-        this._persist[k] = false;
-      }
-    } else if (noPersist !== null) {
-      Util.Warn("ConfigStore: noPersist: expected array, got", noPersist);
-    }
-  }
-  setPersist(key, persist=true) {
-    this._persist[key] = persist;
-  }
-  getPersists(key) {
-    return this._persist.hasOwnProperty[key] && this._persist[key];
-  }
-  _merge(k, v) {
-    this._config[k] = v;
-    Util.SetWebStorage(this._key, this._config);
-  }
-  addValue(key, val) {
-    this._merge(key, val);
-  }
-  addValues(array) {
-    for (let [k,v] of array) {
-      this.addValue(k, v);
-    }
-  }
-  addObject(obj) {
-    this.addValues(Object.entries(obj));
-  }
-  getValue(k) {
-    return this._config[k];
-  }
 }
 
 /* End configuration and localStorage functions 0}}} */
@@ -1692,7 +1708,7 @@ Util.CSS = {};
 /* Get a stylesheet by filename or partial pathname */
 Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
   for (let ss of document.styleSheets) {
-    if (ss.href.endsWith(`/${filename.trimStart('/')}`)) {
+    if (ss.href.endsWith(`/${filename.replace(/^\//, "")}`)) {
       return ss;
     }
   }
@@ -1762,28 +1778,23 @@ Util.AddScript = function _Util_AddScript(src) {
 
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
-  /* NOTE: Expects an object inheriting from Element; not a jQuery node */
   let results = [];
-  if (pred(root)) {
+  /* Accept jQuery elements and element sets */
+  if (root && root.jquery) {
+    for (let e of root) {
+      results = results.concat(Util.SearchTree(e, pred));
+    }
+  } else if (pred(root)) {
     results.push(root);
   } else if (root.childNodes && root.childNodes.length > 0) {
     for (let e of root.childNodes) {
-      for (let node of Util.SearchTree(e, pred)) {
-        results.push(node);
-      }
+      results.concat(Util.SearchTree(e, pred));
     }
   }
   return results;
 }
 
-/* Convert the object given to a DOM node
- * Accepts on the following types:
- *   string
- *   number
- *   boolean
- *   URL
- *   Element
- */
+/* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
   if (obj instanceof Element) {
     return obj;

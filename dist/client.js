@@ -92,9 +92,6 @@ var TwitchEvent = function () {
     value: function value(key) {
       return this._parsed[key];
     }
-
-    /* Methods available for certain Twitch commands */
-
   }, {
     key: "flag",
     value: function flag(_flag) {
@@ -139,14 +136,8 @@ var TwitchEvent = function () {
 
       return null;
     }
-
-    /* Methods specifically for the Twitch NOTICE command */
-
   }, {
     key: "repr",
-
-
-    /* Extra attributes */
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
@@ -155,10 +146,6 @@ var TwitchEvent = function () {
     }
   }, {
     key: "type",
-
-
-    /* Methods available for all Twitch commands */
-
     get: function get() {
       return "twitch-" + this._cmd.toLowerCase();
     }
@@ -408,9 +395,6 @@ var TwitchChatEvent = function (_TwitchEvent) {
     }
   }, {
     key: "repr",
-
-
-    /* Extra attributes */
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
@@ -1190,7 +1174,7 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 /* Private: Load in the global and per-channel BTTV emotes */
 TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
-  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.lstrip('#')), function _bttv_global_emotes_cb(json) {
+  this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")), function _bttv_global_emotes_cb(json) {
     var bttv = this._bttv_channel_emotes[cname];
     bttv.emotes = {};
     var _iteratorNormalCompletion10 = true;
@@ -1499,6 +1483,51 @@ TwitchClient.prototype.SelfUserState = function _TwitchClient_SelfUserState() {
   return obj;
 };
 
+/* Return true if the client has been granted the capability specified. Values
+ * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
+ * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership
+ */
+TwitchClient.prototype.HasCapability = function _TwitchClient_HasCapability(test_cap) {
+  var _iteratorNormalCompletion16 = true;
+  var _didIteratorError16 = false;
+  var _iteratorError16 = undefined;
+
+  try {
+    for (var _iterator16 = this._capabilities[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+      var cap = _step16.value;
+
+      if (test_cap == cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+        return true;
+      }
+    }
+  } catch (err) {
+    _didIteratorError16 = true;
+    _iteratorError16 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion16 && _iterator16.return) {
+        _iterator16.return();
+      }
+    } finally {
+      if (_didIteratorError16) {
+        throw _iteratorError16;
+      }
+    }
+  }
+
+  return false;
+};
+
+/* Get the client's current username */
+TwitchClient.prototype.GetName = function _TwitchClient_GetName() {
+  return this._username;
+};
+
+/* Return whether or not the numeric user ID refers to the client itself */
+TwitchClient.prototype.IsUIDSelf = function _TwitchClient_IsUIDSelf(userid) {
+  return userid == this._self_userid;
+};
+
 /* End of general status functions 0}}} */
 
 /* Role and moderation functions {{{0 */
@@ -1629,29 +1658,29 @@ TwitchClient.prototype.GetChannelInfo = function _TwitchClient_GetChannelInfo(ch
 /* Return whether or not the given word is a cheer for the given channel */
 TwitchClient.prototype.IsCheer = function _TwitchClient_IsCheer(cname, word) {
   if (this._channel_cheers.hasOwnProperty(cname)) {
-    var _iteratorNormalCompletion16 = true;
-    var _didIteratorError16 = false;
-    var _iteratorError16 = undefined;
+    var _iteratorNormalCompletion17 = true;
+    var _didIteratorError17 = false;
+    var _iteratorError17 = undefined;
 
     try {
-      for (var _iterator16 = Object.keys(this._channel_cheers[cname])[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-        var name = _step16.value;
+      for (var _iterator17 = Object.keys(this._channel_cheers[cname])[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
+        var name = _step17.value;
 
         if (word.match(this._channel_cheers[cname][name].word_pattern)) {
           return true;
         }
       }
     } catch (err) {
-      _didIteratorError16 = true;
-      _iteratorError16 = err;
+      _didIteratorError17 = true;
+      _iteratorError17 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion16 && _iterator16.return) {
-          _iterator16.return();
+        if (!_iteratorNormalCompletion17 && _iterator17.return) {
+          _iterator17.return();
         }
       } finally {
-        if (_didIteratorError16) {
-          throw _iteratorError16;
+        if (_didIteratorError17) {
+          throw _iteratorError17;
         }
       }
     }
@@ -1665,13 +1694,13 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
   var parts = message.split(" ");
   var offset = 0;
   if (this._channel_cheers.hasOwnProperty(cname)) {
-    var _iteratorNormalCompletion17 = true;
-    var _didIteratorError17 = false;
-    var _iteratorError17 = undefined;
+    var _iteratorNormalCompletion18 = true;
+    var _didIteratorError18 = false;
+    var _iteratorError18 = undefined;
 
     try {
-      for (var _iterator17 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
-        var _ref13 = _step17.value;
+      for (var _iterator18 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
+        var _ref13 = _step18.value;
 
         var _ref14 = _slicedToArray(_ref13, 2);
 
@@ -1679,13 +1708,13 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
         var cheer = _ref14[1];
 
         if (message.search(cheer.line_pattern) > -1) {
-          var _iteratorNormalCompletion18 = true;
-          var _didIteratorError18 = false;
-          var _iteratorError18 = undefined;
+          var _iteratorNormalCompletion19 = true;
+          var _didIteratorError19 = false;
+          var _iteratorError19 = undefined;
 
           try {
-            for (var _iterator18 = parts[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
-              var token = _step18.value;
+            for (var _iterator19 = parts[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
+              var token = _step19.value;
 
               var m = token.match(cheer.word_pattern);
               if (m) {
@@ -1702,32 +1731,32 @@ TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, mes
               offset += token.length + 1;
             }
           } catch (err) {
-            _didIteratorError18 = true;
-            _iteratorError18 = err;
+            _didIteratorError19 = true;
+            _iteratorError19 = err;
           } finally {
             try {
-              if (!_iteratorNormalCompletion18 && _iterator18.return) {
-                _iterator18.return();
+              if (!_iteratorNormalCompletion19 && _iterator19.return) {
+                _iterator19.return();
               }
             } finally {
-              if (_didIteratorError18) {
-                throw _iteratorError18;
+              if (_didIteratorError19) {
+                throw _iteratorError19;
               }
             }
           }
         }
       }
     } catch (err) {
-      _didIteratorError17 = true;
-      _iteratorError17 = err;
+      _didIteratorError18 = true;
+      _iteratorError18 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion17 && _iterator17.return) {
-          _iterator17.return();
+        if (!_iteratorNormalCompletion18 && _iterator18.return) {
+          _iterator18.return();
         }
       } finally {
-        if (_didIteratorError17) {
-          throw _iteratorError17;
+        if (_didIteratorError18) {
+          throw _iteratorError18;
         }
       }
     }
@@ -1760,13 +1789,13 @@ TwitchClient.prototype.GetFFZEmotes = function _TwitchClient_GetFFZEmotes(channe
 TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(channel) {
   var emotes = {};
   var ch = Twitch.FormatChannel(channel);
-  var _iteratorNormalCompletion19 = true;
-  var _didIteratorError19 = false;
-  var _iteratorError19 = undefined;
+  var _iteratorNormalCompletion20 = true;
+  var _didIteratorError20 = false;
+  var _iteratorError20 = undefined;
 
   try {
-    for (var _iterator19 = Object.entries(this._bttv_global_emotes)[Symbol.iterator](), _step19; !(_iteratorNormalCompletion19 = (_step19 = _iterator19.next()).done); _iteratorNormalCompletion19 = true) {
-      var _ref15 = _step19.value;
+    for (var _iterator20 = Object.entries(this._bttv_global_emotes)[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+      var _ref15 = _step20.value;
 
       var _ref16 = _slicedToArray(_ref15, 2);
 
@@ -1774,36 +1803,6 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
       var v = _ref16[1];
 
       emotes[k] = v;
-    }
-  } catch (err) {
-    _didIteratorError19 = true;
-    _iteratorError19 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion19 && _iterator19.return) {
-        _iterator19.return();
-      }
-    } finally {
-      if (_didIteratorError19) {
-        throw _iteratorError19;
-      }
-    }
-  }
-
-  var _iteratorNormalCompletion20 = true;
-  var _didIteratorError20 = false;
-  var _iteratorError20 = undefined;
-
-  try {
-    for (var _iterator20 = Object.entries(this._bttv_channel_emotes[ch])[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
-      var _ref17 = _step20.value;
-
-      var _ref18 = _slicedToArray(_ref17, 2);
-
-      var _k = _ref18[0];
-      var _v2 = _ref18[1];
-
-      emotes[_k] = _v2;
     }
   } catch (err) {
     _didIteratorError20 = true;
@@ -1820,27 +1819,20 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
     }
   }
 
-  return emotes;
-};
-
-/* End of functions related to cheers and emotes 0}}} */
-
-/* Return true if the client has been granted the capability specified. Values
- * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
- * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership
- */
-TwitchClient.prototype.HasCapability = function _TwitchClient_HasCapability(test_cap) {
   var _iteratorNormalCompletion21 = true;
   var _didIteratorError21 = false;
   var _iteratorError21 = undefined;
 
   try {
-    for (var _iterator21 = this._capabilities[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-      var cap = _step21.value;
+    for (var _iterator21 = Object.entries(this._bttv_channel_emotes[ch])[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+      var _ref17 = _step21.value;
 
-      if (test_cap == cap || cap.endsWith('/' + test_cap.lstrip('/'))) {
-        return true;
-      }
+      var _ref18 = _slicedToArray(_ref17, 2);
+
+      var _k = _ref18[0];
+      var _v2 = _ref18[1];
+
+      emotes[_k] = _v2;
     }
   } catch (err) {
     _didIteratorError21 = true;
@@ -1857,18 +1849,10 @@ TwitchClient.prototype.HasCapability = function _TwitchClient_HasCapability(test
     }
   }
 
-  return false;
+  return emotes;
 };
 
-/* Get the client's current username */
-TwitchClient.prototype.GetName = function _TwitchClient_GetName() {
-  return this._username;
-};
-
-/* Return whether or not the numeric user ID refers to the client itself */
-TwitchClient.prototype.IsUIDSelf = function _TwitchClient_IsUIDSelf(userid) {
-  return userid == this._self_userid;
-};
+/* End of functions related to cheers and emotes 0}}} */
 
 /* Functions for sending messages {{{0 */
 
