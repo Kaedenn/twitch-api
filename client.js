@@ -114,7 +114,7 @@ class TwitchEvent {
   get flags() { return this._parsed.flags; }
   flag(flag) { return this._parsed.flags ? this._parsed.flags[flag] : null; }
 
-  /* Obtain the value of the first non-falsy flag */
+  /* Obtain the first non-falsy value of the listed flags */
   first_flag(...flags) {
     for (let flag of flags) {
       if (this.flags[flag]) {
@@ -139,92 +139,6 @@ class TwitchEvent {
       return msgid.split('_')[0];
     }
     return null;
-  }
-
-  get notice_severity() {
-    /* TODO: Move to a separate module */
-    let msgid = this.notice_msgid;
-    let msgclass = this.notice_class;
-    const sevs = {
-      trace: LoggerUtility.SEVERITIES.TRACE,
-      debug: LoggerUtility.SEVERITIES.DEBUG,
-      info: LoggerUtility.SEVERITIES.INFO,
-      warn: LoggerUtility.SEVERITIES.WARN,
-      error: LoggerUtility.SEVERITIES.ERROR
-    };
-    let sev = sevs.warn;
-    if (typeof(msgid) === "string") {
-      switch (msgclass) {
-        case "already":
-          break;
-        case "bad":
-          break;
-        case "ban":
-          break;
-        case "cmds":
-          break;
-        case "color":
-          break;
-        case "commercial":
-          break;
-        case "delete":
-          break;
-        case "emote":
-          break;
-        case "followers":
-          break;
-        case "host":
-          break;
-        case "hosts":
-          break;
-        case "invalid":
-          break;
-        case "mod":
-          break;
-        case "msg":
-          break;
-        case "no":
-          break;
-        case "not":
-          break;
-        case "r9k":
-          break;
-        case "raid":
-          break;
-        case "room":
-          break;
-        case "slow":
-          break;
-        case "subs":
-          break;
-        case "timeout":
-          break;
-        case "tos":
-          break;
-        case "turbo":
-          break;
-        case "unban":
-          break;
-        case "unmod":
-          break;
-        case "unraid":
-          break;
-        case "unrecognized":
-          break;
-        case "unsupported":
-          break;
-        case "untimeout":
-          break;
-        case "usage":
-          sev = sevs.info;
-          break;
-        case "whisper":
-          break;
-        default:
-          break;
-      }
-    }
-    return sev;
   }
 
   repr() {
@@ -1256,9 +1170,12 @@ function _TwitchClient_SendRaw(raw_msg) {
 /* Add a message to the history of sent messages */
 TwitchClient.prototype.AddHistory =
 function _TwitchClient_AddHistory(message) {
-  this._history.unshift(message);
-  while (this.GetHistoryLength() > this.GetHistoryMax()) {
-    this._history.pop();
+  /* Prevent sequential duplicates */
+  if (this._history.length === 0 || message !== this._history[0]) {
+    this._history.unshift(message);
+    while (this.GetHistoryLength() > this.GetHistoryMax()) {
+      this._history.pop();
+    }
   }
 }
 
