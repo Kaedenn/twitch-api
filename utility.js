@@ -1638,9 +1638,9 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
         val = true;
       else if (val == "false")
         val = false;
-      else if (val.match(/^[0-9]+$/))
+      else if (val.match(/^[+-]?[1-9][0-9]*$/))
         val = parseInt(val);
-      else if (val.match(/^[0-9]+\.[0-9]+$/))
+      else if (val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/))
         val = parseFloat(val);
       else if (val === "null")
         val = null;

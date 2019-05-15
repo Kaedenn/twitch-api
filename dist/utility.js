@@ -2868,7 +2868,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
         var key = part.substr(0, part.indexOf('='));
         var _val = part.substr(part.indexOf('=') + 1);
         _val = decodeURIComponent(_val);
-        if (_val.length == 0) _val = false;else if (_val == "true") _val = true;else if (_val == "false") _val = false;else if (_val.match(/^[0-9]+$/)) _val = parseInt(_val);else if (_val.match(/^[0-9]+\.[0-9]+$/)) _val = parseFloat(_val);else if (_val === "null") _val = null;
+        if (_val.length == 0) _val = false;else if (_val == "true") _val = true;else if (_val == "false") _val = false;else if (_val.match(/^[+-]?[1-9][0-9]*$/)) _val = parseInt(_val);else if (_val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/)) _val = parseFloat(_val);else if (_val === "null") _val = null;
         obj[key] = _val;
       }
     }
