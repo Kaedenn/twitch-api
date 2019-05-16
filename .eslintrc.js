@@ -22,7 +22,8 @@ module.exports = {
     "rules": {
         "no-unused-vars": "warn",
         "no-shadow": "warn",
-        "no-trailing-spaces": "warn"
+        "no-trailing-spaces": "warn",
+        "eqeqeq": "warn"
     },
     "overrides": [
         {

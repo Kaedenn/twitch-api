@@ -687,7 +687,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
     }
   }).bind(this), (function _ffze_onerror(resp) {
     if (resp.status == 404) {
-      Util.Log(`Channel ${cname}:${cid} has no FFZ emotes`);
+      Util.LogOnly(`Channel ${cname}:${cid} has no FFZ emotes`);
     }
   }));
 }
@@ -712,7 +712,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
     }
   }).bind(this), (function _bttve_onerror(resp) {
     if (resp.status == 404) {
-      Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
+      Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
   }));
 
@@ -731,7 +731,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
     }
   }).bind(this), (function _bttve_onerror(resp) {
     if (resp.status == 404) {
-      Util.Log(`Channel ${cname}:${cid} has no BTTV emotes`);
+      Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
   }));
 }
