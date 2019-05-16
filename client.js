@@ -699,9 +699,8 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")),
                         (function _bttv_global_emotes_cb(json) {
     let bttv = this._bttv_channel_emotes[cname];
-    bttv.emotes = {};
     for (let emote of json.emotes) {
-      bttv.emotes[emote.code] = {
+      bttv[emote.code] = {
         'id': emote.id,
         'code': emote.code,
         'channel': emote.channel,
@@ -1095,10 +1094,28 @@ function _TwitchClient_GetCheer(cname, name) {
   return cheer;
 }
 
-/* Return the URL to the image for the emote specified */
+/* Return the emotes the client is allowed to use */
+TwitchClient.prototype.GetEmotes =
+function _TwitchClient_GetEmotes() {
+  let emotes = {};
+  for (let [k, v] of Object.entries(this._self_emotes)) {
+    emotes[v] = this.GetEmote(k);
+  }
+  return emotes;
+}
+
+/* Return the URL to the image for the emote and size specified (id or name) */
 TwitchClient.prototype.GetEmote =
-function _TwitchClient_GetEmote(emote_id) {
-  return Twitch.URL.Emote(emote_id, '1.0');
+function _TwitchClient_GetEmote(emote_id, size="1.0") {
+  if (typeof(emote_id) === "number" || `${emote_id}`.match(/^[0-9]+$/)) {
+    return Twitch.URL.Emote(emote_id, size);
+  } else {
+    for (let [k, v] of Object.entries(this._self_emotes)) {
+      if (v === emote_id) {
+        return Twitch.URL.Emote(k, size);
+      }
+    }
+  }
 }
 
 /* Obtain the FFZ emotes for a channel */
@@ -1107,18 +1124,22 @@ function _TwitchClient_GetFFZEmotes(channel) {
   return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
 }
 
-/* Obtain the BTTV emotes for a channel */
+/* Obtain global BTTV emotes */
+TwitchClient.prototype.GetGlobalBTTVEmotes =
+function _TwitchClient_GetGlobalBTTVEmotes() {
+  return Util.JSONClone(this._bttv_global_emotes);
+}
+
+/* Obtain the BTTV emotes for the channel specified */
 TwitchClient.prototype.GetBTTVEmotes =
 function _TwitchClient_GetBTTVEmotes(channel) {
-  let emotes = {};
   let ch = Twitch.FormatChannel(channel);
-  for (let [k, v] of Object.entries(this._bttv_global_emotes)) {
-    emotes[k] = v;
+  if (this._bttv_channel_emotes[ch]) {
+    return Util.JSONClone(this._bttv_channel_emotes[ch]);
+  } else {
+    Util.Log("Channel", channel, "has no BTTV emotes stored");
+    return {};
   }
-  for (let [k, v] of Object.entries(this._bttv_channel_emotes[ch])) {
-    emotes[k] = v;
-  }
-  return emotes;
 }
 
 /* End of functions related to cheers and emotes 0}}} */

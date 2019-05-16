@@ -1093,7 +1093,6 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
   this._bttv_channel_emotes[cname] = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")), function _bttv_global_emotes_cb(json) {
     var bttv = this._bttv_channel_emotes[cname];
-    bttv.emotes = {};
     var _iteratorNormalCompletion10 = true;
     var _didIteratorError10 = false;
     var _iteratorError10 = undefined;
@@ -1102,7 +1101,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
       for (var _iterator10 = json.emotes[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
         var emote = _step10.value;
 
-        bttv.emotes[emote.code] = {
+        bttv[emote.code] = {
           'id': emote.id,
           'code': emote.code,
           'channel': emote.channel,
@@ -1692,26 +1691,15 @@ TwitchClient.prototype.GetCheer = function _TwitchClient_GetCheer(cname, name) {
   return cheer;
 };
 
-/* Return the URL to the image for the emote specified */
-TwitchClient.prototype.GetEmote = function _TwitchClient_GetEmote(emote_id) {
-  return Twitch.URL.Emote(emote_id, '1.0');
-};
-
-/* Obtain the FFZ emotes for a channel */
-TwitchClient.prototype.GetFFZEmotes = function _TwitchClient_GetFFZEmotes(channel) {
-  return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
-};
-
-/* Obtain the BTTV emotes for a channel */
-TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(channel) {
+/* Return the emotes the client is allowed to use */
+TwitchClient.prototype.GetEmotes = function _TwitchClient_GetEmotes() {
   var emotes = {};
-  var ch = Twitch.FormatChannel(channel);
   var _iteratorNormalCompletion20 = true;
   var _didIteratorError20 = false;
   var _iteratorError20 = undefined;
 
   try {
-    for (var _iterator20 = Object.entries(this._bttv_global_emotes)[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
+    for (var _iterator20 = Object.entries(this._self_emotes)[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
       var _ref15 = _step20.value;
 
       var _ref16 = _slicedToArray(_ref15, 2);
@@ -1719,7 +1707,7 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
       var k = _ref16[0];
       var v = _ref16[1];
 
-      emotes[k] = v;
+      emotes[v] = this.GetEmote(k);
     }
   } catch (err) {
     _didIteratorError20 = true;
@@ -1736,37 +1724,69 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
     }
   }
 
-  var _iteratorNormalCompletion21 = true;
-  var _didIteratorError21 = false;
-  var _iteratorError21 = undefined;
+  return emotes;
+};
 
-  try {
-    for (var _iterator21 = Object.entries(this._bttv_channel_emotes[ch])[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
-      var _ref17 = _step21.value;
+/* Return the URL to the image for the emote and size specified (id or name) */
+TwitchClient.prototype.GetEmote = function _TwitchClient_GetEmote(emote_id) {
+  var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
 
-      var _ref18 = _slicedToArray(_ref17, 2);
+  if (typeof emote_id === "number" || ("" + emote_id).match(/^[0-9]+$/)) {
+    return Twitch.URL.Emote(emote_id, size);
+  } else {
+    var _iteratorNormalCompletion21 = true;
+    var _didIteratorError21 = false;
+    var _iteratorError21 = undefined;
 
-      var _k = _ref18[0];
-      var _v2 = _ref18[1];
-
-      emotes[_k] = _v2;
-    }
-  } catch (err) {
-    _didIteratorError21 = true;
-    _iteratorError21 = err;
-  } finally {
     try {
-      if (!_iteratorNormalCompletion21 && _iterator21.return) {
-        _iterator21.return();
+      for (var _iterator21 = Object.entries(this._self_emotes)[Symbol.iterator](), _step21; !(_iteratorNormalCompletion21 = (_step21 = _iterator21.next()).done); _iteratorNormalCompletion21 = true) {
+        var _ref17 = _step21.value;
+
+        var _ref18 = _slicedToArray(_ref17, 2);
+
+        var k = _ref18[0];
+        var v = _ref18[1];
+
+        if (v === emote_id) {
+          return Twitch.URL.Emote(k, size);
+        }
       }
+    } catch (err) {
+      _didIteratorError21 = true;
+      _iteratorError21 = err;
     } finally {
-      if (_didIteratorError21) {
-        throw _iteratorError21;
+      try {
+        if (!_iteratorNormalCompletion21 && _iterator21.return) {
+          _iterator21.return();
+        }
+      } finally {
+        if (_didIteratorError21) {
+          throw _iteratorError21;
+        }
       }
     }
   }
+};
 
-  return emotes;
+/* Obtain the FFZ emotes for a channel */
+TwitchClient.prototype.GetFFZEmotes = function _TwitchClient_GetFFZEmotes(channel) {
+  return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
+};
+
+/* Obtain global BTTV emotes */
+TwitchClient.prototype.GetGlobalBTTVEmotes = function _TwitchClient_GetGlobalBTTVEmotes() {
+  return Util.JSONClone(this._bttv_global_emotes);
+};
+
+/* Obtain the BTTV emotes for the channel specified */
+TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(channel) {
+  var ch = Twitch.FormatChannel(channel);
+  if (this._bttv_channel_emotes[ch]) {
+    return Util.JSONClone(this._bttv_channel_emotes[ch]);
+  } else {
+    Util.Log("Channel", channel, "has no BTTV emotes stored");
+    return {};
+  }
 };
 
 /* End of functions related to cheers and emotes 0}}} */

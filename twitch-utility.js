@@ -256,18 +256,18 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
 }
 
 /* Generate emote specifications for the given emotes [eid, ename] */
-Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
+Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes, escape=false) {
   let results = [];
   for (let emote_def of emotes) {
     let [eid, emote] = emote_def;
-    let pat = Twitch.EmoteToRegex(emote);
+    let pat = Twitch.EmoteToRegex(escape ? RegExp.escape(emote) : emote);
     let arr;
     while ((arr = pat.exec(msg)) !== null) {
       /* arr = [wholeMatch, matchPart] */
       let start = arr.index + arr[0].indexOf(arr[1]);
       /* -1 to keep consistent with Twitch's off-by-one */
       let end = start + arr[1].length - 1;
-      results.push({id: eid, name: emote, start: start, end: end});
+      results.push({id: eid, pat: pat, name: emote, start: start, end: end});
     }
   }
   return results;

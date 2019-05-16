@@ -523,6 +523,8 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
 
 /* Generate emote specifications for the given emotes [eid, ename] */
 Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
+  var escape = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
   var results = [];
   var _iteratorNormalCompletion10 = true;
   var _didIteratorError10 = false;
@@ -536,14 +538,14 @@ Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
           eid = _emote_def[0],
           emote = _emote_def[1];
 
-      var pat = Twitch.EmoteToRegex(emote);
+      var pat = Twitch.EmoteToRegex(escape ? RegExp.escape(emote) : emote);
       var arr = void 0;
       while ((arr = pat.exec(msg)) !== null) {
         /* arr = [wholeMatch, matchPart] */
         var start = arr.index + arr[0].indexOf(arr[1]);
         /* -1 to keep consistent with Twitch's off-by-one */
         var end = start + arr[1].length - 1;
-        results.push({ id: eid, name: emote, start: start, end: end });
+        results.push({ id: eid, pat: pat, name: emote, start: start, end: end });
       }
     }
   } catch (err) {
