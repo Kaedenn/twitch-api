@@ -68,10 +68,10 @@ Util.Browser.Get = function _Util_Browser_Get() {
   }
 }
 Util.Browser.Current = Util.Browser.Get()
-Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
-Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
-Util.Browser.IsTesla = Util.Browser.Current == Util.Browser.TESLA;
-Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
+Util.Browser.IsChrome = Util.Browser.Current === Util.Browser.CHROME;
+Util.Browser.IsFirefox = Util.Browser.Current === Util.Browser.FIREFOX;
+Util.Browser.IsTesla = Util.Browser.Current === Util.Browser.TESLA;
+Util.Browser.IsOBS = Util.Browser.Current === Util.Browser.OBS;
 
 /* End of browser identification 0}}} */
 
@@ -142,8 +142,8 @@ Array.prototype.all = function _Array_all(func) {
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
-  if (this.length == 0) { return undefined; }
-  if (this.length == 1) { return this[0]; }
+  if (this.length === 0) { return undefined; }
+  if (this.length === 1) { return this[0]; }
   let max_value = cmp(this[0]);
   let max_elem = this[0];
   for (let e of this) {
@@ -158,8 +158,8 @@ Array.prototype.max = function _Array_max(cmp) {
 /* Obtain the minimal element from an array */
 Array.prototype.min = function _Array_min(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
-  if (this.length == 0) { return undefined; }
-  if (this.length == 1) { return this[0]; }
+  if (this.length === 0) { return undefined; }
+  if (this.length === 1) { return this[0]; }
   let min_value = cmp(this[0]);
   let min_elem = this[0];
   for (let e of this) {
@@ -223,10 +223,10 @@ String.prototype.map = function _String_map(func) {
 if (typeof(("").trimStart) !== "function") {
   String.prototype.trimStart = function() {
     let i = 0;
-    while (i < this.length && this[i] == ' ') {
+    while (i < this.length && this[i] === ' ') {
       i += 1;
     }
-    return i == 0 ? this : this.substr(i);
+    return i === 0 ? this : this.substr(i);
   }
 }
 
@@ -234,7 +234,7 @@ if (typeof(("").trimStart) !== "function") {
 if (typeof(("").trimEnd) !== "function") {
   String.prototype.trimEnd = function() {
     let i = this.length-1;
-    while (i > 0 && this[i] == ' ') {
+    while (i > 0 && this[i] === ' ') {
       i -= 1;
     }
     return this.substr(0, i+1);
@@ -276,7 +276,7 @@ Util.IsArray = function _Util_IsArray(value) {
   /* Values are considered "arrays" if value[Symbol.iterator] is a function
    * and that object is not a string */
   if (typeof(value) === "string") return false;
-  if (value && typeof(value[Symbol.iterator]) == "function") {
+  if (value && typeof(value[Symbol.iterator]) === "function") {
     return true;
   } else {
     return false;
@@ -328,7 +328,7 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 Util.URL = function _Util_URL(url) {
   if (url.startsWith('//')) {
     let p = 'http:';
-    if (window.location.protocol == "https:") {
+    if (window.location.protocol === "https:") {
       p = 'https:';
     }
     return p + url;
@@ -377,7 +377,7 @@ class _Util_API {
     return new Promise(function (resolve, reject) {
       let r = new XMLHttpRequest();
       r.onreadystatechange = function _XHR_onreadystatechange() {
-        if (this.readyState == XMLHttpRequest.DONE) {
+        if (this.readyState === XMLHttpRequest.DONE) {
           resolve(JSON.parse(this.responseText));
         }
       }
@@ -501,7 +501,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     if (Util.Browser.IsChrome) {
       // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
       let m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
-      if (m == null) {
+      if (m === null) {
         Util.ErrorOnly("Failed to parse stack frame", line);
         continue;
       }
@@ -514,7 +514,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     } else if (Util.Browser.IsFirefox) {
       // "(function)@(file):(line):(column)"
       let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
-      if (m == null) {
+      if (m === null) {
         Util.ErrorOnly("Failed to parse stack frame", line);
         continue;
       }
@@ -584,7 +584,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   /* Strip the common prefix */
   if (ref_path !== null) {
     for (let i = 0; i < ref_path.length; ++i) {
-      if (pieces.every((p) => (p[0][0] == ref_path[i]))) {
+      if (pieces.every((p) => (p[0][0] === ref_path[i]))) {
         for (let piece of pieces) { piece[0] = piece[0].slice(1); }
       }
     }
@@ -601,7 +601,7 @@ Util.FormatStack = function _Util_FormatStack(stack) {
     paths.push(frame.file);
   }
   paths = Util.StripCommonPrefix(paths);
-  console.assert(stack.length == paths.length);
+  console.assert(stack.length === paths.length);
   let result = [];
   for (let i = 0; i < paths.length; ++i) {
     result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
@@ -682,11 +682,11 @@ class LoggerUtility {
   severity_enabled(sev) {
     if (!this._assert_sev(sev)) { return false; }
     let val = this._sev_value(sev);
-    if (Util.DebugLevel == Util.LEVEL_TRACE) return true;
-    if (Util.DebugLevel == Util.LEVEL_DEBUG) {
+    if (Util.DebugLevel === Util.LEVEL_TRACE) return true;
+    if (Util.DebugLevel === Util.LEVEL_DEBUG) {
       return val >= LoggerUtility.SEVERITIES.DEBUG;
     }
-    if (Util.DebugLevel == Util.LEVEL_OFF) {
+    if (Util.DebugLevel === Util.LEVEL_OFF) {
       return val >= LoggerUtility.SEVERITIES.INFO;
     }
     return val >= LoggerUtility.SEVERITIES.WARN;
@@ -831,7 +831,7 @@ class ColorParser {
     let g = Number(rgbtuple[1]); g = Number.isNaN(g) ? 0 : g;
     let b = Number(rgbtuple[2]); b = Number.isNaN(b) ? 0 : b;
     let res = [r, g, b];
-    if (rgbtuple.length == 4 && rgbtuple[3] !== undefined) {
+    if (rgbtuple.length === 4 && rgbtuple[3] !== undefined) {
       let a = Number(rgbtuple[3]); a = Number.isNaN(a) ? 0 : a;
       res.push(a);
     }
@@ -839,7 +839,7 @@ class ColorParser {
     return res;
   }
   static parse(color, failQuiet=false) {
-    if (Util._ColorParser == null) {
+    if (Util._ColorParser === null) {
       Util._ColorParser = new ColorParser();
     }
     try {
@@ -967,16 +967,16 @@ class _Util_Color {
     this.b = 0;
     this.a = 255;
     /* Handle Color([...]) -> Color(...) */
-    if (args.length == 1 && args[0] instanceof Array) {
+    if (args.length === 1 && args[0] instanceof Array) {
       args = args[0];
     }
-    if (args.length == 1) {
+    if (args.length === 1) {
       /* Handle Color(Color) and Color("string") */
       let arg = args[0];
       if (arg instanceof Util.Color) {
         [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
         this.scale = arg.scale;
-      } else if (typeof(arg) == "string" || arg instanceof String) {
+      } else if (typeof(arg) === "string" || arg instanceof String) {
         let [r, g, b, a] = ColorParser.parse(arg);
         [this.r, this.g, this.b, this.a] = [r, g, b, a];
       } else {
@@ -985,7 +985,7 @@ class _Util_Color {
     } else if (args.length >= 3 && args.length <= 4) {
       /* Handle Color(r, g, b) and Color(r, g, b, a) */
       [this.r, this.g, this.b] = args;
-      if (args.length == 4) this.a = args[3];
+      if (args.length === 4) this.a = args[3];
     } else if (args.length > 0) {
       Util.Throw(`Invalid arguments "${args}" to Color()`);
     }
@@ -1090,9 +1090,9 @@ class _Util_Color {
    *    Named CSS4:
    *      rebeccapurple
    *  Case 1:
-   *    rgb1 -> hsl -> rgb2 => rgb1 == rgb2
+   *    rgb1 -> hsl -> rgb2 => rgb1 === rgb2
    *  Case 2:
-   *    rgba1 -> hsla -> rgba2 => rgba1 == rgba2
+   *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
    *  "#ff0000" -> hsl -> "#ff0000"
    */
 }
@@ -1106,15 +1106,15 @@ Util.Color = _Util_Color;
  *  Util.ParseCSSColor(r, g, b[, a]) */
 Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
   let r = 0, g = 0, b = 0, a = 0;
-  if (color.length == 1) { color = color[0]; }
-  if (typeof(color) == "string") {
+  if (color.length === 1) { color = color[0]; }
+  if (typeof(color) === "string") {
     [r, g, b, a] = ColorParser.parse(color);
-  } else if (typeof(color) == "object") {
-    if (color.length == 3 || color.length == 4) {
+  } else if (typeof(color) === "object") {
+    if (color.length === 3 || color.length === 4) {
       r = color[0];
       g = color[1];
       b = color[2];
-      if (color.length == 4) {
+      if (color.length === 4) {
         a = color[4];
       }
     }
@@ -1129,7 +1129,7 @@ Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
  *  Util.RelativeLuminance([r, g, b, a])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
-  let color = Util.ParseCSSColor(args.length == 1 ? args[0] : args);
+  let color = Util.ParseCSSColor(args.length === 1 ? args[0] : args);
   let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
   function c_to_cx(c) {
     if (c < 0.03928) {
@@ -1158,7 +1158,7 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
 Util.GetMaxContrast = function _Util_GetMaxContrast(c1, ...colors) {
   let best_color = null;
   let best_contrast = null;
-  if (colors.length == 1 && Util.IsArray(colors[0])) {
+  if (colors.length === 1 && Util.IsArray(colors[0])) {
     colors = colors[0];
   }
   for (let c of colors) {
@@ -1277,7 +1277,7 @@ Util.Unbind = function _Util_Unbind(evname, evcallback) {
   if (Util._events[evname]) {
     let i = Util._events[evname].indexOf(evcallback);
     if (i > -1) {
-      Util._events[evname] = Util._events[evname].filter((e) => e != evcallback);
+      Util._events[evname] = Util._events[evname].filter((e) => e !== evcallback);
       return true;
     }
   }
@@ -1372,10 +1372,10 @@ Util.FormatInterval = function _Util_FormatInterval(time) {
     parts.push('-');
     time *= -1;
   }
-  if (time % 60 != 0) { parts.unshift(`${time % 60}s`); }
+  if (time % 60 !== 0) { parts.unshift(`${time % 60}s`); }
   time = Math.floor(time / 60);
   if (time > 0) {
-    if (time % 60 != 0) { parts.unshift(`${time % 60}m`); }
+    if (time % 60 !== 0) { parts.unshift(`${time % 60}m`); }
     time = Math.floor(time / 60);
   }
   if (time > 0) {
@@ -1389,12 +1389,12 @@ Util.DecodeFlags = function _Util_DecodeFlags(f, nbits=null) {
   let bits = [];
   if (f.match(/^[01]+$/)) {
     for (let c of f) {
-      bits.push(c == "1");
+      bits.push(c === "1");
     }
   } else if (f.match(/^[1-9][0-9]*d$/)) {
     let num = Number.parseInt(f.substr(0, f.length-1));
     for (let n = 0; (1 << n) < num; ++n) {
-      bits.push(((1 << n) & num) != 0);
+      bits.push(((1 << n) & num) !== 0);
     }
   }
   if (nbits !== null) {
@@ -1428,7 +1428,7 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20)
       result = result.concat(Util.EscapeCharCode(cn));
-    else if (ch == '\\')
+    else if (ch === '\\')
       result = result.concat('\\\\');
     else
       result = result.concat(ch);
@@ -1532,7 +1532,7 @@ Util.GetWebStorage = function _Util_GetWebStorage(...args) {
     Util.WarnOnly("Local Storage disabled");
     return {};
   }
-  if (args.length == 0) {
+  if (args.length === 0) {
     key = Util.GetWebStorageKey();
   } else if (args.length === 1) {
     if (typeof(args[0]) === "string") {
@@ -1621,7 +1621,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
   if (query.startsWith('?')) query = query.substr(1);
   let obj = {};
   for (let part of query.split('&')) {
-    if (part.indexOf('=') == -1) {
+    if (part.indexOf('=') === -1) {
       obj[part] = true;
     } else if (part.startsWith('base64=')) {
       let val = decodeURIComponent(part.substr(part.indexOf('=')+1));
@@ -1632,11 +1632,11 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
       let key = part.substr(0, part.indexOf('='));
       let val = part.substr(part.indexOf('=')+1);
       val = decodeURIComponent(val);
-      if (val.length == 0)
+      if (val.length === 0)
         val = false;
-      else if (val == "true")
+      else if (val === "true")
         val = true;
-      else if (val == "false")
+      else if (val === "false")
         val = false;
       else if (val.match(/^[+-]?[1-9][0-9]*$/))
         val = parseInt(val);
@@ -1709,7 +1709,7 @@ Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
 /* Given a stylesheet, obtain a rule definition by name */
 Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
   for (let rule of css.cssRules) {
-    if (rule.selectorText == rule_name) {
+    if (rule.selectorText === rule_name) {
       return rule;
     }
   }

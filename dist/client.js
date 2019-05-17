@@ -284,9 +284,9 @@ var TwitchChatEvent = function (_TwitchEvent) {
           var badge_name = _ref2[0];
           var badge_rev = _ref2[1];
 
-          if (badge_name == badge) {
+          if (badge_name === badge) {
             if (rev !== undefined) {
-              return badge_rev == rev;
+              return badge_rev === rev;
             } else {
               return true;
             }
@@ -353,7 +353,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
           var bname = _ref4[0];
           var brev = _ref4[1];
 
-          if (bname == "subscriber") {
+          if (bname === "subscriber") {
             return brev;
           }
         }
@@ -429,7 +429,7 @@ var TwitchSubEvent = function (_TwitchEvent2) {
   }, {
     key: "anonymous",
     get: function get() {
-      return this.kind == TwitchSubEvent.ANONGIFTSUB;
+      return this.kind === TwitchSubEvent.ANONGIFTSUB;
     }
   }, {
     key: "recipient",
@@ -460,11 +460,11 @@ var TwitchSubEvent = function (_TwitchEvent2) {
     value: function PlanName(plan_id) {
       if (plan_id === TwitchSubEvent.PLAN_PRIME) {
         return "Twitch Prime";
-      } else if (plan_id == TwitchSubEvent.PLAN_TIER1) {
+      } else if (plan_id === TwitchSubEvent.PLAN_TIER1) {
         return "Tier 1";
-      } else if (plan_id == TwitchSubEvent.PLAN_TIER2) {
+      } else if (plan_id === TwitchSubEvent.PLAN_TIER2) {
         return "Tier 2";
-      } else if (plan_id == TwitchSubEvent.PLAN_TIER3) {
+      } else if (plan_id === TwitchSubEvent.PLAN_TIER3) {
         return "Tier 3";
       } else {
         return "\"" + plan_id + "\"";
@@ -591,7 +591,7 @@ function TwitchClient(opts) {
   var oauth = void 0,
       oauth_header = void 0;
   if (this._authed) {
-    if (cfg_pass.indexOf("oauth:") != 0) {
+    if (cfg_pass.indexOf("oauth:") !== 0) {
       oauth = "oauth:" + cfg_pass;
       oauth_header = "OAuth " + cfg_pass;
     } else {
@@ -785,7 +785,7 @@ TwitchClient.prototype._ensureUser = function _TwitchClient__ensureUser(user) {
 
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureChannel = function _TwitchClient__ensureChannel(channel) {
-  if (typeof channel == "string") {
+  if (typeof channel === "string") {
     return Twitch.ParseChannel(channel);
   } else {
     return channel;
@@ -1083,7 +1083,7 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
       }
     }
   }.bind(this), function _ffze_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly("Channel " + cname + ":" + cid + " has no FFZ emotes");
     }
   });
@@ -1125,7 +1125,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
       }
     }
   }.bind(this), function _bttve_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly("Channel " + cname + ":" + cid + " has no BTTV emotes");
     }
   });
@@ -1163,7 +1163,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
       }
     }
   }.bind(this), function _bttve_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly("Channel " + cname + ":" + cid + " has no BTTV emotes");
     }
   });
@@ -1413,7 +1413,7 @@ TwitchClient.prototype.HasCapability = function _TwitchClient_HasCapability(test
     for (var _iterator16 = this._capabilities[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
       var cap = _step16.value;
 
-      if (test_cap == cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+      if (test_cap === cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
         return true;
       }
     }
@@ -1442,7 +1442,7 @@ TwitchClient.prototype.GetName = function _TwitchClient_GetName() {
 
 /* Return whether or not the numeric user ID refers to the client itself */
 TwitchClient.prototype.IsUIDSelf = function _TwitchClient_IsUIDSelf(userid) {
-  return userid == this._self_userid;
+  return userid === this._self_userid;
 };
 
 /* End of general status functions 0}}} */
@@ -1516,13 +1516,13 @@ TwitchClient.prototype.JoinChannel = function _TwitchClient_JoinChannel(channel)
   channel = this._ensureChannel(channel);
   var ch = channel.channel;
   if (this._is_open) {
-    if (this._channels.indexOf(ch) == -1) {
+    if (this._channels.indexOf(ch) === -1) {
       this.send("JOIN " + ch);
       this._channels.push(ch);
     } else {
       Util.Warn("JoinChannel: Already in " + ch);
     }
-  } else if (this._pending_channels.indexOf(ch) == -1) {
+  } else if (this._pending_channels.indexOf(ch) === -1) {
     this._pending_channels.push(ch);
   }
 };
@@ -1987,7 +1987,7 @@ TwitchClient.prototype._onWebsocketOpen = function _TwitchClient__onWebsocketOpe
     this._username = "justinfan" + Math.floor(Math.random() * 999999);
   }
   if (pass) {
-    this.send("PASS " + (pass.indexOf("oauth:") == 0 ? "" : "oauth:") + pass);
+    this.send("PASS " + (pass.indexOf("oauth:") === 0 ? "" : "oauth:") + pass);
     this.send("NICK " + name);
   } else {
     this.send("NICK " + this._username);
@@ -2028,7 +2028,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
 
   var lines = ws_event.data.trim().split("\r\n");
   /* Log the lines to the debug console */
-  if (lines.length == 1) {
+  if (lines.length === 1) {
     Util.DebugOnly("ws recv> \"" + lines[0] + "\"");
   } else {
     var _iteratorNormalCompletion24 = true;
@@ -2065,7 +2065,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
 
   var _loop = function _loop(line) {
     /* Ignore empty lines */
-    if (line.trim() == '') {
+    if (line.trim() === '') {
       return "continue";
     }
 
@@ -2159,9 +2159,9 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
         /* Reconnect is responsibility of hooking code */
         break;
       case "MODE":
-        if (result.modeflag == "+o") {
+        if (result.modeflag === "+o") {
           _this3._onOp(result.channel, result.user);
-        } else if (result.modeflag == "-o") {
+        } else if (result.modeflag === "-o") {
           _this3._onDeOp(result.channel, result.user);
         }
         break;
@@ -2284,13 +2284,13 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
         }.bind(_this3));
         break;
       case "USERNOTICE":
-        if (result.sub_kind == "SUB") {
+        if (result.sub_kind === "SUB") {
           Util.FireEvent(new TwitchSubEvent("SUB", line, result));
-        } else if (result.sub_kind == "RESUB") {
+        } else if (result.sub_kind === "RESUB") {
           Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
-        } else if (result.sub_kind == "GIFTSUB") {
+        } else if (result.sub_kind === "GIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
-        } else if (result.sub_kind == "ANONGIFTSUB") {
+        } else if (result.sub_kind === "ANONGIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
         } else if (result.israid) {
           Util.FireEvent(new TwitchEvent("RAID", line, result));
@@ -2322,7 +2322,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
     }
 
     /* Obtain emotes the client is able to use */
-    if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
+    if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
         _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
           var _iteratorNormalCompletion29 = true;
@@ -2420,7 +2420,7 @@ TwitchClient.prototype._onWebsocketClose = function _TwitchClient__onWebsocketCl
     for (var _iterator31 = this._channels[Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
       var chobj = _step31.value;
 
-      if (this._pending_channels.indexOf(chobj) == -1) {
+      if (this._pending_channels.indexOf(chobj) === -1) {
         this._pending_channels.push(chobj);
       }
     }

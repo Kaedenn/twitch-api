@@ -177,9 +177,9 @@ class TwitchChatEvent extends TwitchEvent {
     if (!this.flags.badges)
       return false;
     for (let [badge_name, badge_rev] of this.flags.badges) {
-      if (badge_name == badge) {
+      if (badge_name === badge) {
         if (rev !== undefined) {
-          return badge_rev == rev;
+          return badge_rev === rev;
         } else {
           return true;
         }
@@ -190,7 +190,7 @@ class TwitchChatEvent extends TwitchEvent {
   get sub_months() {
     if (this.flags["badge-info"]) {
       for (let [bname, brev] in this.flags["badge-info"]) {
-        if (bname == "subscriber") {
+        if (bname === "subscriber") {
           return brev;
         }
       }
@@ -235,11 +235,11 @@ class TwitchSubEvent extends TwitchEvent {
   static PlanName(plan_id) {
     if (plan_id === TwitchSubEvent.PLAN_PRIME) {
       return "Twitch Prime";
-    } else if (plan_id == TwitchSubEvent.PLAN_TIER1) {
+    } else if (plan_id === TwitchSubEvent.PLAN_TIER1) {
       return "Tier 1";
-    } else if (plan_id == TwitchSubEvent.PLAN_TIER2) {
+    } else if (plan_id === TwitchSubEvent.PLAN_TIER2) {
       return "Tier 2";
-    } else if (plan_id == TwitchSubEvent.PLAN_TIER3) {
+    } else if (plan_id === TwitchSubEvent.PLAN_TIER3) {
       return "Tier 3";
     } else {
       return `"${plan_id}"`
@@ -262,7 +262,7 @@ class TwitchSubEvent extends TwitchEvent {
   get streak_months() { return this.flags['msg-param-streak-months'] || 0; }
 
   /* Methods below only apply only to gift subs */
-  get anonymous() { return this.kind == TwitchSubEvent.ANONGIFTSUB; }
+  get anonymous() { return this.kind === TwitchSubEvent.ANONGIFTSUB; }
   get recipient() { return this.flags['msg-param-recipient-user-name']; }
   get recipient_id() { return this.flags['msg-param-recipient-id']; }
   get recipient_name() { return this.flags['msg-param-recipient-display-name']; }
@@ -335,7 +335,7 @@ function TwitchClient(opts) {
   this._authed = cfg_pass ? true : false;
   let oauth, oauth_header;
   if (this._authed) {
-    if (cfg_pass.indexOf("oauth:") != 0) {
+    if (cfg_pass.indexOf("oauth:") !== 0) {
       oauth = `oauth:${cfg_pass}`;
       oauth_header = `OAuth ${cfg_pass}`;
     } else {
@@ -515,7 +515,7 @@ function _TwitchClient__ensureUser(user) {
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureChannel =
 function _TwitchClient__ensureChannel(channel) {
-  if (typeof(channel) == "string") {
+  if (typeof(channel) === "string") {
     return Twitch.ParseChannel(channel);
   } else {
     return channel;
@@ -687,7 +687,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
       }
     }
   }).bind(this), (function _ffze_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly(`Channel ${cname}:${cid} has no FFZ emotes`);
     }
   }));
@@ -711,7 +711,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
       };
     }
   }).bind(this), (function _bttve_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
   }));
@@ -730,7 +730,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
       };
     }
   }).bind(this), (function _bttve_onerror(resp) {
-    if (resp.status == 404) {
+    if (resp.status === 404) {
       Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
   }));
@@ -885,7 +885,7 @@ function _TwitchClient_SelfUserState() {
 TwitchClient.prototype.HasCapability =
 function _TwitchClient_HasCapability(test_cap) {
   for (let cap of this._capabilities) {
-    if (test_cap == cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+    if (test_cap === cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
       return true;
     }
   }
@@ -901,7 +901,7 @@ function _TwitchClient_GetName() {
 /* Return whether or not the numeric user ID refers to the client itself */
 TwitchClient.prototype.IsUIDSelf =
 function _TwitchClient_IsUIDSelf(userid) {
-  return userid == this._self_userid;
+  return userid === this._self_userid;
 }
 
 /* End of general status functions 0}}} */
@@ -980,13 +980,13 @@ function _TwitchClient_JoinChannel(channel) {
   channel = this._ensureChannel(channel);
   let ch = channel.channel;
   if (this._is_open) {
-    if (this._channels.indexOf(ch) == -1) {
+    if (this._channels.indexOf(ch) === -1) {
       this.send(`JOIN ${ch}`);
       this._channels.push(ch);
     } else {
       Util.Warn(`JoinChannel: Already in ${ch}`);
     }
-  } else if (this._pending_channels.indexOf(ch) == -1) {
+  } else if (this._pending_channels.indexOf(ch) === -1) {
     this._pending_channels.push(ch);
   }
 }
@@ -1326,7 +1326,7 @@ function _TwitchClient__onWebsocketOpen(name, pass) {
     this._username = `justinfan${Math.floor(Math.random() * 999999)}`;
   }
   if (pass) {
-    this.send(`PASS ${pass.indexOf("oauth:") == 0 ? "" : "oauth:"}${pass}`);
+    this.send(`PASS ${pass.indexOf("oauth:") === 0 ? "" : "oauth:"}${pass}`);
     this.send(`NICK ${name}`);
   } else {
     this.send(`NICK ${this._username}`);
@@ -1344,7 +1344,7 @@ TwitchClient.prototype._onWebsocketMessage =
 function _TwitchClient__onWebsocketMessage(ws_event) {
   let lines = ws_event.data.trim().split("\r\n");
   /* Log the lines to the debug console */
-  if (lines.length == 1) {
+  if (lines.length === 1) {
     Util.DebugOnly(`ws recv> "${lines[0]}"`);
   } else {
     for (let [i, l] of Object.entries(lines)) {
@@ -1354,7 +1354,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
   }
   for (let line of lines) {
     /* Ignore empty lines */
-    if (line.trim() == '') {
+    if (line.trim() === '') {
       continue;
     }
 
@@ -1426,9 +1426,9 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
         /* Reconnect is responsibility of hooking code */
         break;
       case "MODE":
-        if (result.modeflag == "+o") {
+        if (result.modeflag === "+o") {
           this._onOp(result.channel, result.user);
-        } else if (result.modeflag == "-o") {
+        } else if (result.modeflag === "-o") {
           this._onDeOp(result.channel, result.user);
         }
         break;
@@ -1498,13 +1498,13 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
         }).bind(this));
         break;
       case "USERNOTICE":
-        if (result.sub_kind == "SUB") {
+        if (result.sub_kind === "SUB") {
           Util.FireEvent(new TwitchSubEvent("SUB", line, result));
-        } else if (result.sub_kind == "RESUB") {
+        } else if (result.sub_kind === "RESUB") {
           Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
-        } else if (result.sub_kind == "GIFTSUB") {
+        } else if (result.sub_kind === "GIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
-        } else if (result.sub_kind == "ANONGIFTSUB") {
+        } else if (result.sub_kind === "ANONGIFTSUB") {
           Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
         } else if (result.israid) {
           Util.FireEvent(new TwitchEvent("RAID", line, result));
@@ -1536,7 +1536,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
     }
 
     /* Obtain emotes the client is able to use */
-    if (result.cmd == "USERSTATE" || result.cmd == "GLOBALUSERSTATE") {
+    if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
         this._api.GetCB(
           Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')),
@@ -1563,7 +1563,7 @@ function _TwitchClient__onWebsocketError(event) {
 TwitchClient.prototype._onWebsocketClose =
 function _TwitchClient__onWebsocketClose(event) {
   for (let chobj of this._channels) {
-    if (this._pending_channels.indexOf(chobj) == -1) {
+    if (this._pending_channels.indexOf(chobj) === -1) {
       this._pending_channels.push(chobj);
     }
   }

@@ -73,10 +73,10 @@ Util.Browser.Get = function _Util_Browser_Get() {
   }
 };
 Util.Browser.Current = Util.Browser.Get();
-Util.Browser.IsChrome = Util.Browser.Current == Util.Browser.CHROME;
-Util.Browser.IsFirefox = Util.Browser.Current == Util.Browser.FIREFOX;
-Util.Browser.IsTesla = Util.Browser.Current == Util.Browser.TESLA;
-Util.Browser.IsOBS = Util.Browser.Current == Util.Browser.OBS;
+Util.Browser.IsChrome = Util.Browser.Current === Util.Browser.CHROME;
+Util.Browser.IsFirefox = Util.Browser.Current === Util.Browser.FIREFOX;
+Util.Browser.IsTesla = Util.Browser.Current === Util.Browser.TESLA;
+Util.Browser.IsOBS = Util.Browser.Current === Util.Browser.OBS;
 
 /* End of browser identification 0}}} */
 
@@ -198,10 +198,10 @@ Array.prototype.max = function _Array_max(cmp) {
       return x;
     };
   }
-  if (this.length == 0) {
+  if (this.length === 0) {
     return undefined;
   }
-  if (this.length == 1) {
+  if (this.length === 1) {
     return this[0];
   }
   var max_value = cmp(this[0]);
@@ -244,10 +244,10 @@ Array.prototype.min = function _Array_min(cmp) {
       return x;
     };
   }
-  if (this.length == 0) {
+  if (this.length === 0) {
     return undefined;
   }
-  if (this.length == 1) {
+  if (this.length === 1) {
     return this[0];
   }
   var min_value = cmp(this[0]);
@@ -381,10 +381,10 @@ String.prototype.map = function _String_map(func) {
 if (typeof "".trimStart !== "function") {
   String.prototype.trimStart = function () {
     var i = 0;
-    while (i < this.length && this[i] == ' ') {
+    while (i < this.length && this[i] === ' ') {
       i += 1;
     }
-    return i == 0 ? this : this.substr(i);
+    return i === 0 ? this : this.substr(i);
   };
 }
 
@@ -392,7 +392,7 @@ if (typeof "".trimStart !== "function") {
 if (typeof "".trimEnd !== "function") {
   String.prototype.trimEnd = function () {
     var i = this.length - 1;
-    while (i > 0 && this[i] == ' ') {
+    while (i > 0 && this[i] === ' ') {
       i -= 1;
     }
     return this.substr(0, i + 1);
@@ -458,7 +458,7 @@ Util.IsArray = function _Util_IsArray(value) {
   /* Values are considered "arrays" if value[Symbol.iterator] is a function
    * and that object is not a string */
   if (typeof value === "string") return false;
-  if (value && typeof value[Symbol.iterator] == "function") {
+  if (value && typeof value[Symbol.iterator] === "function") {
     return true;
   } else {
     return false;
@@ -561,7 +561,7 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 Util.URL = function _Util_URL(url) {
   if (url.startsWith('//')) {
     var p = 'http:';
-    if (window.location.protocol == "https:") {
+    if (window.location.protocol === "https:") {
       p = 'https:';
     }
     return p + url;
@@ -675,7 +675,7 @@ var _Util_API = function () {
       return new Promise(function (resolve, reject) {
         var r = new XMLHttpRequest();
         r.onreadystatechange = function _XHR_onreadystatechange() {
-          if (this.readyState == XMLHttpRequest.DONE) {
+          if (this.readyState === XMLHttpRequest.DONE) {
             resolve(JSON.parse(this.responseText));
           }
         };
@@ -860,7 +860,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       if (Util.Browser.IsChrome) {
         // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
         var m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
-        if (m == null) {
+        if (m === null) {
           Util.ErrorOnly("Failed to parse stack frame", line);
           continue;
         }
@@ -873,7 +873,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       } else if (Util.Browser.IsFirefox) {
         // "(function)@(file):(line):(column)"
         var _m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
-        if (_m == null) {
+        if (_m === null) {
           Util.ErrorOnly("Failed to parse stack frame", line);
           continue;
         }
@@ -1005,7 +1005,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   if (ref_path !== null) {
     var _loop = function _loop(i) {
       if (pieces.every(function (p) {
-        return p[0][0] == ref_path[i];
+        return p[0][0] === ref_path[i];
       })) {
         var _iteratorNormalCompletion16 = true;
         var _didIteratorError16 = false;
@@ -1073,7 +1073,7 @@ Util.FormatStack = function _Util_FormatStack(stack) {
   }
 
   paths = Util.StripCommonPrefix(paths);
-  console.assert(stack.length == paths.length);
+  console.assert(stack.length === paths.length);
   var result = [];
   for (var i = 0; i < paths.length; ++i) {
     result.push(stack[i].name + "@" + paths[i] + ":" + stack[i].line + ":" + stack[i].column);
@@ -1253,11 +1253,11 @@ var LoggerUtility = function () {
         return false;
       }
       var val = this._sev_value(sev);
-      if (Util.DebugLevel == Util.LEVEL_TRACE) return true;
-      if (Util.DebugLevel == Util.LEVEL_DEBUG) {
+      if (Util.DebugLevel === Util.LEVEL_TRACE) return true;
+      if (Util.DebugLevel === Util.LEVEL_DEBUG) {
         return val >= LoggerUtility.SEVERITIES.DEBUG;
       }
-      if (Util.DebugLevel == Util.LEVEL_OFF) {
+      if (Util.DebugLevel === Util.LEVEL_OFF) {
         return val >= LoggerUtility.SEVERITIES.INFO;
       }
       return val >= LoggerUtility.SEVERITIES.WARN;
@@ -1555,7 +1555,7 @@ var ColorParser = function () {
       var g = Number(rgbtuple[1]);g = Number.isNaN(g) ? 0 : g;
       var b = Number(rgbtuple[2]);b = Number.isNaN(b) ? 0 : b;
       var res = [r, g, b];
-      if (rgbtuple.length == 4 && rgbtuple[3] !== undefined) {
+      if (rgbtuple.length === 4 && rgbtuple[3] !== undefined) {
         var a = Number(rgbtuple[3]);a = Number.isNaN(a) ? 0 : a;
         res.push(a);
       }
@@ -1567,7 +1567,7 @@ var ColorParser = function () {
     value: function parse(color) {
       var failQuiet = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 
-      if (Util._ColorParser == null) {
+      if (Util._ColorParser === null) {
         Util._ColorParser = new ColorParser();
       }
       try {
@@ -1753,10 +1753,10 @@ var _Util_Color = function () {
     this.b = 0;
     this.a = 255;
     /* Handle Color([...]) -> Color(...) */
-    if (args.length == 1 && args[0] instanceof Array) {
+    if (args.length === 1 && args[0] instanceof Array) {
       args = args[0];
     }
-    if (args.length == 1) {
+    if (args.length === 1) {
       /* Handle Color(Color) and Color("string") */
       var arg = args[0];
       if (arg instanceof Util.Color) {
@@ -1767,7 +1767,7 @@ var _Util_Color = function () {
         this.a = _ref9[3];
 
         this.scale = arg.scale;
-      } else if (typeof arg == "string" || arg instanceof String) {
+      } else if (typeof arg === "string" || arg instanceof String) {
         var _ColorParser$parse = ColorParser.parse(arg),
             _ColorParser$parse2 = _slicedToArray(_ColorParser$parse, 4),
             r = _ColorParser$parse2[0],
@@ -1793,7 +1793,7 @@ var _Util_Color = function () {
       this.g = _args2[1];
       this.b = _args2[2];
 
-      if (args.length == 4) this.a = args[3];
+      if (args.length === 4) this.a = args[3];
     } else if (args.length > 0) {
       Util.Throw("Invalid arguments \"" + args + "\" to Color()");
     }
@@ -1845,9 +1845,9 @@ var _Util_Color = function () {
      *    Named CSS4:
      *      rebeccapurple
      *  Case 1:
-     *    rgb1 -> hsl -> rgb2 => rgb1 == rgb2
+     *    rgb1 -> hsl -> rgb2 => rgb1 === rgb2
      *  Case 2:
-     *    rgba1 -> hsla -> rgba2 => rgba1 == rgba2
+     *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
      *  "#ff0000" -> hsl -> "#ff0000"
      */
 
@@ -2051,10 +2051,10 @@ Util.ParseCSSColor = function _Util_ParseCSSColor() {
       g = 0,
       b = 0,
       a = 0;
-  if (color.length == 1) {
+  if (color.length === 1) {
     color = color[0];
   }
-  if (typeof color == "string") {
+  if (typeof color === "string") {
     var _ColorParser$parse3 = ColorParser.parse(color);
 
     var _ColorParser$parse4 = _slicedToArray(_ColorParser$parse3, 4);
@@ -2063,12 +2063,12 @@ Util.ParseCSSColor = function _Util_ParseCSSColor() {
     g = _ColorParser$parse4[1];
     b = _ColorParser$parse4[2];
     a = _ColorParser$parse4[3];
-  } else if ((typeof color === "undefined" ? "undefined" : _typeof(color)) == "object") {
-    if (color.length == 3 || color.length == 4) {
+  } else if ((typeof color === "undefined" ? "undefined" : _typeof(color)) === "object") {
+    if (color.length === 3 || color.length === 4) {
       r = color[0];
       g = color[1];
       b = color[2];
-      if (color.length == 4) {
+      if (color.length === 4) {
         a = color[4];
       }
     }
@@ -2087,7 +2087,7 @@ Util.RelativeLuminance = function _Util_RelativeLuminance() {
     args[_key18] = arguments[_key18];
   }
 
-  var color = Util.ParseCSSColor(args.length == 1 ? args[0] : args);
+  var color = Util.ParseCSSColor(args.length === 1 ? args[0] : args);
   var color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
   function c_to_cx(c) {
     if (c < 0.03928) {
@@ -2120,7 +2120,7 @@ Util.GetMaxContrast = function _Util_GetMaxContrast(c1) {
 
   var best_color = null;
   var best_contrast = null;
-  if (colors.length == 1 && Util.IsArray(colors[0])) {
+  if (colors.length === 1 && Util.IsArray(colors[0])) {
     colors = colors[0];
   }
   var _iteratorNormalCompletion23 = true;
@@ -2326,7 +2326,7 @@ Util.Unbind = function _Util_Unbind(evname, evcallback) {
     var i = Util._events[evname].indexOf(evcallback);
     if (i > -1) {
       Util._events[evname] = Util._events[evname].filter(function (e) {
-        return e != evcallback;
+        return e !== evcallback;
       });
       return true;
     }
@@ -2450,12 +2450,12 @@ Util.FormatInterval = function _Util_FormatInterval(time) {
     parts.push('-');
     time *= -1;
   }
-  if (time % 60 != 0) {
+  if (time % 60 !== 0) {
     parts.unshift(time % 60 + "s");
   }
   time = Math.floor(time / 60);
   if (time > 0) {
-    if (time % 60 != 0) {
+    if (time % 60 !== 0) {
       parts.unshift(time % 60 + "m");
     }
     time = Math.floor(time / 60);
@@ -2480,7 +2480,7 @@ Util.DecodeFlags = function _Util_DecodeFlags(f) {
       for (var _iterator26 = f[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
         var c = _step26.value;
 
-        bits.push(c == "1");
+        bits.push(c === "1");
       }
     } catch (err) {
       _didIteratorError26 = true;
@@ -2499,7 +2499,7 @@ Util.DecodeFlags = function _Util_DecodeFlags(f) {
   } else if (f.match(/^[1-9][0-9]*d$/)) {
     var num = Number.parseInt(f.substr(0, f.length - 1));
     for (var n = 0; 1 << n < num; ++n) {
-      bits.push((1 << n & num) != 0);
+      bits.push((1 << n & num) !== 0);
     }
   }
   if (nbits !== null) {
@@ -2545,7 +2545,7 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
       var cn = _ref16[0];
       var ch = _ref16[1];
 
-      if (cn < 0x20) result = result.concat(Util.EscapeCharCode(cn));else if (ch == '\\') result = result.concat('\\\\');else result = result.concat(ch);
+      if (cn < 0x20) result = result.concat(Util.EscapeCharCode(cn));else if (ch === '\\') result = result.concat('\\\\');else result = result.concat(ch);
     }
   } catch (err) {
     _didIteratorError27 = true;
@@ -2735,7 +2735,7 @@ Util.GetWebStorage = function _Util_GetWebStorage() {
     Util.WarnOnly("Local Storage disabled");
     return {};
   }
-  if (arguments.length == 0) {
+  if (arguments.length === 0) {
     key = Util.GetWebStorageKey();
   } else if (arguments.length === 1) {
     if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === "string") {
@@ -2831,7 +2831,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
     for (var _iterator31 = query.split('&')[Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
       var part = _step31.value;
 
-      if (part.indexOf('=') == -1) {
+      if (part.indexOf('=') === -1) {
         obj[part] = true;
       } else if (part.startsWith('base64=')) {
         var val = decodeURIComponent(part.substr(part.indexOf('=') + 1));
@@ -2868,7 +2868,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
         var key = part.substr(0, part.indexOf('='));
         var _val = part.substr(part.indexOf('=') + 1);
         _val = decodeURIComponent(_val);
-        if (_val.length == 0) _val = false;else if (_val == "true") _val = true;else if (_val == "false") _val = false;else if (_val.match(/^[+-]?[1-9][0-9]*$/)) _val = parseInt(_val);else if (_val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/)) _val = parseFloat(_val);else if (_val === "null") _val = null;
+        if (_val.length === 0) _val = false;else if (_val === "true") _val = true;else if (_val === "false") _val = false;else if (_val.match(/^[+-]?[1-9][0-9]*$/)) _val = parseInt(_val);else if (_val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/)) _val = parseFloat(_val);else if (_val === "null") _val = null;
         obj[key] = _val;
       }
     }
@@ -3027,7 +3027,7 @@ Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
     for (var _iterator36 = css.cssRules[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
       var rule = _step36.value;
 
-      if (rule.selectorText == rule_name) {
+      if (rule.selectorText === rule_name) {
         return rule;
       }
     }
