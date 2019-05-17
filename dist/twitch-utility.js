@@ -963,10 +963,14 @@ Twitch.IRC = {
     result.sub_kind = TwitchSubEvent.FromMsgID(result.flags["msg-id"]);
     result.issub = result.sub_kind !== null;
     result.israid = result.flags["msg-id"] === "raid";
+    result.isritual = result.flags["msg-id"] === "ritual";
     if (result.israid) {
       result.viewer_count = result.flags["msg-param-viewerCount"];
       result.raider = result.flags["msg-param-displayName"];
       result.raid_user = result.flags["msg-param-login"];
+    }
+    if (result.isritual) {
+      result.ritual_kind = result.flags["msg-param-ritual-name"];
     }
   } else if (parts[1] == "GLOBALUSERSTATE") {
     /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
