@@ -119,7 +119,7 @@ Math.divmod = function _Math_divmod(n, r) {
 
 /* Return true if any of the values satisfy the function given */
 Array.prototype.any = function _Array_any(func) {
-  if (!func) func = (function _bool(x) { x ? true : false; });
+  if (!func) func = (b) => b ? true : false;
   for (let e of this) {
     if (func(e)) {
       return true;
@@ -130,7 +130,7 @@ Array.prototype.any = function _Array_any(func) {
 
 /* Return true if all of the values satisfy the function given */
 Array.prototype.all = function _Array_all(func) {
-  if (!func) func = (function _bool(x) { x ? true : false; });
+  if (!func) func = (b) => b ? true : false;
   for (let e of this) {
     if (!func(e)) {
       return false;
@@ -374,7 +374,7 @@ class _Util_API {
   /* Fetch a resource using XMLHttpRequest */
   _fetch_xhr(url, parms) {
     let stack = Util.GetStack();
-    return new Promise(function (resolve, reject) {
+    return new Promise((function (resolve, reject) {
       let r = new XMLHttpRequest();
       r.onreadystatechange = function _XHR_onreadystatechange() {
         if (this.readyState === XMLHttpRequest.DONE) {
@@ -390,7 +390,7 @@ class _Util_API {
         r.setRequestHeader(k, v);
       }
       r.send(parms.body || null);
-    });
+    }).bind(this));
   }
 
   /* Fetch the given URL with the given parameter object.
@@ -405,9 +405,10 @@ class _Util_API {
 
   fetchCB(url, parms, onSuccess, onError=null) {
     onError = onError || Util.Error;
+    let self = this;
     this.fetchAsync(url, parms)
-      .then(function _fetchCB_then(json) { onSuccess(json, this); })
-      .catch(function _fetchCB_catch(...args) { onError(args, this); });
+      .then(function _fetchCB_then(json) { onSuccess(json, self); })
+      .catch(function _fetchCB_catch(...args) { onError(args, self); });
   }
 }
 Util.API = _Util_API;

@@ -123,8 +123,8 @@ Math.divmod = function _Math_divmod(n, r) {
 
 /* Return true if any of the values satisfy the function given */
 Array.prototype.any = function _Array_any(func) {
-  if (!func) func = function _bool(x) {
-    x ? true : false;
+  if (!func) func = function func(b) {
+    return b ? true : false;
   };
   var _iteratorNormalCompletion = true;
   var _didIteratorError = false;
@@ -158,8 +158,8 @@ Array.prototype.any = function _Array_any(func) {
 
 /* Return true if all of the values satisfy the function given */
 Array.prototype.all = function _Array_all(func) {
-  if (!func) func = function _bool(x) {
-    x ? true : false;
+  if (!func) func = function func(b) {
+    return b ? true : false;
   };
   var _iteratorNormalCompletion2 = true;
   var _didIteratorError2 = false;
@@ -715,7 +715,7 @@ var _Util_API = function () {
         }
 
         r.send(parms.body || null);
-      });
+      }.bind(this));
     }
 
     /* Fetch the given URL with the given parameter object.
@@ -738,14 +738,15 @@ var _Util_API = function () {
       var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
       onError = onError || Util.Error;
+      var self = this;
       this.fetchAsync(url, parms).then(function _fetchCB_then(json) {
-        onSuccess(json, this);
+        onSuccess(json, self);
       }).catch(function _fetchCB_catch() {
         for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
           args[_key2] = arguments[_key2];
         }
 
-        onError(args, this);
+        onError(args, self);
       });
     }
   }], [{

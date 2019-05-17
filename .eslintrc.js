@@ -23,7 +23,13 @@ module.exports = {
         "no-unused-vars": "warn",
         "no-shadow": "warn",
         "no-trailing-spaces": "warn",
-        "eqeqeq": "warn"
+        "eqeqeq": "warn",
+        "no-implied-eval": "warn",
+        "no-invalid-this": "error",
+        "no-self-compare": "warn",
+        "no-throw-literal": "warn",
+        "no-unused-expressions": "warn",
+        "no-use-before-define": "warn"
     },
     "overrides": [
         {
