@@ -1577,15 +1577,18 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
 /* Parse a raw localStorage string using the options given */
 Util.StorageParse = function _Util_StorageParse(s, opts=null) {
   let str = s;
+  let use_json = true;
   if (Util.IsArray(opts)) {
     for (let o of opts) {
       if (o === "b64") str = window.atob(str);
       if (o === "xor") s = s.xor(127);
       if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
       if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+      if (typeof(o) === "function") s = o(s);
+      if (o === "nojson") use_json = false;
     }
   }
-  return JSON.parse(s);
+  return use_json ? JSON.parse(s) : s;
 }
 
 /* Format an object for storing into localStorage */
@@ -1597,6 +1600,7 @@ Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
       if (o === "xor") s = s.xor(127);
       if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
       if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+      if (typeof(o) === "function") s = o(s);
     }
   }
   return s;

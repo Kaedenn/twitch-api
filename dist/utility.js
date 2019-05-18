@@ -2737,6 +2737,7 @@ Util.StorageParse = function _Util_StorageParse(s) {
   var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
   var str = s;
+  var use_json = true;
   if (Util.IsArray(opts)) {
     var _iteratorNormalCompletion29 = true;
     var _didIteratorError29 = false;
@@ -2752,6 +2753,8 @@ Util.StorageParse = function _Util_StorageParse(s) {
           return (i & 15) * 16 + (i & 240) / 16;
         });
         if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+        if (typeof o === "function") s = o(s);
+        if (o === "nojson") use_json = false;
       }
     } catch (err) {
       _didIteratorError29 = true;
@@ -2768,7 +2771,7 @@ Util.StorageParse = function _Util_StorageParse(s) {
       }
     }
   }
-  return JSON.parse(s);
+  return use_json ? JSON.parse(s) : s;
 };
 
 /* Format an object for storing into localStorage */
@@ -2791,6 +2794,7 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
           return (i & 15) * 16 + (i & 240) / 16;
         });
         if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+        if (typeof o === "function") s = o(s);
       }
     } catch (err) {
       _didIteratorError30 = true;
