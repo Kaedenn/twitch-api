@@ -1492,59 +1492,31 @@ Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
   }
 }
 
-/* Disables localStorage suppport */
-Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
-  Util._ws_enabled = false;
-}
-
-/* Parse a raw localStorage string using the options given */
-Util.StorageParse = function _Util_StorageParse(s, opts=null) {
-  let str = s;
-  if (Util.IsArray(opts)) {
-    for (let o of opts) {
-      if (o === "b64") str = window.atob(str);
-      if (o === "xor") s = s.xor(127);
-      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
-      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
-    }
-  }
-  return JSON.parse(s);
-}
-
-/* Format an object for storing into localStorage */
-Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
-  let s = JSON.stringify(obj);
-  if (Util.IsArray(opts)) {
-    for (let o of opts) {
-      if (o === "b64") s = window.btoa(s);
-      if (o === "xor") s = s.xor(127);
-      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
-      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
-    }
-  }
-  return s;
-}
-
 /* Get and decode value, using either the configured key or the one given */
 Util.GetWebStorage = function _Util_GetWebStorage(...args) {
-  let key = "";
-  let opts = {};
   if (!Util._ws_enabled) {
     Util.WarnOnly("Local Storage disabled");
     return {};
   }
-  if (args.length === 0) {
-    key = Util.GetWebStorageKey();
-  } else if (args.length === 1) {
-    if (typeof(args[0]) === "string") {
-      key = args[0];
-    } else {
-      key = Util.GetWebStorageKey();
+  function parseArgs(...arglist) {
+    let k = null;
+    let o = {};
+    if (arglist.length === 1) {
+      if (typeof(arglist[0]) === "string") {
+        k = arglist[0];
+      } else {
+        o = arglist[0];
+      }
+    } else if (arglist.length >= 2) {
+      k = arglist[0];
+      o = arglist[1];
     }
-  } else {
-    key = args[0];
-    opts = args[1];
+    if (k === null) {
+      k = Util.GetWebStorageKey();
+    }
+    return [k, o];
   }
+  let [key, opts] = parseArgs(...args);
   if (!key) {
     Util.Error("Util.GetWebStorage called without a key configured");
   } else {
@@ -1600,6 +1572,50 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
     new_v.push(value);
   }
   Util.SetWebStorage(key, new_v);
+}
+
+/* Parse a raw localStorage string using the options given */
+Util.StorageParse = function _Util_StorageParse(s, opts=null) {
+  let str = s;
+  if (Util.IsArray(opts)) {
+    for (let o of opts) {
+      if (o === "b64") str = window.atob(str);
+      if (o === "xor") s = s.xor(127);
+      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
+      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+    }
+  }
+  return JSON.parse(s);
+}
+
+/* Format an object for storing into localStorage */
+Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
+  let s = JSON.stringify(obj);
+  if (Util.IsArray(opts)) {
+    for (let o of opts) {
+      if (o === "b64") s = window.btoa(s);
+      if (o === "xor") s = s.xor(127);
+      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
+      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
+    }
+  }
+  return s;
+}
+
+/* Disables localStorage suppport entirely */
+Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
+  Util._ws_enabled = false;
+  function wsapi_wrapper(f) {
+    Util.Warn("Function is disabled", f);
+    return null;
+  }
+  Util.GetWebStorageKey = wsapi_wrapper(Util.GetWebStorageKey);
+  Util.SetWebStorageKey = wsapi_wrapper(Util.SetWebStorageKey);
+  Util.GetWebStorage = wsapi_wrapper(Util.GetWebStorage);
+  Util.SetWebStorage = wsapi_wrapper(Util.SetWebStorage);
+  Util.StorageAppend = wsapi_wrapper(Util.StorageAppend);
+  Util.StorageParse = wsapi_wrapper(Util.StorageParse);
+  Util.StorageFormat = wsapi_wrapper(Util.StorageFormat);
 }
 
 /* End configuration and localStorage functions 0}}} */

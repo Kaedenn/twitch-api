@@ -2645,9 +2645,91 @@ Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
   }
 };
 
-/* Disables localStorage suppport */
-Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
-  Util._ws_enabled = false;
+/* Get and decode value, using either the configured key or the one given */
+Util.GetWebStorage = function _Util_GetWebStorage() {
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+    return {};
+  }
+  function parseArgs() {
+    var k = null;
+    var o = {};
+    if (arguments.length === 1) {
+      if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === "string") {
+        k = arguments.length <= 0 ? undefined : arguments[0];
+      } else {
+        o = arguments.length <= 0 ? undefined : arguments[0];
+      }
+    } else if (arguments.length >= 2) {
+      k = arguments.length <= 0 ? undefined : arguments[0];
+      o = arguments.length <= 1 ? undefined : arguments[1];
+    }
+    if (k === null) {
+      k = Util.GetWebStorageKey();
+    }
+    return [k, o];
+  }
+
+  var _parseArgs = parseArgs.apply(undefined, arguments),
+      _parseArgs2 = _slicedToArray(_parseArgs, 2),
+      key = _parseArgs2[0],
+      opts = _parseArgs2[1];
+
+  if (!key) {
+    Util.Error("Util.GetWebStorage called without a key configured");
+  } else {
+    var v = window.localStorage.getItem(key);
+    if (v === null) return null;
+    if (v === "") return "";
+    return Util.StorageParse(v, opts);
+  }
+};
+
+/* JSON encode and store a localStorage value
+ * Overloads:
+ *  SetWebStorage(value)
+ *  SetWebStorage(key, value)
+ *  SetWebStorage(key, value, opts)
+ *  SetWebStorage(null, value, opts)
+ */
+Util.SetWebStorage = function _Util_SetWebStorage() {
+  var key = null;
+  var value = null;
+  var opts = {};
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+  }
+  if (arguments.length === 1) {
+    key = Util.GetWebStorageKey();
+    value = arguments.length <= 0 ? undefined : arguments[0];
+  } else if (arguments.length === 2) {
+    key = (arguments.length <= 0 ? undefined : arguments[0]) === null ? Util.GetWebStorageKey() : arguments.length <= 0 ? undefined : arguments[0];
+    value = arguments.length <= 1 ? undefined : arguments[1];
+  } else if (arguments.length === 3) {
+    key = (arguments.length <= 0 ? undefined : arguments[0]) === null ? Util.GetWebStorageKey() : arguments.length <= 0 ? undefined : arguments[0];
+    value = arguments.length <= 1 ? undefined : arguments[1];
+    opts = arguments.length <= 2 ? undefined : arguments[2];
+  }
+  if (key === null) {
+    Util.Error("Util.SetWebStorage called without a key configured");
+  } else {
+    window.localStorage.setItem(key, Util.StorageFormat(value, opts));
+  }
+};
+
+/* Append a value to the given localStorage key */
+Util.StorageAppend = function _Util_StorageAppend(key, value) {
+  var v = Util.GetWebStorage(key);
+  var new_v = [];
+  if (v === null) {
+    new_v = [value];
+  } else if (!(v instanceof Array)) {
+    new_v = [v, value];
+  } else {
+    new_v = v;
+    new_v.push(value);
+  }
+  Util.SetWebStorage(key, new_v);
 };
 
 /* Parse a raw localStorage string using the options given */
@@ -2728,81 +2810,20 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
   return s;
 };
 
-/* Get and decode value, using either the configured key or the one given */
-Util.GetWebStorage = function _Util_GetWebStorage() {
-  var key = "";
-  var opts = {};
-  if (!Util._ws_enabled) {
-    Util.WarnOnly("Local Storage disabled");
-    return {};
+/* Disables localStorage suppport entirely */
+Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
+  Util._ws_enabled = false;
+  function wsapi_wrapper(f) {
+    Util.Warn("Function is disabled", f);
+    return null;
   }
-  if (arguments.length === 0) {
-    key = Util.GetWebStorageKey();
-  } else if (arguments.length === 1) {
-    if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === "string") {
-      key = arguments.length <= 0 ? undefined : arguments[0];
-    } else {
-      key = Util.GetWebStorageKey();
-    }
-  } else {
-    key = arguments.length <= 0 ? undefined : arguments[0];
-    opts = arguments.length <= 1 ? undefined : arguments[1];
-  }
-  if (!key) {
-    Util.Error("Util.GetWebStorage called without a key configured");
-  } else {
-    var v = window.localStorage.getItem(key);
-    if (v === null) return null;
-    if (v === "") return "";
-    return Util.StorageParse(v, opts);
-  }
-};
-
-/* JSON encode and store a localStorage value
- * Overloads:
- *  SetWebStorage(value)
- *  SetWebStorage(key, value)
- *  SetWebStorage(key, value, opts)
- *  SetWebStorage(null, value, opts)
- */
-Util.SetWebStorage = function _Util_SetWebStorage() {
-  var key = null;
-  var value = null;
-  var opts = {};
-  if (!Util._ws_enabled) {
-    Util.WarnOnly("Local Storage disabled");
-  }
-  if (arguments.length === 1) {
-    key = Util.GetWebStorageKey();
-    value = arguments.length <= 0 ? undefined : arguments[0];
-  } else if (arguments.length === 2) {
-    key = (arguments.length <= 0 ? undefined : arguments[0]) === null ? Util.GetWebStorageKey() : arguments.length <= 0 ? undefined : arguments[0];
-    value = arguments.length <= 1 ? undefined : arguments[1];
-  } else if (arguments.length === 3) {
-    key = (arguments.length <= 0 ? undefined : arguments[0]) === null ? Util.GetWebStorageKey() : arguments.length <= 0 ? undefined : arguments[0];
-    value = arguments.length <= 1 ? undefined : arguments[1];
-    opts = arguments.length <= 2 ? undefined : arguments[2];
-  }
-  if (key === null) {
-    Util.Error("Util.SetWebStorage called without a key configured");
-  } else {
-    window.localStorage.setItem(key, Util.StorageFormat(value, opts));
-  }
-};
-
-/* Append a value to the given localStorage key */
-Util.StorageAppend = function _Util_StorageAppend(key, value) {
-  var v = Util.GetWebStorage(key);
-  var new_v = [];
-  if (v === null) {
-    new_v = [value];
-  } else if (!(v instanceof Array)) {
-    new_v = [v, value];
-  } else {
-    new_v = v;
-    new_v.push(value);
-  }
-  Util.SetWebStorage(key, new_v);
+  Util.GetWebStorageKey = wsapi_wrapper(Util.GetWebStorageKey);
+  Util.SetWebStorageKey = wsapi_wrapper(Util.SetWebStorageKey);
+  Util.GetWebStorage = wsapi_wrapper(Util.GetWebStorage);
+  Util.SetWebStorage = wsapi_wrapper(Util.SetWebStorage);
+  Util.StorageAppend = wsapi_wrapper(Util.StorageAppend);
+  Util.StorageParse = wsapi_wrapper(Util.StorageParse);
+  Util.StorageFormat = wsapi_wrapper(Util.StorageFormat);
 };
 
 /* End configuration and localStorage functions 0}}} */
