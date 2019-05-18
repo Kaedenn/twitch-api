@@ -55,14 +55,14 @@ Util.Browser.Get = function _Util_Browser_Get() {
   let p_firefox = /\bFirefox\/[0-9.]+\b/;
   let p_chrome = /\bChrome\/[0-9.]+\b/;
   let p_tesla = /\bTesla\b/;
-  if (navigator.userAgent.match(p_firefox)) {
+  if (window.obssource) {
+    return Util.Browser.OBS;
+  } else if (navigator.userAgent.match(p_firefox)) {
     return Util.Browser.FIREFOX;
   } else if (navigator.userAgent.match(p_chrome)) {
     return Util.Browser.CHROME;
   } else if (navigator.userAgent.match(p_tesla)) {
     return Util.Browser.TESLA;
-  } else if (window.obssource) {
-    return Util.Browser.OBS;
   } else {
     return Util.Browser.UNKNOWN;
   }
