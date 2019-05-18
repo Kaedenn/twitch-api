@@ -12,6 +12,7 @@
  *  _onWebsocketMessage:
  *    Use Twitch.IRC.Parse over Twitch.ParseIRCMessage. Requires significant
  *    rewrite of _onWebsocketMessage and of bound event handlers in drivers.
+ *  _ensureChannel().channel vs FormatChannel() ???
  */
 
 /* TODO:
@@ -977,8 +978,7 @@ function _TwitchClient_UnBan(channel, user) {
 /* Request the client to join the channel specified */
 TwitchClient.prototype.JoinChannel =
 function _TwitchClient_JoinChannel(channel) {
-  channel = this._ensureChannel(channel);
-  let ch = channel.channel;
+  let ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     if (this._channels.indexOf(ch) === -1) {
       this.send(`JOIN ${ch}`);
@@ -994,8 +994,7 @@ function _TwitchClient_JoinChannel(channel) {
 /* Request the client to leave the channel specified */
 TwitchClient.prototype.LeaveChannel =
 function _TwitchClient_LeaveChannel(channel) {
-  channel = this._ensureChannel(channel);
-  let ch = channel.channel;
+  let ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     let idx = this._channels.indexOf(ch);
     if (idx > -1) {
@@ -1011,8 +1010,7 @@ function _TwitchClient_LeaveChannel(channel) {
 /* Return whether or not the client is in the channel specified */
 TwitchClient.prototype.IsInChannel =
 function _TwitchClient_IsInChannel(channel) {
-  channel = this._ensureChannel(channel);
-  let ch = channel.channel;
+  let ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     if (this._channels.indexOf(ch) > -1) {
       return true;
@@ -1033,7 +1031,8 @@ function _TwitchClient_GetJoinedChannels() {
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetChannelInfo =
 function _TwitchClient_GetChannelInfo(channel) {
-  return this._rooms[channel] || {};
+  let cname = this._ensureChannel(channel).channel;
+  return this._rooms[cname] || {};
 }
 
 /* End channel functions 0}}} */
@@ -1042,7 +1041,8 @@ function _TwitchClient_GetChannelInfo(channel) {
 
 /* Return whether or not the given word is a cheer for the given channel */
 TwitchClient.prototype.IsCheer =
-function _TwitchClient_IsCheer(cname, word) {
+function _TwitchClient_IsCheer(channel, word) {
+  let cname = this._ensureChannel(channel).channel;
   if (this._channel_cheers.hasOwnProperty(cname)) {
     for (let name of Object.keys(this._channel_cheers[cname])) {
       if (word.match(this._channel_cheers[cname][name].word_pattern)) {
@@ -1055,10 +1055,11 @@ function _TwitchClient_IsCheer(cname, word) {
 
 /* Return all of the cheers found in the message */
 TwitchClient.prototype.FindCheers =
-function _TwitchClient_FindCheers(cname, message) {
+function _TwitchClient_FindCheers(channel, message) {
   let matches = [];
   let parts = message.split(" ");
   let offset = 0;
+  let cname = this._ensureChannel(channel).channel;
   if (this._channel_cheers.hasOwnProperty(cname)) {
     for (let [name, cheer] of Object.entries(this._channel_cheers[cname])) {
       if (message.search(cheer.line_pattern) > -1) {

@@ -12,6 +12,7 @@
  *  _onWebsocketMessage:
  *    Use Twitch.IRC.Parse over Twitch.ParseIRCMessage. Requires significant
  *    rewrite of _onWebsocketMessage and of bound event handlers in drivers.
+ *  _ensureChannel().channel vs FormatChannel() ???
  */
 
 /* TODO:
@@ -1513,8 +1514,7 @@ TwitchClient.prototype.UnBan = function _TwitchClient_UnBan(channel, user) {
 
 /* Request the client to join the channel specified */
 TwitchClient.prototype.JoinChannel = function _TwitchClient_JoinChannel(channel) {
-  channel = this._ensureChannel(channel);
-  var ch = channel.channel;
+  var ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     if (this._channels.indexOf(ch) === -1) {
       this.send("JOIN " + ch);
@@ -1529,8 +1529,7 @@ TwitchClient.prototype.JoinChannel = function _TwitchClient_JoinChannel(channel)
 
 /* Request the client to leave the channel specified */
 TwitchClient.prototype.LeaveChannel = function _TwitchClient_LeaveChannel(channel) {
-  channel = this._ensureChannel(channel);
-  var ch = channel.channel;
+  var ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     var idx = this._channels.indexOf(ch);
     if (idx > -1) {
@@ -1545,8 +1544,7 @@ TwitchClient.prototype.LeaveChannel = function _TwitchClient_LeaveChannel(channe
 
 /* Return whether or not the client is in the channel specified */
 TwitchClient.prototype.IsInChannel = function _TwitchClient_IsInChannel(channel) {
-  channel = this._ensureChannel(channel);
-  var ch = channel.channel;
+  var ch = this._ensureChannel(channel).channel;
   if (this._is_open) {
     if (this._channels.indexOf(ch) > -1) {
       return true;
@@ -1565,7 +1563,8 @@ TwitchClient.prototype.GetJoinedChannels = function _TwitchClient_GetJoinedChann
 
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetChannelInfo = function _TwitchClient_GetChannelInfo(channel) {
-  return this._rooms[channel] || {};
+  var cname = this._ensureChannel(channel).channel;
+  return this._rooms[cname] || {};
 };
 
 /* End channel functions 0}}} */
@@ -1573,7 +1572,8 @@ TwitchClient.prototype.GetChannelInfo = function _TwitchClient_GetChannelInfo(ch
 /* Functions related to cheers and emotes {{{0 */
 
 /* Return whether or not the given word is a cheer for the given channel */
-TwitchClient.prototype.IsCheer = function _TwitchClient_IsCheer(cname, word) {
+TwitchClient.prototype.IsCheer = function _TwitchClient_IsCheer(channel, word) {
+  var cname = this._ensureChannel(channel).channel;
   if (this._channel_cheers.hasOwnProperty(cname)) {
     var _iteratorNormalCompletion17 = true;
     var _didIteratorError17 = false;
@@ -1606,10 +1606,11 @@ TwitchClient.prototype.IsCheer = function _TwitchClient_IsCheer(cname, word) {
 };
 
 /* Return all of the cheers found in the message */
-TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(cname, message) {
+TwitchClient.prototype.FindCheers = function _TwitchClient_FindCheers(channel, message) {
   var matches = [];
   var parts = message.split(" ");
   var offset = 0;
+  var cname = this._ensureChannel(channel).channel;
   if (this._channel_cheers.hasOwnProperty(cname)) {
     var _iteratorNormalCompletion18 = true;
     var _didIteratorError18 = false;
