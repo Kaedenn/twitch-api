@@ -2981,34 +2981,62 @@ Util.RectContains = function _Util_RectContains(x, y, rect) {
 
 /* Return whether or not the position is over the HTML element */
 Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
-  var rects = elem.getClientRects();
-  var _iteratorNormalCompletion34 = true;
-  var _didIteratorError34 = false;
-  var _iteratorError34 = undefined;
+  if (elem && elem.jquery) {
+    var _iteratorNormalCompletion34 = true;
+    var _didIteratorError34 = false;
+    var _iteratorError34 = undefined;
 
-  try {
-    for (var _iterator34 = rects[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
-      var rect = _step34.value;
+    try {
+      for (var _iterator34 = elem[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
+        var e = _step34.value;
 
-      if (Util.RectContains(x, y, rect)) {
-        return true;
+        if (Util.PointIsOn(x, y, e)) {
+          return true;
+        }
+      }
+    } catch (err) {
+      _didIteratorError34 = true;
+      _iteratorError34 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion34 && _iterator34.return) {
+          _iterator34.return();
+        }
+      } finally {
+        if (_didIteratorError34) {
+          throw _iteratorError34;
+        }
       }
     }
-  } catch (err) {
-    _didIteratorError34 = true;
-    _iteratorError34 = err;
-  } finally {
+  } else {
+    var rects = elem.getClientRects();
+    var _iteratorNormalCompletion35 = true;
+    var _didIteratorError35 = false;
+    var _iteratorError35 = undefined;
+
     try {
-      if (!_iteratorNormalCompletion34 && _iterator34.return) {
-        _iterator34.return();
+      for (var _iterator35 = rects[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
+        var rect = _step35.value;
+
+        if (Util.RectContains(x, y, rect)) {
+          return true;
+        }
       }
+    } catch (err) {
+      _didIteratorError35 = true;
+      _iteratorError35 = err;
     } finally {
-      if (_didIteratorError34) {
-        throw _iteratorError34;
+      try {
+        if (!_iteratorNormalCompletion35 && _iterator35.return) {
+          _iterator35.return();
+        }
+      } finally {
+        if (_didIteratorError35) {
+          throw _iteratorError35;
+        }
       }
     }
   }
-
   return false;
 };
 
@@ -3020,48 +3048,16 @@ Util.CSS = {};
 
 /* Get a stylesheet by filename or partial pathname */
 Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
-  var _iteratorNormalCompletion35 = true;
-  var _didIteratorError35 = false;
-  var _iteratorError35 = undefined;
-
-  try {
-    for (var _iterator35 = document.styleSheets[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
-      var ss = _step35.value;
-
-      if (ss.href.endsWith("/" + filename.replace(/^\//, ""))) {
-        return ss;
-      }
-    }
-  } catch (err) {
-    _didIteratorError35 = true;
-    _iteratorError35 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion35 && _iterator35.return) {
-        _iterator35.return();
-      }
-    } finally {
-      if (_didIteratorError35) {
-        throw _iteratorError35;
-      }
-    }
-  }
-
-  return null;
-};
-
-/* Given a stylesheet, obtain a rule definition by name */
-Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
   var _iteratorNormalCompletion36 = true;
   var _didIteratorError36 = false;
   var _iteratorError36 = undefined;
 
   try {
-    for (var _iterator36 = css.cssRules[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-      var rule = _step36.value;
+    for (var _iterator36 = document.styleSheets[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+      var ss = _step36.value;
 
-      if (rule.selectorText === rule_name) {
-        return rule;
+      if (ss.href.endsWith("/" + filename.replace(/^\//, ""))) {
+        return ss;
       }
     }
   } catch (err) {
@@ -3075,6 +3071,38 @@ Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
     } finally {
       if (_didIteratorError36) {
         throw _iteratorError36;
+      }
+    }
+  }
+
+  return null;
+};
+
+/* Given a stylesheet, obtain a rule definition by name */
+Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
+  var _iteratorNormalCompletion37 = true;
+  var _didIteratorError37 = false;
+  var _iteratorError37 = undefined;
+
+  try {
+    for (var _iterator37 = css.cssRules[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
+      var rule = _step37.value;
+
+      if (rule.selectorText === rule_name) {
+        return rule;
+      }
+    }
+  } catch (err) {
+    _didIteratorError37 = true;
+    _iteratorError37 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion37 && _iterator37.return) {
+        _iterator37.return();
+      }
+    } finally {
+      if (_didIteratorError37) {
+        throw _iteratorError37;
       }
     }
   }
@@ -3138,42 +3166,15 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
   var results = [];
   /* Accept jQuery elements and element sets */
   if (root && root.jquery) {
-    var _iteratorNormalCompletion37 = true;
-    var _didIteratorError37 = false;
-    var _iteratorError37 = undefined;
-
-    try {
-      for (var _iterator37 = root[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
-        var e = _step37.value;
-
-        results = results.concat(Util.SearchTree(e, pred));
-      }
-    } catch (err) {
-      _didIteratorError37 = true;
-      _iteratorError37 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion37 && _iterator37.return) {
-          _iterator37.return();
-        }
-      } finally {
-        if (_didIteratorError37) {
-          throw _iteratorError37;
-        }
-      }
-    }
-  } else if (pred(root)) {
-    results.push(root);
-  } else if (root.childNodes && root.childNodes.length > 0) {
     var _iteratorNormalCompletion38 = true;
     var _didIteratorError38 = false;
     var _iteratorError38 = undefined;
 
     try {
-      for (var _iterator38 = root.childNodes[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
-        var _e2 = _step38.value;
+      for (var _iterator38 = root[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
+        var e = _step38.value;
 
-        results.concat(Util.SearchTree(_e2, pred));
+        results = results.concat(Util.SearchTree(e, pred));
       }
     } catch (err) {
       _didIteratorError38 = true;
@@ -3186,6 +3187,33 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
       } finally {
         if (_didIteratorError38) {
           throw _iteratorError38;
+        }
+      }
+    }
+  } else if (pred(root)) {
+    results.push(root);
+  } else if (root.childNodes && root.childNodes.length > 0) {
+    var _iteratorNormalCompletion39 = true;
+    var _didIteratorError39 = false;
+    var _iteratorError39 = undefined;
+
+    try {
+      for (var _iterator39 = root.childNodes[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
+        var _e2 = _step39.value;
+
+        results = results.concat(Util.SearchTree(_e2, pred));
+      }
+    } catch (err) {
+      _didIteratorError39 = true;
+      _iteratorError39 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion39 && _iterator39.return) {
+          _iterator39.return();
+        }
+      } finally {
+        if (_didIteratorError39) {
+          throw _iteratorError39;
         }
       }
     }
@@ -3221,6 +3249,18 @@ Util.GetHTML = function _Util_GetHTML(node) {
     return ("" + node.nodeValue).escape();
   } else {
     return "" + node;
+  }
+};
+
+/* Ensure the absolute offset displays entirely on-screen */
+Util.ClampToScreen = function _Util_ClampToScreen(offset) {
+  if (offset.top < 0) offset.top = 0;
+  if (offset.left < 0) offset.left = 0;
+  if (offset.left + offset.width > window.innerWidth) {
+    offset.left = window.innerWidth - offset.width;
+  }
+  if (offset.top + offset.height > window.innerHeight) {
+    offset.top = window.innerHeight - offset.height;
   }
 };
 

@@ -1709,10 +1709,18 @@ Util.RectContains = function _Util_RectContains(x, y, rect) {
 
 /* Return whether or not the position is over the HTML element */
 Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
-  let rects = elem.getClientRects();
-  for (let rect of rects) {
-    if (Util.RectContains(x, y, rect)) {
-      return true;
+  if (elem && elem.jquery) {
+    for (let e of elem) {
+      if (Util.PointIsOn(x, y, e)) {
+        return true;
+      }
+    }
+  } else {
+    let rects = elem.getClientRects();
+    for (let rect of rects) {
+      if (Util.RectContains(x, y, rect)) {
+        return true;
+      }
     }
   }
   return false;
@@ -1807,7 +1815,7 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
     results.push(root);
   } else if (root.childNodes && root.childNodes.length > 0) {
     for (let e of root.childNodes) {
-      results.concat(Util.SearchTree(e, pred));
+      results = results.concat(Util.SearchTree(e, pred));
     }
   }
   return results;
@@ -1841,6 +1849,18 @@ Util.GetHTML = function _Util_GetHTML(node) {
     return `${node.nodeValue}`.escape();
   } else {
     return `${node}`;
+  }
+}
+
+/* Ensure the absolute offset displays entirely on-screen */
+Util.ClampToScreen = function _Util_ClampToScreen(offset) {
+  if (offset.top < 0) offset.top = 0;
+  if (offset.left < 0) offset.left = 0;
+  if (offset.left + offset.width > window.innerWidth) {
+    offset.left = window.innerWidth - offset.width;
+  }
+  if (offset.top + offset.height > window.innerHeight) {
+    offset.top = window.innerHeight - offset.height;
   }
 }
 
