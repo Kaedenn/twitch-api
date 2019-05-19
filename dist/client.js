@@ -9,35 +9,25 @@
 /* FIXME:
  *  Only the first channel-specific sub badge seems to appear; longer-duration
  *  badges don't display.
- *  _onWebsocketMessage:
- *    Use Twitch.IRC.Parse over Twitch.ParseIRCMessage. Requires significant
- *    rewrite of _onWebsocketMessage and of bound event handlers in drivers.
  *  _ensureChannel().channel vs FormatChannel() ???
  */
 
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
- *  Implement the following features:
- *    Clip information
- *      https://api.twitch.tv/kraken/clips/<string>
- *    USERNOTICEs:
- *      submysterygift
- *      rewardgift
- *      giftpaidupgrade
- *        msg-param-promo-gift-total
- *        msg-param-promo-name
- *      anongiftpaidupgrade
- *        msg-param-promo-gift-total
- *        msg-param-promo-name
- *      raid
- *        msg-param-viewerCount (raid size)
- *        msg-param-displayName (raider's name)
- *        msg-param-login (raider's login)
- *      unraid
- *      ritual
- *        msg-id: new_chatter
- *      bitsbadgetier
+ *  Clip information
+ *    https://api.twitch.tv/kraken/clips/<string>
+ *  USERNOTICEs:
+ *    submysterygift
+ *    rewardgift
+ *    giftpaidupgrade
+ *      msg-param-promo-gift-total
+ *      msg-param-promo-name
+ *    anongiftpaidupgrade
+ *      msg-param-promo-gift-total
+ *      msg-param-promo-name
+ *    unraid
+ *    bitsbadgetier
  */
 
 /* Event classes {{{0 */
@@ -96,7 +86,7 @@ var TwitchEvent = function () {
   }, {
     key: "flag",
     value: function flag(_flag) {
-      return this._parsed.flags ? this._parsed.flags[_flag] : null;
+      return this.flags ? this.flags[_flag] : null;
     }
 
     /* Obtain the first non-falsy value of the listed flags */
@@ -168,27 +158,27 @@ var TwitchEvent = function () {
   }, {
     key: "channel",
     get: function get() {
-      return this._parsed.channel;
+      return this.values.channel;
     }
   }, {
     key: "message",
     get: function get() {
-      return this._parsed.message;
+      return this.values.message;
     }
   }, {
     key: "user",
     get: function get() {
-      return this._parsed.user || this.flags["display-name"];
+      return this.values.user || this.flags["display-name"];
     }
   }, {
     key: "name",
     get: function get() {
-      return this.flags["display-name"] || this._parsed.user;
+      return this.flags["display-name"] || this.values.user;
     }
   }, {
     key: "flags",
     get: function get() {
-      return this._parsed.flags;
+      return this.values.flags;
     }
   }, {
     key: "notice_msgid",
@@ -652,7 +642,8 @@ function TwitchClient(opts) {
 
     var self = this;
 
-    this._ws = new WebSocket("wss://irc-ws.chat.twitch.tv");
+    this._endpoint = "wss://irc-ws.chat.twitch.tv";
+    this._ws = new WebSocket(this._endpoint);
     this._ws.client = this;
     this._ws.onopen = function _ws_onopen() /*event*/{
       try {
@@ -2070,15 +2061,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
       return "continue";
     }
 
-    /* Parse the message (TODO: Use Twitch.IRC.Parse()) */
     var result = Twitch.ParseIRCMessage(line);
-    Util.Trace('result1:', result);
-    try {
-      var result2 = Twitch.IRC.Parse(line);
-      Util.Trace('result2:', result2);
-    } catch (e) {
-      Util.Error(e);
-    }
 
     /* Fire twitch-message for every line received */
     Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
@@ -2446,7 +2429,3 @@ TwitchClient.prototype._onWebsocketClose = function _TwitchClient__onWebsocketCl
 };
 
 /* End websocket callbacks 0}}} */
-
-/* Mark the Twitch Client API as loaded */
-TwitchClient.API_Loaded = true;
-document.dispatchEvent(new Event("twapi-client-loaded"));

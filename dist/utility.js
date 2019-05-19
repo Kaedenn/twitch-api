@@ -1589,7 +1589,7 @@ var ColorParser = function () {
 /* Class for handling colors and color arithmetic */
 
 
-var _Util_Color = function () {
+Util.Color = function () {
   _createClass(_Util_Color, null, [{
     key: "RGBToHSL",
 
@@ -2035,8 +2035,6 @@ var _Util_Color = function () {
   return _Util_Color;
 }();
 
-Util.Color = _Util_Color;
-
 /* Parse a CSS color.
  * Overloads
  *  Util.ParseCSSColor('css color spec')
@@ -2170,20 +2168,29 @@ Util.RandomGenerator = function () {
     this._crypto = null;
     if (disable_crypto) {
       Util.Warn("Forcibly disabling crypto");
-    }
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      this._crypto = crypto;
-    } else if (Util.Defined("msCrypto")) {
-      this._crypto = Function("return msCrypto")();
     } else {
-      console.error("Failed to get secure PRNG; falling back to Math.random");
+      this._crypto = this._getCrypto();
     }
   }
 
-  /* Obtain Uint8Array of random values using crypto */
-
-
   _createClass(_Util_Random, [{
+    key: "_getCrypto",
+    value: function _getCrypto() {
+      if (Util.Defined("crypto")) {
+        if (new Function("return crypto.getRandomValues")()) {
+          return new Function("return crypto")();
+        }
+      }
+      if (Util.Defined("msCrypto")) {
+        return new Function("return msCrypto")();
+      }
+      Util.Error("Failed to get secure PRNG; falling back to Math.random");
+      return null;
+    }
+
+    /* Obtain Uint8Array of random values using crypto */
+
+  }, {
     key: "_genRandCrypto",
     value: function _genRandCrypto(num_bytes) {
       var a = new Uint8Array(num_bytes);
@@ -3218,7 +3225,3 @@ Util.GetHTML = function _Util_GetHTML(node) {
 };
 
 /* End DOM functions 0}}} */
-
-/* Mark the Utility API as loaded */
-Util.API_Loaded = true;
-document.dispatchEvent(new Event("twapi-utility-loaded"));

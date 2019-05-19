@@ -217,7 +217,7 @@ String.prototype.map = function _String_map(func) {
     result += func(ch);
   }
   return result;
-};
+}
 
 /* Ensure String.trimStart is present */
 if (typeof(("").trimStart) !== "function") {
@@ -857,7 +857,7 @@ class ColorParser {
 }
 
 /* Class for handling colors and color arithmetic */
-class _Util_Color {
+Util.Color = class _Util_Color {
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
     r /= 255; g /= 255; b /= 255;
@@ -1097,7 +1097,6 @@ class _Util_Color {
    *  "#ff0000" -> hsl -> "#ff0000"
    */
 }
-Util.Color = _Util_Color;
 
 /* Parse a CSS color.
  * Overloads
@@ -1184,14 +1183,22 @@ Util.RandomGenerator = class _Util_Random {
     this._crypto = null;
     if (disable_crypto) {
       Util.Warn("Forcibly disabling crypto");
-    }
-    if (typeof(crypto) !== 'undefined' && crypto.getRandomValues) {
-      this._crypto = crypto;
-    } else if (Util.Defined("msCrypto")) {
-      this._crypto = (Function("return msCrypto"))();
     } else {
-      console.error("Failed to get secure PRNG; falling back to Math.random");
+      this._crypto = this._getCrypto();
     }
+  }
+
+  _getCrypto() {
+    if (Util.Defined("crypto")) {
+      if ((new Function("return crypto.getRandomValues"))()) {
+        return (new Function("return crypto"))();
+      }
+    }
+    if (Util.Defined("msCrypto")) {
+      return (new Function("return msCrypto"))();
+    }
+    Util.Error("Failed to get secure PRNG; falling back to Math.random");
+    return null;
   }
 
   /* Obtain Uint8Array of random values using crypto */
@@ -1251,7 +1258,7 @@ Util.RandomGenerator = class _Util_Random {
     parts.forEach(([s, l]) => result.push(h.substr(s, l)));
     return result.join("-");
   }
-};
+}
 
 Util.Random = new Util.RandomGenerator();
 
@@ -1693,7 +1700,7 @@ Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
   } else {
     return false;
   }
-};
+}
 
 /* Return whether or not the position is inside the given DOMRect */
 Util.RectContains = function _Util_RectContains(x, y, rect) {
@@ -1709,7 +1716,7 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
     }
   }
   return false;
-};
+}
 
 /* End point-box functions 0}}} */
 
@@ -1725,7 +1732,7 @@ Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
     }
   }
   return null;
-};
+}
 
 /* Given a stylesheet, obtain a rule definition by name */
 Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
@@ -1786,7 +1793,7 @@ Util.AddScript = function _Util_AddScript(src) {
   s.setAttribute("type", "text/javascript");
   s.setAttribute("src", src);
   document.head.appendChild(s);
-};
+}
 
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
@@ -1838,8 +1845,4 @@ Util.GetHTML = function _Util_GetHTML(node) {
 }
 
 /* End DOM functions 0}}} */
-
-/* Mark the Utility API as loaded */
-Util.API_Loaded = true;
-document.dispatchEvent(new Event("twapi-utility-loaded"));
 

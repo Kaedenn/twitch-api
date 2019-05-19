@@ -566,302 +566,8 @@ Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
   return results;
 };
 
-/* Object containing logic for parsing and interpreting Twitch IRC messages */
-Twitch.IRC = {
-  /* Regex for parsing incoming Twitch IRC messages; all messages should parse */
-  Messages: {
-    PING: [
-    /* "PING :<server>\r\n" */ /* Verified */
-    /^PING :(.*)(?:\r\n)?$/, { server: 1 }],
-    ACK: [
-    /* ":<server> CAP * ACK :<flags...>\r\n" */
-    /^:([^ ]+) CAP \* (ACK) :(.*)(?:\r\n)?$/, { server: 1, operation: 2, flags: 3 }],
-    TOPIC: [
-    /* ":<server> <code> <username> :<message>\r\n" */ /* Verified */
-    /^:([^ ]+) ((?:00[1-9])|(?:372)) ([^ ]+) :(.*)(?:\r\n)?$/, { server: 1, code: 2, username: 3, message: 4 }],
-    NAMES: [
-    /* ":<login> 353 <username> <modechr> <channel> :<users...>\r\n" */ /* Verified */
-    /^:([^ ]+) 353 ([^ ]+) ([^ ]+) (#[^ ]+) :(.*)(?:\r\n)?$/, { user: 1, modechr: 3, channel: 4, users: 5 }],
-    JOIN: [
-    /* ":<name>!<user>@<user>.<host> JOIN <channel>\r\n" */ /* Verified */
-    /^:([^ ]+) JOIN (#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
-    PART: [
-    /* ":<name>!<user>@<user>.<host> PART <channel>\r\n" */ /* Verified */
-    /^:([^ ]+) PART (#[^ ]+)(?:\r\n)?$/, { user: 1, channel: 2 }],
-    MODE: [
-    /* ":<user> MODE <channel> <modeop> <users...>\r\n" */ /* Verified */
-    /^:([^ ]+) MODE (#[^ ]+) ([+-]\w) (.*)(?:\r\n)?$/, { sender: 1, channel: 2, modeflag: 3, user: 4 }],
-    PRIVMSG: [
-    /* "@<flags> :<user> PRIVMSG <channel> :<message>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) PRIVMSG (#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, user: 2, channel: 3, message: 4 }],
-    WHISPER: [
-    /* @<flags> :<name>!<user>@<user>.<host> WHISPER <recipient> :<message>\r\n */
-    /^@([^ ]+) :([^!]+)!([^@]+)@([^ ]+) WHISPER ([^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, sender: 2, recipient: 6, message: 7 }],
-    USERSTATE: [
-    /* "@<flags> :<server> USERSTATE <channel>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) USERSTATE (#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
-    ROOMSTATE: [
-    /* "@<flags> :<server> ROOMSTATE <channel>\r\n" */ /* Verified */
-    /^@([^ ]+) :([^ ]+) ROOMSTATE (#[^ ]+)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3 }],
-    USERNOTICE: [
-    /* "@<flags> :<server> USERNOTICE <channel>[ :<message>]\r\n" */
-    /^@([^ ]+) :([^ ]+) USERNOTICE (#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
-    GLOBALUSERSTATE: [
-    /* "@<flags> :<server> GLOBALUSERSTATE \r\n" */
-    /^@([^ ]+) :([^ ]+) GLOBALUSERSTATE(?:\r\n)?$/, { flags: 1, server: 2 }],
-    CLEARCHAT: [
-    /* "@<flags> :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
-    /^@([^ ]+) :([^ ]+) CLEARCHAT (#[^ ]+)(?: :(.*))?(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, user: 4 }],
-    CLEARMSG: [
-    /* "@<flags> :<server> CLEARMSG <channel> :<message>\r\n" */
-    /^@([^ ]+) :([^ ]+) CLEARMSG (#[^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
-    HOSTTARGET: [
-    /* ":<server> HOSTTARGET <channel> :<hosting-user> -\r\n" */
-    /^([^ ]+) HOSTTARGET (#[^ ]+) :([^ ]+).*(?:\r\n)?$/, { server: 1, channel: 2, user: 3, message: 4 }],
-    NOTICE: [
-    /* "@<flags> :<server> NOTICE <channel> :<message>\r\n" */
-    /^(?:@([^ ]+) )?:([^ ]+) NOTICE ([^ ]+) :(.*)(?:\r\n)?$/, { flags: 1, server: 2, channel: 3, message: 4 }],
-    ERROR: [
-    /* ":<server> 421 <user> <command> :<message>\r\n" */
-    /^:([^ ]+) (421) ([^ ]+) ([^ ]+) :(.*)(?:\r\n)?$/, { server: 1, user: 2, command: 3, message: 4 }],
-    /* Line patterns to ignore */
-    Ignore: [
-    /* Start of TOPIC listing */
-    /^:([^ ]+) (375) ([^ ]+) :-(?:\r\n)?$/,
-    /* End of TOPIC listing */
-    /^:([^ ]+) (376) ([^ ]+) :>(?:\r\n)?$/,
-    /* Start/end of TOPIC listing, end of NAMES listing */
-    /^:[^ ]+ (?:37[56]|366) [^ ]+ #[^ ]+ :.*(?:\r\n)?$/]
-  },
-
-  /* Return true if the line should be silently ignored */
-  ShouldIgnore: function _Twitch_IRC_ShouldIgnore(line) {
-    var _iteratorNormalCompletion11 = true;
-    var _didIteratorError11 = false;
-    var _iteratorError11 = undefined;
-
-    try {
-      for (var _iterator11 = Twitch.IRC.Messages.Ignore[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
-        var pat = _step11.value;
-
-        if (line.match(pat)) {
-          return true;
-        }
-      }
-    } catch (err) {
-      _didIteratorError11 = true;
-      _iteratorError11 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion11 && _iterator11.return) {
-          _iterator11.return();
-        }
-      } finally {
-        if (_didIteratorError11) {
-          throw _iteratorError11;
-        }
-      }
-    }
-
-    return false;
-  },
-
-  /* Message-specific extra parsing */
-  ParseSpecial: {
-    /* PRIVMSG: Handle /me */
-    'PRIVMSG': function _Twitch_IRC_ParseSpecial_PRIVMSG(obj) {
-      var msg = obj.message;
-      if (msg.startsWith("\x01ACTION ") && msg.endsWith('\x01')) {
-        obj.fields.action = true;
-        obj.fields.message = msg.strip('\x01').substr("ACTION ".length);
-      } else {
-        obj.fields.action = false;
-      }
-    },
-    /* USERSTATE: Add user attribute */
-    'USERSTATE': function _Twitch_IRC_ParseSpecial_USERSTATE(obj) {
-      if (obj.fields.flags && obj.fields.flags['display-name']) {
-        obj.fields.username = obj.fields.flags['display-name'];
-      }
-    },
-    /* USERNOTICE: Handle sub notices */
-    'USERNOTICE': function _Twitch_IRC_ParseSpecial_USERNOTICE(obj) {
-      var fields = obj.fields;
-      var flags = fields.flags;
-      fields.issub = false;
-      fields.sub_kind = null;
-      fields.sub_user = null;
-      fields.sub_gifting_user = null;
-      fields.sub_months = null;
-      fields.sub_plan = null;
-      fields.sub_plan_name = null;
-      if (flags && flags["msg-id"]) {
-        switch (flags["msg-id"]) {
-          case "sub":
-            fields.issub = true;
-            fields.sub_kind = flags["msg-id"].toUpperCase();
-            fields.sub_user = flags["login"];
-            fields.sub_months = flags["msg-param-sub-months"];
-            fields.sub_total_months = flags["msg-param-cumulative-months"];
-            fields.sub_plan = flags["msg-param-sub-plan"];
-            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
-            break;
-          case "resub":
-            fields.issub = true;
-            fields.sub_kind = flags["msg-id"].toUpperCase();
-            fields.sub_user = flags["login"];
-            fields.sub_months = flags["msg-param-sub-months"];
-            fields.sub_total_months = flags["msg-param-cumulative-months"];
-            fields.sub_plan = flags["msg-param-sub-plan"];
-            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
-            break;
-          case "subgift":
-            fields.issub = true;
-            fields.sub_kind = flags["msg-id"].toUpperCase();
-            fields.sub_user = flags["msg-param-recipient-user-name"];
-            fields.sub_months = flags["msg-param-sub-months"];
-            fields.sub_total_months = flags["msg-param-cumulative-months"];
-            fields.sub_plan = flags["msg-param-sub-plan"];
-            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
-            break;
-          case "anonsubgift":
-            fields.issub = true;
-            fields.sub_kind = flags["msg-id"].toUpperCase();
-            fields.sub_user = flags["msg-param-recipient-user-name"];
-            fields.sub_months = flags["msg-param-sub-months"];
-            fields.sub_total_months = flags["msg-param-cumulative-months"];
-            fields.sub_plan = flags["msg-param-sub-plan"];
-            fields.sub_plan_name = flags["msg-param-sub-plan-name"];
-            break;
-          case "raid":
-            /* TODO */
-            /* msg-param-displayName - raiding user
-             * msg-param-login - raiding user's username
-             * msg-param-viewerCount - number of viewers */
-            break;
-        }
-      }
-    }
-  },
-
-  /* Parse the given line into an object defined by Twitch.IRC.Messages */
-  Parse: function _Twitch_IRC_Parse(line) {
-    if (Twitch.IRC.ShouldIgnore(line)) {
-      return null;
-    }
-    var cmd = null;
-    var pattern = null;
-    var match = null;
-    var rules = null;
-    var _iteratorNormalCompletion12 = true;
-    var _didIteratorError12 = false;
-    var _iteratorError12 = undefined;
-
-    try {
-      for (var _iterator12 = Object.entries(Twitch.IRC.Messages)[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
-        var _ref = _step12.value;
-
-        var _ref2 = _slicedToArray(_ref, 2);
-
-        var pn = _ref2[0];
-        var pr = _ref2[1];
-
-        var _pr = _slicedToArray(pr, 2),
-            pat = _pr[0],
-            patrules = _pr[1];
-
-        if (pn === "Ignore") continue;
-        if ((match = line.match(pat)) !== null) {
-          cmd = pn;
-          pattern = pat;
-          rules = patrules;
-          break;
-        }
-      }
-    } catch (err) {
-      _didIteratorError12 = true;
-      _iteratorError12 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion12 && _iterator12.return) {
-          _iterator12.return();
-        }
-      } finally {
-        if (_didIteratorError12) {
-          throw _iteratorError12;
-        }
-      }
-    }
-
-    if (cmd === null) {
-      /* Failed to parse line! */
-      Util.Error("Failed to parse IRC message", line);
-      return null;
-    }
-    /* Construct a response */
-    var resp = {
-      cmd: cmd,
-      line: line,
-      patinfo: [pattern, match],
-      fields: {},
-      message: null
-    };
-    if (rules.hasOwnProperty("message")) {
-      resp.message = match[rules.message];
-    }
-    var _iteratorNormalCompletion13 = true;
-    var _didIteratorError13 = false;
-    var _iteratorError13 = undefined;
-
-    try {
-      for (var _iterator13 = Object.entries(rules)[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-        var _ref3 = _step13.value;
-
-        var _ref4 = _slicedToArray(_ref3, 2);
-
-        var fn = _ref4[0];
-        var fi = _ref4[1];
-
-        /* Perform special parsing on specific items */
-        if (["username", "user", "login"].includes(fn)) {
-          /* Parse a username */
-          resp.fields[fn] = Twitch.ParseUser(match[fi]);
-        } else if (fn === "channel") {
-          resp.fields[fn] = Twitch.ParseChannel(match[fi]);
-        } else if (fn === "capabilities") {
-          resp.fields[fn] = match[fi].split(" ");
-        } else if (fn === "users") {
-          resp.fields[fn] = match[fi].split(" ");
-        } else if (fn === "flags") {
-          resp.fields[fn] = Twitch.ParseFlags(match[fi]);
-        } else {
-          resp.fields[fn] = match[fi];
-        }
-      }
-      /* Handle special parsing */
-    } catch (err) {
-      _didIteratorError13 = true;
-      _iteratorError13 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion13 && _iterator13.return) {
-          _iterator13.return();
-        }
-      } finally {
-        if (_didIteratorError13) {
-          throw _iteratorError13;
-        }
-      }
-    }
-
-    if (Twitch.IRC.ParseSpecial[cmd]) {
-      Twitch.IRC.ParseSpecial[cmd](resp);
-    }
-    return resp;
-  }
-
-  /* Parse a line received through the Twitch websocket */
-};Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
+/* Parse a line received through the Twitch websocket */
+Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   /* Try parsing with the new object */
   var result = { cmd: null };
   var parts = line.split(' ');
@@ -1020,13 +726,13 @@ Twitch.IRC = {
   }
   /* Ensure result.flags has values defined by badges */
   if (result.flags && result.flags.badges) {
-    var _iteratorNormalCompletion14 = true;
-    var _didIteratorError14 = false;
-    var _iteratorError14 = undefined;
+    var _iteratorNormalCompletion11 = true;
+    var _didIteratorError11 = false;
+    var _iteratorError11 = undefined;
 
     try {
-      for (var _iterator14 = result.flags.badges[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-        var badge_def = _step14.value;
+      for (var _iterator11 = result.flags.badges[Symbol.iterator](), _step11; !(_iteratorNormalCompletion11 = (_step11 = _iterator11.next()).done); _iteratorNormalCompletion11 = true) {
+        var badge_def = _step11.value;
 
         var badge_name = badge_def[0];
         /* let badge_rev = badge_def[1]; */
@@ -1042,16 +748,16 @@ Twitch.IRC = {
         }
       }
     } catch (err) {
-      _didIteratorError14 = true;
-      _iteratorError14 = err;
+      _didIteratorError11 = true;
+      _iteratorError11 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion14 && _iterator14.return) {
-          _iterator14.return();
+        if (!_iteratorNormalCompletion11 && _iterator11.return) {
+          _iterator11.return();
         }
       } finally {
-        if (_didIteratorError14) {
-          throw _iteratorError14;
+        if (_didIteratorError11) {
+          throw _iteratorError11;
         }
       }
     }
@@ -1062,41 +768,37 @@ Twitch.IRC = {
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   var pats = [['oauth:', /oauth:[\w]+/g], ['OAuth ', /OAuth [\w]+/g]];
-  var _iteratorNormalCompletion15 = true;
-  var _didIteratorError15 = false;
-  var _iteratorError15 = undefined;
+  var _iteratorNormalCompletion12 = true;
+  var _didIteratorError12 = false;
+  var _iteratorError12 = undefined;
 
   try {
-    for (var _iterator15 = pats[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-      var _ref5 = _step15.value;
+    for (var _iterator12 = pats[Symbol.iterator](), _step12; !(_iteratorNormalCompletion12 = (_step12 = _iterator12.next()).done); _iteratorNormalCompletion12 = true) {
+      var _ref = _step12.value;
 
-      var _ref6 = _slicedToArray(_ref5, 2);
+      var _ref2 = _slicedToArray(_ref, 2);
 
-      var name = _ref6[0];
-      var pat = _ref6[1];
+      var name = _ref2[0];
+      var pat = _ref2[1];
 
       if (msg.search(pat)) {
         msg = msg.replace(pat, name + "<removed>");
       }
     }
   } catch (err) {
-    _didIteratorError15 = true;
-    _iteratorError15 = err;
+    _didIteratorError12 = true;
+    _iteratorError12 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion15 && _iterator15.return) {
-        _iterator15.return();
+      if (!_iteratorNormalCompletion12 && _iterator12.return) {
+        _iterator12.return();
       }
     } finally {
-      if (_didIteratorError15) {
-        throw _iteratorError15;
+      if (_didIteratorError12) {
+        throw _iteratorError12;
       }
     }
   }
 
   return msg;
 };
-
-/* Mark the Twitch Utility API as loaded */
-Twitch.API_Loaded = true;
-document.dispatchEvent(new Event("twapi-twutil-loaded"));
