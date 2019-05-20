@@ -55,13 +55,17 @@ Util.Browser.FIREFOX = "Firefox";
 Util.Browser.CHROME = "Chrome";
 Util.Browser.TESLA = "Tesla";
 Util.Browser.OBS = "OBS";
+Util.Browser.MOBILE = "Mobile";
 Util.Browser.UNKNOWN = "Unknown";
 Util.Browser.Get = function _Util_Browser_Get() {
   var p_firefox = /\bFirefox\/[0-9.]+\b/;
   var p_chrome = /\bChrome\/[0-9.]+\b/;
   var p_tesla = /\bTesla\b/;
+  var p_mobile = /\bMobile\b/;
   if (window.obssource) {
     return Util.Browser.OBS;
+  } else if (navigator.userAgent.match(p_mobile)) {
+    return Util.Browser.MOBILE;
   } else if (navigator.userAgent.match(p_firefox)) {
     return Util.Browser.FIREFOX;
   } else if (navigator.userAgent.match(p_chrome)) {
@@ -77,6 +81,7 @@ Util.Browser.IsChrome = Util.Browser.Current === Util.Browser.CHROME;
 Util.Browser.IsFirefox = Util.Browser.Current === Util.Browser.FIREFOX;
 Util.Browser.IsTesla = Util.Browser.Current === Util.Browser.TESLA;
 Util.Browser.IsOBS = Util.Browser.Current === Util.Browser.OBS;
+Util.Browser.IsMobile = Util.Browser.Current === Util.Browser.MOBILE;
 
 /* End of browser identification 0}}} */
 
@@ -451,7 +456,7 @@ RegExp.escape = function _RegExp_escape(string) {
 
 /* End standard object additions 0}}} */
 
-/* Array functions {{{0 */
+/* Array and sequence functions {{{0 */
 
 /* Return true if the object is an array */
 Util.IsArray = function _Util_IsArray(value) {
@@ -545,12 +550,12 @@ Util.Zip = function _Util_Zip() {
   return result;
 };
 
-/* Convert an arguments object to an Array instance */
+/* Convert an arguments object to an Array */
 Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
   return Array.of.apply(Array, argobj);
 };
 
-/* End array functions 0}}} */
+/* End array and sequence functions 0}}} */
 
 /* URL and URI handling {{{0 */
 
@@ -3265,3 +3270,42 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
 };
 
 /* End DOM functions 0}}} */
+
+/* Miscellaneous functions {{{0 */
+
+Util.Open = function _Util_Open(url, id, attrs) {
+  var a = [];
+  var _iteratorNormalCompletion40 = true;
+  var _didIteratorError40 = false;
+  var _iteratorError40 = undefined;
+
+  try {
+    for (var _iterator40 = Object.entries(attrs)[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
+      var _ref21 = _step40.value;
+
+      var _ref22 = _slicedToArray(_ref21, 2);
+
+      var k = _ref22[0];
+      var v = _ref22[1];
+
+      a.push(k + "=" + v);
+    }
+  } catch (err) {
+    _didIteratorError40 = true;
+    _iteratorError40 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion40 && _iterator40.return) {
+        _iterator40.return();
+      }
+    } finally {
+      if (_didIteratorError40) {
+        throw _iteratorError40;
+      }
+    }
+  }
+
+  return window.open(url, id, a.join(","));
+};
+
+/* End miscellaneous functions 0}}} */
