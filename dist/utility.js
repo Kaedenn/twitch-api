@@ -50,38 +50,25 @@ Util.ASCII = "\0\x01\x02\x03\x04\x05\x06\x07\b\t\n" + "\x0B\f\r\x0E\x0F\x10\x11\
 
 /* Browser identification {{{0 */
 
-Util.Browser = {};
-Util.Browser.FIREFOX = "Firefox";
-Util.Browser.CHROME = "Chrome";
-Util.Browser.TESLA = "Tesla";
-Util.Browser.OBS = "OBS";
-Util.Browser.MOBILE = "Mobile";
-Util.Browser.UNKNOWN = "Unknown";
-Util.Browser.Get = function _Util_Browser_Get() {
-  var p_firefox = /\bFirefox\/[0-9.]+\b/;
-  var p_chrome = /\bChrome\/[0-9.]+\b/;
-  var p_tesla = /\bTesla\b/;
-  var p_mobile = /\bMobile\b/;
-  if (window.obssource) {
-    return Util.Browser.OBS;
-  } else if (navigator.userAgent.match(p_mobile)) {
-    return Util.Browser.MOBILE;
-  } else if (navigator.userAgent.match(p_firefox)) {
-    return Util.Browser.FIREFOX;
-  } else if (navigator.userAgent.match(p_chrome)) {
-    return Util.Browser.CHROME;
-  } else if (navigator.userAgent.match(p_tesla)) {
-    return Util.Browser.TESLA;
-  } else {
-    return Util.Browser.UNKNOWN;
+Util.Browser = function () {
+  function _Util_Browser() {
+    _classCallCheck(this, _Util_Browser);
   }
-};
-Util.Browser.Current = Util.Browser.Get();
-Util.Browser.IsChrome = Util.Browser.Current === Util.Browser.CHROME;
-Util.Browser.IsFirefox = Util.Browser.Current === Util.Browser.FIREFOX;
-Util.Browser.IsTesla = Util.Browser.Current === Util.Browser.TESLA;
-Util.Browser.IsOBS = Util.Browser.Current === Util.Browser.OBS;
-Util.Browser.IsMobile = Util.Browser.Current === Util.Browser.MOBILE;
+
+  _createClass(_Util_Browser, null, [{
+    key: "IsTesla",
+    get: function get() {
+      return navigator.userAgent.search(/\bTesla\b/) > -1;
+    }
+  }, {
+    key: "IsOBS",
+    get: function get() {
+      return Boolean(window.obssource);
+    }
+  }]);
+
+  return _Util_Browser;
+}();
 
 /* End of browser identification 0}}} */
 

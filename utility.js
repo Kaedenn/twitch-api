@@ -45,38 +45,14 @@ Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
 
 /* Browser identification {{{0 */
 
-Util.Browser = {};
-Util.Browser.FIREFOX = "Firefox";
-Util.Browser.CHROME = "Chrome";
-Util.Browser.TESLA = "Tesla";
-Util.Browser.OBS = "OBS";
-Util.Browser.MOBILE = "Mobile";
-Util.Browser.UNKNOWN = "Unknown";
-Util.Browser.Get = function _Util_Browser_Get() {
-  let p_firefox = /\bFirefox\/[0-9.]+\b/;
-  let p_chrome = /\bChrome\/[0-9.]+\b/;
-  let p_tesla = /\bTesla\b/;
-  let p_mobile = /\bMobile\b/;
-  if (window.obssource) {
-    return Util.Browser.OBS;
-  } else if (navigator.userAgent.match(p_mobile)) {
-    return Util.Browser.MOBILE;
-  } else if (navigator.userAgent.match(p_firefox)) {
-    return Util.Browser.FIREFOX;
-  } else if (navigator.userAgent.match(p_chrome)) {
-    return Util.Browser.CHROME;
-  } else if (navigator.userAgent.match(p_tesla)) {
-    return Util.Browser.TESLA;
-  } else {
-    return Util.Browser.UNKNOWN;
+Util.Browser = class _Util_Browser {
+  static get IsTesla() {
+    return navigator.userAgent.search(/\bTesla\b/) > -1;
   }
-}
-Util.Browser.Current = Util.Browser.Get()
-Util.Browser.IsChrome = Util.Browser.Current === Util.Browser.CHROME;
-Util.Browser.IsFirefox = Util.Browser.Current === Util.Browser.FIREFOX;
-Util.Browser.IsTesla = Util.Browser.Current === Util.Browser.TESLA;
-Util.Browser.IsOBS = Util.Browser.Current === Util.Browser.OBS;
-Util.Browser.IsMobile = Util.Browser.Current === Util.Browser.MOBILE;
+  static get IsOBS() {
+    return Boolean(window.obssource);
+  }
+};
 
 /* End of browser identification 0}}} */
 
