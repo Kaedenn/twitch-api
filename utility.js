@@ -540,35 +540,25 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       column: 0
     };
     frame.text = line;
-    if (Util.Browser.IsChrome) {
-      // "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
-      let m = line.match(/^[ ]* at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/);
-      if (m === null) {
-        Util.ErrorOnly("Failed to parse stack frame", line);
-        continue;
-      }
+    let m = null;
+    if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/)) !== null) {
+      // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
       frame = {};
       frame.name = m[1];
       frame.actual_name = m[2];
       frame.file = m[3];
       frame.line = parseInt(m[4]);
       frame.column = parseInt(m[5]);
-    } else if (Util.Browser.IsFirefox) {
-      // "(function)@(file):(line):(column)"
-      let m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/);
-      if (m === null) {
-        Util.ErrorOnly("Failed to parse stack frame", line);
-        continue;
-      }
+    } else if ((m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/)) !== null) {
+      // Firefox "(function)@(file):(line):(column)"
       frame = {};
       frame.name = m[1];
       frame.file = m[2];
       frame.line = parseInt(m[3]);
       frame.column = parseInt(m[4]);
-    } else if (Util.Browser.IsOBS) {
-      /* TODO: OBS stacktrace parsing */
-    } else if (Util.Browser.IsTesla) {
-      /* TODO: Tesla stacktrace parsing */
+    } else {
+      /* OBS: /^[ ]*at ([^ ]+) \((.*):([0-9]+):([0-9]+)\)/ */
+      /* TODO: OBS, Tesla stacktrace parsing */
     }
     frames.push(frame);
   }
@@ -586,7 +576,11 @@ Util.FormatStack = function _Util_FormatStack(stack) {
   console.assert(stack.length === paths.length);
   let result = [];
   for (let i = 0; i < paths.length; ++i) {
-    result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
+    if (stack[i].name === "???") {
+      result.push(stack[i].text);
+    } else {
+      result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
+    }
   }
   return result.join("\n");
 }
