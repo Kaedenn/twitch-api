@@ -544,7 +544,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 
 /* End array and sequence functions 0}}} */
 
-/* URL and URI handling {{{0 */
+/* URL handling {{{0 */
 
 /* RegExp for matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
@@ -753,7 +753,143 @@ var _Util_API = function () {
 
 Util.API = _Util_API;
 
-/* End URL and URI handling 0}}} */
+/* Split a path into <dirname>/<basename> parts */
+Util.SplitPath = function _Util_SplitPath(path) {
+  if (path.indexOf('/') > -1) {
+    return [path.substr(0, path.lastIndexOf('/')), path.substr(path.lastIndexOf('/') + 1)];
+  } else {
+    return ["", path];
+  }
+};
+
+/* Join a directory and a filename */
+Util.JoinPath = function _Util_JoinPath(dir, file) {
+  if (dir) {
+    return [dir, file].join('/');
+  } else {
+    return file;
+  }
+};
+
+/* Strip a common prefix from an array of paths */
+Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
+  var pieces = [];
+  try {
+    var _iteratorNormalCompletion13 = true;
+    var _didIteratorError13 = false;
+    var _iteratorError13 = undefined;
+
+    try {
+      for (var _iterator13 = paths[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
+        var path = _step13.value;
+
+        path = new URL(path).pathname;
+
+        var _Util$SplitPath = Util.SplitPath(path),
+            _Util$SplitPath2 = _slicedToArray(_Util$SplitPath, 2),
+            dir = _Util$SplitPath2[0],
+            file = _Util$SplitPath2[1];
+
+        pieces.push([dir.split('/'), file]);
+      }
+    } catch (err) {
+      _didIteratorError13 = true;
+      _iteratorError13 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion13 && _iterator13.return) {
+          _iterator13.return();
+        }
+      } finally {
+        if (_didIteratorError13) {
+          throw _iteratorError13;
+        }
+      }
+    }
+  } catch (e) {
+    if (e.message.match(/is not a valid URL/)) {
+      /* Not a valid URL; bail */
+      return paths;
+    } else {
+      /* Something else; re-raise */
+      throw e;
+    }
+  }
+  /* Find the longest item */
+  var ref_path = null;
+  var len = 0;
+  var _iteratorNormalCompletion14 = true;
+  var _didIteratorError14 = false;
+  var _iteratorError14 = undefined;
+
+  try {
+    for (var _iterator14 = pieces[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
+      var piece = _step14.value;
+
+      if (piece[0].length > len) {
+        len = piece[0].length;
+        /* Copy to protect from modification below */
+        ref_path = piece[0].slice(0);
+      }
+    }
+    /* Strip the common prefix */
+  } catch (err) {
+    _didIteratorError14 = true;
+    _iteratorError14 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion14 && _iterator14.return) {
+        _iterator14.return();
+      }
+    } finally {
+      if (_didIteratorError14) {
+        throw _iteratorError14;
+      }
+    }
+  }
+
+  if (ref_path !== null) {
+    var _loop = function _loop(i) {
+      if (pieces.every(function (p) {
+        return p[0][0] === ref_path[i];
+      })) {
+        var _iteratorNormalCompletion15 = true;
+        var _didIteratorError15 = false;
+        var _iteratorError15 = undefined;
+
+        try {
+          for (var _iterator15 = pieces[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+            var _piece = _step15.value;
+            _piece[0] = _piece[0].slice(1);
+          }
+        } catch (err) {
+          _didIteratorError15 = true;
+          _iteratorError15 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion15 && _iterator15.return) {
+              _iterator15.return();
+            }
+          } finally {
+            if (_didIteratorError15) {
+              throw _iteratorError15;
+            }
+          }
+        }
+      }
+    };
+
+    for (var i = 0; i < ref_path.length; ++i) {
+      _loop(i);
+    }
+  }
+  /* Join the paths back together */
+  return pieces.map(function (v) {
+    return Util.JoinPath(v[0].join('/'), v[1]);
+  });
+};
+
+/* End URL handling 0}}} */
 
 /* Error handling {{{0 */
 
@@ -834,13 +970,13 @@ Util.GetStack = function _Util_GetStack() {
 /* Parse a given stacktrace */
 Util.ParseStack = function _Util_ParseStack(lines) {
   var frames = [];
-  var _iteratorNormalCompletion13 = true;
-  var _didIteratorError13 = false;
-  var _iteratorError13 = undefined;
+  var _iteratorNormalCompletion16 = true;
+  var _didIteratorError16 = false;
+  var _iteratorError16 = undefined;
 
   try {
-    for (var _iterator13 = lines[Symbol.iterator](), _step13; !(_iteratorNormalCompletion13 = (_step13 = _iterator13.next()).done); _iteratorNormalCompletion13 = true) {
-      var line = _step13.value;
+    for (var _iterator16 = lines[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+      var line = _step16.value;
 
       var frame = {
         text: line,
@@ -883,157 +1019,21 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frames.push(frame);
     }
   } catch (err) {
-    _didIteratorError13 = true;
-    _iteratorError13 = err;
+    _didIteratorError16 = true;
+    _iteratorError16 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion13 && _iterator13.return) {
-        _iterator13.return();
+      if (!_iteratorNormalCompletion16 && _iterator16.return) {
+        _iterator16.return();
       }
     } finally {
-      if (_didIteratorError13) {
-        throw _iteratorError13;
+      if (_didIteratorError16) {
+        throw _iteratorError16;
       }
     }
   }
 
   return frames;
-};
-
-/* Split a path into <dirname>/<basename> parts */
-Util.SplitPath = function _Util_SplitPath(path) {
-  if (path.indexOf('/') > -1) {
-    return [path.substr(0, path.lastIndexOf('/')), path.substr(path.lastIndexOf('/') + 1)];
-  } else {
-    return ["", path];
-  }
-};
-
-/* Join a directory and a filename */
-Util.JoinPath = function _Util_JoinPath(dir, file) {
-  if (dir) {
-    return [dir, file].join('/');
-  } else {
-    return file;
-  }
-};
-
-/* Strip a common prefix from an array of paths */
-Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
-  var pieces = [];
-  try {
-    var _iteratorNormalCompletion14 = true;
-    var _didIteratorError14 = false;
-    var _iteratorError14 = undefined;
-
-    try {
-      for (var _iterator14 = paths[Symbol.iterator](), _step14; !(_iteratorNormalCompletion14 = (_step14 = _iterator14.next()).done); _iteratorNormalCompletion14 = true) {
-        var path = _step14.value;
-
-        path = new URL(path).pathname;
-
-        var _Util$SplitPath = Util.SplitPath(path),
-            _Util$SplitPath2 = _slicedToArray(_Util$SplitPath, 2),
-            dir = _Util$SplitPath2[0],
-            file = _Util$SplitPath2[1];
-
-        pieces.push([dir.split('/'), file]);
-      }
-    } catch (err) {
-      _didIteratorError14 = true;
-      _iteratorError14 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion14 && _iterator14.return) {
-          _iterator14.return();
-        }
-      } finally {
-        if (_didIteratorError14) {
-          throw _iteratorError14;
-        }
-      }
-    }
-  } catch (e) {
-    if (e.message.match(/is not a valid URL/)) {
-      /* Not a valid URL; bail */
-      return paths;
-    } else {
-      /* Something else; re-raise */
-      throw e;
-    }
-  }
-  /* Find the longest item */
-  var ref_path = null;
-  var len = 0;
-  var _iteratorNormalCompletion15 = true;
-  var _didIteratorError15 = false;
-  var _iteratorError15 = undefined;
-
-  try {
-    for (var _iterator15 = pieces[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
-      var piece = _step15.value;
-
-      if (piece[0].length > len) {
-        len = piece[0].length;
-        /* Copy to protect from modification below */
-        ref_path = piece[0].slice(0);
-      }
-    }
-    /* Strip the common prefix */
-  } catch (err) {
-    _didIteratorError15 = true;
-    _iteratorError15 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion15 && _iterator15.return) {
-        _iterator15.return();
-      }
-    } finally {
-      if (_didIteratorError15) {
-        throw _iteratorError15;
-      }
-    }
-  }
-
-  if (ref_path !== null) {
-    var _loop = function _loop(i) {
-      if (pieces.every(function (p) {
-        return p[0][0] === ref_path[i];
-      })) {
-        var _iteratorNormalCompletion16 = true;
-        var _didIteratorError16 = false;
-        var _iteratorError16 = undefined;
-
-        try {
-          for (var _iterator16 = pieces[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
-            var _piece = _step16.value;
-            _piece[0] = _piece[0].slice(1);
-          }
-        } catch (err) {
-          _didIteratorError16 = true;
-          _iteratorError16 = err;
-        } finally {
-          try {
-            if (!_iteratorNormalCompletion16 && _iterator16.return) {
-              _iterator16.return();
-            }
-          } finally {
-            if (_didIteratorError16) {
-              throw _iteratorError16;
-            }
-          }
-        }
-      }
-    };
-
-    for (var i = 0; i < ref_path.length; ++i) {
-      _loop(i);
-    }
-  }
-  /* Join the paths back together */
-  return pieces.map(function (v) {
-    return Util.JoinPath(v[0].join('/'), v[1]);
-  });
 };
 
 /* Format stack frames for output */
@@ -1300,10 +1300,10 @@ var LoggerUtility = function () {
         Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
         switch (val) {
           case LoggerUtility.SEVERITIES.TRACE:
-            Util._toConsole(console.log, argobj);
+            Util._toConsole(console.debug, argobj);
             break;
           case LoggerUtility.SEVERITIES.DEBUG:
-            Util._toConsole(console.log, argobj);
+            Util._toConsole(console.debug, argobj);
             break;
           case LoggerUtility.SEVERITIES.INFO:
             Util._toConsole(console.log, argobj);
@@ -1319,10 +1319,10 @@ var LoggerUtility = function () {
       } else {
         switch (val) {
           case LoggerUtility.SEVERITIES.TRACE:
-            console.log.apply(console, argobj);
+            console.debug.apply(console, argobj);
             break;
           case LoggerUtility.SEVERITIES.DEBUG:
-            console.log.apply(console, argobj);
+            console.debug.apply(console, argobj);
             break;
           case LoggerUtility.SEVERITIES.INFO:
             console.log.apply(console, argobj);

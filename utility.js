@@ -300,7 +300,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 
 /* End array and sequence functions 0}}} */
 
-/* URL and URI handling {{{0 */
+/* URL handling {{{0 */
 
 /* RegExp for matching URLs */
 Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
@@ -394,7 +394,67 @@ class _Util_API {
 }
 Util.API = _Util_API;
 
-/* End URL and URI handling 0}}} */
+/* Split a path into <dirname>/<basename> parts */
+Util.SplitPath = function _Util_SplitPath(path) {
+  if (path.indexOf('/') > -1) {
+    return [path.substr(0, path.lastIndexOf('/')),
+            path.substr(path.lastIndexOf('/')+1)];
+  } else {
+    return ["", path];
+  }
+}
+
+/* Join a directory and a filename */
+Util.JoinPath = function _Util_JoinPath(dir, file) {
+  if (dir) {
+    return [dir, file].join('/');
+  } else {
+    return file;
+  }
+}
+
+/* Strip a common prefix from an array of paths */
+Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
+  let pieces = [];
+  try {
+    for (let path of paths) {
+      path = (new URL(path)).pathname;
+      let [dir, file] = Util.SplitPath(path);
+      pieces.push([dir.split('/'), file]);
+    }
+  }
+  catch (e) {
+    if (e.message.match(/is not a valid URL/)) {
+      /* Not a valid URL; bail */
+      return paths;
+    } else {
+      /* Something else; re-raise */
+      throw e;
+    }
+  }
+  /* Find the longest item */
+  let ref_path = null;
+  let len = 0;
+  for (let piece of pieces) {
+    if (piece[0].length > len) {
+      len = piece[0].length;
+      /* Copy to protect from modification below */
+      ref_path = piece[0].slice(0);
+    }
+  }
+  /* Strip the common prefix */
+  if (ref_path !== null) {
+    for (let i = 0; i < ref_path.length; ++i) {
+      if (pieces.every((p) => (p[0][0] === ref_path[i]))) {
+        for (let piece of pieces) { piece[0] = piece[0].slice(1); }
+      }
+    }
+  }
+  /* Join the paths back together */
+  return pieces.map((v) => Util.JoinPath(v[0].join('/'), v[1]));
+}
+
+/* End URL handling 0}}} */
 
 /* Error handling {{{0 */
 
@@ -515,66 +575,6 @@ Util.ParseStack = function _Util_ParseStack(lines) {
   return frames;
 }
 
-/* Split a path into <dirname>/<basename> parts */
-Util.SplitPath = function _Util_SplitPath(path) {
-  if (path.indexOf('/') > -1) {
-    return [path.substr(0, path.lastIndexOf('/')),
-            path.substr(path.lastIndexOf('/')+1)];
-  } else {
-    return ["", path];
-  }
-}
-
-/* Join a directory and a filename */
-Util.JoinPath = function _Util_JoinPath(dir, file) {
-  if (dir) {
-    return [dir, file].join('/');
-  } else {
-    return file;
-  }
-}
-
-/* Strip a common prefix from an array of paths */
-Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
-  let pieces = [];
-  try {
-    for (let path of paths) {
-      path = (new URL(path)).pathname;
-      let [dir, file] = Util.SplitPath(path);
-      pieces.push([dir.split('/'), file]);
-    }
-  }
-  catch (e) {
-    if (e.message.match(/is not a valid URL/)) {
-      /* Not a valid URL; bail */
-      return paths;
-    } else {
-      /* Something else; re-raise */
-      throw e;
-    }
-  }
-  /* Find the longest item */
-  let ref_path = null;
-  let len = 0;
-  for (let piece of pieces) {
-    if (piece[0].length > len) {
-      len = piece[0].length;
-      /* Copy to protect from modification below */
-      ref_path = piece[0].slice(0);
-    }
-  }
-  /* Strip the common prefix */
-  if (ref_path !== null) {
-    for (let i = 0; i < ref_path.length; ++i) {
-      if (pieces.every((p) => (p[0][0] === ref_path[i]))) {
-        for (let piece of pieces) { piece[0] = piece[0].slice(1); }
-      }
-    }
-  }
-  /* Join the paths back together */
-  return pieces.map((v) => Util.JoinPath(v[0].join('/'), v[1]));
-}
-
 /* Format stack frames for output */
 Util.FormatStack = function _Util_FormatStack(stack) {
   /* Strip out the common prefix directory */
@@ -687,10 +687,10 @@ class LoggerUtility {
       Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
       switch (val) {
         case LoggerUtility.SEVERITIES.TRACE:
-          Util._toConsole(console.log, argobj);
+          Util._toConsole(console.debug, argobj);
           break;
         case LoggerUtility.SEVERITIES.DEBUG:
-          Util._toConsole(console.log, argobj);
+          Util._toConsole(console.debug, argobj);
           break;
         case LoggerUtility.SEVERITIES.INFO:
           Util._toConsole(console.log, argobj);
@@ -706,10 +706,10 @@ class LoggerUtility {
     } else {
       switch (val) {
         case LoggerUtility.SEVERITIES.TRACE:
-          console.log.apply(console, argobj);
+          console.debug.apply(console, argobj);
           break;
         case LoggerUtility.SEVERITIES.DEBUG:
-          console.log.apply(console, argobj);
+          console.debug.apply(console, argobj);
           break;
         case LoggerUtility.SEVERITIES.INFO:
           console.log.apply(console, argobj);

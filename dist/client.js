@@ -521,7 +521,6 @@ function TwitchClient(opts) {
   this._is_open = false;
   this._connected = false;
   this._username = null;
-  this._debug = opts.Debug ? 1 : 0;
 
   /* Channels/rooms presently connected to */
   this._channels = [];
@@ -652,7 +651,7 @@ function TwitchClient(opts) {
         self._is_open = true;
         self._onWebsocketOpen(cfg_name, oauth);
       } catch (e) {
-        alert("ws._onopen error: " + e.toString());
+        alert("ws.onopen error: " + e.toString());
         throw e;
       }
     }.bind(this._ws);
@@ -662,7 +661,7 @@ function TwitchClient(opts) {
         Util.TraceOnly('ws recv>', data);
         self._onWebsocketMessage(event);
       } catch (e) {
-        alert("ws._onmessage error: " + e.toString() + "\n" + e.stack);
+        alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
       }
     }.bind(this._ws);
@@ -672,7 +671,7 @@ function TwitchClient(opts) {
         self._connected = false;
         self._onWebsocketError(event);
       } catch (e) {
-        alert("ws._onerror error: " + e.toString());
+        alert("ws.onerror error: " + e.toString());
         throw e;
       }
     }.bind(this._ws);
@@ -683,7 +682,7 @@ function TwitchClient(opts) {
         self._is_open = false;
         self._onWebsocketClose(event);
       } catch (e) {
-        alert("ws._onclose error: " + e.toString());
+        alert("ws.onclose error: " + e.toString());
         throw e;
       }
     }.bind(this._ws);
@@ -706,33 +705,6 @@ function TwitchClient(opts) {
 /* Statics */
 TwitchClient.DEFAULT_HISTORY_SIZE = 300;
 TwitchClient.DEFAULT_MAX_MESSAGES = 100;
-
-/* Debugging section {{{0 */
-
-/* debug(args...): output everything given to the console as a debugging
- * message, if config.Debug was set to true */
-TwitchClient.prototype.debug = function _TwitchClient_debug() {
-  if (this._debug) {
-    Util.LogOnly.apply(Util.LogOnly, arguments);
-  }
-};
-
-/* Obtain the current client debug level */
-TwitchClient.prototype.GetDebug = function _TwitchClient_GetDebug() {
-  return this._debug;
-};
-
-/* Update both client and logger debug level */
-TwitchClient.prototype.SetDebug = function _TwitchClient_SetDebug(val) {
-  if (val === false || val === 0) this._debug = 0;else if (val === true || val === 1) this._debug = 1;else if (val === 2) this._debug = 2;else if (val) {
-    this._debug = 1;
-  } else {
-    this._debug = 0;
-  }
-  Util.DebugLevel = this._debug;
-};
-
-/* End debugging section 0}}} */
 
 /* Event handling {{{0 */
 
@@ -2021,7 +1993,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
   var lines = ws_event.data.trim().split("\r\n");
   /* Log the lines to the debug console */
   if (lines.length === 1) {
-    Util.DebugOnly("ws recv> \"" + lines[0] + "\"");
+    Util.LogOnly("ws recv> \"" + lines[0] + "\"");
   } else {
     var _iteratorNormalCompletion24 = true;
     var _didIteratorError24 = false;
@@ -2037,7 +2009,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
         var l = _ref20[1];
 
         var n = Number.parseInt(i) + 1;
-        if (l.trim().length > 0) Util.DebugOnly("ws recv/" + n + "> \"" + l + "\"");
+        if (l.trim().length > 0) Util.LogOnly("ws recv/" + n + "> \"" + l + "\"");
       }
     } catch (err) {
       _didIteratorError24 = true;
