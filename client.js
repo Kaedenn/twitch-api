@@ -224,16 +224,17 @@ class TwitchSubEvent extends TwitchEvent {
   }
 
   static PlanName(plan_id) {
-    if (plan_id === TwitchSubEvent.PLAN_PRIME) {
+    let plan = `${plan_id}`;
+    if (plan === TwitchSubEvent.PLAN_PRIME) {
       return "Twitch Prime";
-    } else if (plan_id === TwitchSubEvent.PLAN_TIER1) {
+    } else if (plan === TwitchSubEvent.PLAN_TIER1) {
       return "Tier 1";
-    } else if (plan_id === TwitchSubEvent.PLAN_TIER2) {
+    } else if (plan === TwitchSubEvent.PLAN_TIER2) {
       return "Tier 2";
-    } else if (plan_id === TwitchSubEvent.PLAN_TIER3) {
+    } else if (plan === TwitchSubEvent.PLAN_TIER3) {
       return "Tier 3";
     } else {
-      return `"${plan_id}"`
+      return `"${plan}"`
     }
   }
 
