@@ -3254,6 +3254,7 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
 
 /* Miscellaneous functions {{{0 */
 
+/* Wrap window.open */
 Util.Open = function _Util_Open(url, id, attrs) {
   var a = [];
   var _iteratorNormalCompletion40 = true;
@@ -3287,6 +3288,50 @@ Util.Open = function _Util_Open(url, id, attrs) {
   }
 
   return window.open(url, id, a.join(","));
+};
+
+/* Get a value from an object by path: "key1.key2" -> o[key1][key2] */
+Util.ObjectGet = function _Util_ObjectGet(obj, path) {
+  var items = path.split(".");
+  var cobj = obj;
+  while (items.length > 0) {
+    if (cobj.hasOwnProperty(items[0])) {
+      cobj = cobj[items.shift()];
+    } else {
+      Util.Error("Object", cobj, "lacks property", items[0]);
+      return null;
+    }
+  }
+  return cobj;
+};
+
+/* Set an object's value by path: "key1.key2" -> o[key1][key2] */
+Util.ObjectSet = function _Util_ObjectSet(obj, path, value) {
+  var items = path.split(".");
+  var cobj = obj;
+  while (items.length > 1) {
+    if (cobj.hasOwnProperty(items[0])) {
+      cobj = cobj[items.shift()];
+    } else {
+      Util.Error("Object", cobj, "lacks property", items[0]);
+      return null;
+    }
+  }
+  cobj[items[0]] = value;
+};
+
+/* Return whether or not an object contains the given path */
+Util.ObjectHas = function _Util_ObjectHas(obj, path) {
+  var items = path.split(".");
+  var cobj = obj;
+  while (items.length > 0) {
+    if (cobj.hasOwnProperty(items[0])) {
+      cobj = cobj[items.shift()];
+    } else {
+      return false;
+    }
+  }
+  return true;
 };
 
 /* End miscellaneous functions 0}}} */
