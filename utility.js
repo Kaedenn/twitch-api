@@ -656,9 +656,23 @@ class LoggerUtility {
 
   /* Add a filter function for the given severity. Messages returning `false`
    * will be shown; ones returning `true` will be filtered out.
-   * Util.Log("message", 1, 2) will call func(["message", 1, 2]) */
-  add_filter(func, sev="ALL") {
+   * Overloads:
+   *   add_filter(function, sev="ALL")
+   *     `function` will be called with one argument: [log_arg1, log_arg2, ...]
+   *   add_filter(regex, sev="ALL")
+   *     Filter if regex matches log_args.toString()
+   *   add_filter(string, sev="ALL")
+   *     Filter if log_args.toString().indexOf(string) > -1 */
+  add_filter(filter_obj, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
+    let func = function() { return false; }
+    if (filter_obj instanceof RegExp) {
+      func = (args) => `${args}`.match(filter_obj);
+    } else if (typeof(filter_obj) === "string") {
+      func = (args) => `${args}`.indexOf(filter_obj) > -1;
+    } else {
+      func = filter_obj;
+    }
     this._filters[this._sev_value(sev)].push(func);
   }
 
