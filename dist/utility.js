@@ -48,7 +48,7 @@ Util.__wscfg = "kae-twapi-local-key";
 /* Everyone needs an ASCII table */
 Util.ASCII = "\0\x01\x02\x03\x04\x05\x06\x07\b\t\n" + "\x0B\f\r\x0E\x0F\x10\x11\x12\x13\x14" + "\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D" + "\x1E\x1F !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" + "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7F";
 
-/* Browser identification {{{0 */
+/* Special browser identification {{{0 */
 
 Util.Browser = function () {
   function _Util_Browser() {
@@ -70,7 +70,7 @@ Util.Browser = function () {
   return _Util_Browser;
 }();
 
-/* End of browser identification 0}}} */
+/* End of special browser identification 0}}} */
 
 /* Portability considerations {{{0 */
 
@@ -106,82 +106,88 @@ Util.Key.DOWN = 40;
 
 /* End portability code 0}}} */
 
-/* Standard object (Math, Array, String, RegExp) additions {{{0 */
+/* Standard object additions and polyfills {{{0 */
 
 /* Calculates the divmod of the values given */
-Math.divmod = function _Math_divmod(n, r) {
-  return [n / r, n % r];
-};
+if (typeof Math.divmod !== "function") {
+  Math.divmod = function _Math_divmod(n, r) {
+    return [n / r, n % r];
+  };
+}
 
 /* Return true if any of the values satisfy the function given */
-Array.prototype.any = function _Array_any(func) {
-  if (!func) func = function func(b) {
-    return b ? true : false;
-  };
-  var _iteratorNormalCompletion = true;
-  var _didIteratorError = false;
-  var _iteratorError = undefined;
+if (typeof Array.prototype.any !== "function") {
+  Array.prototype.any = function _Array_any(func) {
+    if (!func) func = function func(b) {
+      return b ? true : false;
+    };
+    var _iteratorNormalCompletion = true;
+    var _didIteratorError = false;
+    var _iteratorError = undefined;
 
-  try {
-    for (var _iterator = this[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-      var e = _step.value;
-
-      if (func(e)) {
-        return true;
-      }
-    }
-  } catch (err) {
-    _didIteratorError = true;
-    _iteratorError = err;
-  } finally {
     try {
-      if (!_iteratorNormalCompletion && _iterator.return) {
-        _iterator.return();
+      for (var _iterator = this[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
+        var e = _step.value;
+
+        if (func(e)) {
+          return true;
+        }
       }
+    } catch (err) {
+      _didIteratorError = true;
+      _iteratorError = err;
     } finally {
-      if (_didIteratorError) {
-        throw _iteratorError;
+      try {
+        if (!_iteratorNormalCompletion && _iterator.return) {
+          _iterator.return();
+        }
+      } finally {
+        if (_didIteratorError) {
+          throw _iteratorError;
+        }
       }
     }
-  }
 
-  return false;
-};
+    return false;
+  };
+}
 
 /* Return true if all of the values satisfy the function given */
-Array.prototype.all = function _Array_all(func) {
-  if (!func) func = function func(b) {
-    return b ? true : false;
-  };
-  var _iteratorNormalCompletion2 = true;
-  var _didIteratorError2 = false;
-  var _iteratorError2 = undefined;
+if (typeof Array.prototype.all !== "function") {
+  Array.prototype.all = function _Array_all(func) {
+    if (!func) func = function func(b) {
+      return b ? true : false;
+    };
+    var _iteratorNormalCompletion2 = true;
+    var _didIteratorError2 = false;
+    var _iteratorError2 = undefined;
 
-  try {
-    for (var _iterator2 = this[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-      var e = _step2.value;
-
-      if (!func(e)) {
-        return false;
-      }
-    }
-  } catch (err) {
-    _didIteratorError2 = true;
-    _iteratorError2 = err;
-  } finally {
     try {
-      if (!_iteratorNormalCompletion2 && _iterator2.return) {
-        _iterator2.return();
+      for (var _iterator2 = this[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
+        var e = _step2.value;
+
+        if (!func(e)) {
+          return false;
+        }
       }
+    } catch (err) {
+      _didIteratorError2 = true;
+      _iteratorError2 = err;
     } finally {
-      if (_didIteratorError2) {
-        throw _iteratorError2;
+      try {
+        if (!_iteratorNormalCompletion2 && _iterator2.return) {
+          _iterator2.return();
+        }
+      } finally {
+        if (_didIteratorError2) {
+          throw _iteratorError2;
+        }
       }
     }
-  }
 
-  return true;
-};
+    return true;
+  };
+}
 
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
@@ -398,7 +404,21 @@ if (typeof "".trim !== "function") {
   };
 }
 
-/* Apply the numeric transformation to the string characters */
+/* Create function to compare two strings as lower-case */
+String.prototype.equalsLowerCase = function _String_equalsLowerCase(str) {
+  var s1 = this.toLowerCase();
+  var s2 = str.toLowerCase();
+  return s1 === s2;
+};
+
+/* Create function to compare two strings as upper-case */
+String.prototype.equalsUpperCase = function _String_equalsUpperCase(str) {
+  var s1 = this.toUpperCase();
+  var s2 = str.toUpperCase();
+  return s1 === s2;
+};
+
+/* Map the numeric transformation over the string's characters */
 String.prototype.transform = function _String_transform(func) {
   var result = [];
   var _iteratorNormalCompletion7 = true;
@@ -429,7 +449,7 @@ String.prototype.transform = function _String_transform(func) {
   return result.join("");
 };
 
-/* XOR the string with the byte given  */
+/* Per-character XOR with the byte given  */
 String.prototype.xor = function _String_xor(byte) {
   return this.transform(function (i) {
     return i ^ byte;
@@ -437,9 +457,11 @@ String.prototype.xor = function _String_xor(byte) {
 };
 
 /* Escape a string for use in regex */
-RegExp.escape = function _RegExp_escape(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-};
+if (typeof RegExp.escape !== "function") {
+  RegExp.escape = function _RegExp_escape(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+}
 
 /* End standard object additions 0}}} */
 

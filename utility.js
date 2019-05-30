@@ -43,7 +43,7 @@ Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
 
-/* Browser identification {{{0 */
+/* Special browser identification {{{0 */
 
 Util.Browser = class _Util_Browser {
   static get IsTesla() {
@@ -54,7 +54,7 @@ Util.Browser = class _Util_Browser {
   }
 };
 
-/* End of browser identification 0}}} */
+/* End of special browser identification 0}}} */
 
 /* Portability considerations {{{0 */
 
@@ -91,33 +91,39 @@ Util.Key.DOWN = 40;
 
 /* End portability code 0}}} */
 
-/* Standard object (Math, Array, String, RegExp) additions {{{0 */
+/* Standard object additions and polyfills {{{0 */
 
 /* Calculates the divmod of the values given */
-Math.divmod = function _Math_divmod(n, r) {
-  return [n / r, n % r];
+if (typeof(Math.divmod) !== "function") {
+  Math.divmod = function _Math_divmod(n, r) {
+    return [n / r, n % r];
+  }
 }
 
 /* Return true if any of the values satisfy the function given */
-Array.prototype.any = function _Array_any(func) {
-  if (!func) func = (b) => b ? true : false;
-  for (let e of this) {
-    if (func(e)) {
-      return true;
+if (typeof(Array.prototype.any) !== "function") {
+  Array.prototype.any = function _Array_any(func) {
+    if (!func) func = (b) => b ? true : false;
+    for (let e of this) {
+      if (func(e)) {
+        return true;
+      }
     }
+    return false;
   }
-  return false;
 }
 
 /* Return true if all of the values satisfy the function given */
-Array.prototype.all = function _Array_all(func) {
-  if (!func) func = (b) => b ? true : false;
-  for (let e of this) {
-    if (!func(e)) {
-      return false;
+if (typeof(Array.prototype.all) !== "function") {
+  Array.prototype.all = function _Array_all(func) {
+    if (!func) func = (b) => b ? true : false;
+    for (let e of this) {
+      if (!func(e)) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
 }
 
 /* Obtain the maximal element from an array */
@@ -229,7 +235,21 @@ if (typeof(("").trim) !== "function") {
   }
 }
 
-/* Apply the numeric transformation to the string characters */
+/* Create function to compare two strings as lower-case */
+String.prototype.equalsLowerCase = function _String_equalsLowerCase(str) {
+  let s1 = this.toLowerCase();
+  let s2 = str.toLowerCase();
+  return s1 === s2;
+}
+
+/* Create function to compare two strings as upper-case */
+String.prototype.equalsUpperCase = function _String_equalsUpperCase(str) {
+  let s1 = this.toUpperCase();
+  let s2 = str.toUpperCase();
+  return s1 === s2;
+}
+
+/* Map the numeric transformation over the string's characters */
 String.prototype.transform = function _String_transform(func) {
   let result = [];
   for (let ch of this) {
@@ -238,14 +258,16 @@ String.prototype.transform = function _String_transform(func) {
   return result.join("");
 }
 
-/* XOR the string with the byte given  */
+/* Per-character XOR with the byte given  */
 String.prototype.xor = function _String_xor(byte) {
   return this.transform((i) => i^byte);
 }
 
 /* Escape a string for use in regex */
-RegExp.escape = function _RegExp_escape(string) {
-  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+if (typeof(RegExp.escape) !== "function") {
+  RegExp.escape = function _RegExp_escape(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
 }
 
 /* End standard object additions 0}}} */
