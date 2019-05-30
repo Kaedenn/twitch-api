@@ -654,8 +654,9 @@ class LoggerUtility {
     return true;
   }
 
-  /* Add a filter function for the given severity
-   * (NOTE: will be called with an array of arguments) */
+  /* Add a filter function for the given severity. Messages returning `false`
+   * will be shown; ones returning `true` will be filtered out.
+   * Util.Log("message", 1, 2) will call func(["message", 1, 2]) */
   add_filter(func, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
     this._filters[this._sev_value(sev)].push(func);

@@ -1173,8 +1173,9 @@ var LoggerUtility = function () {
       return true;
     }
 
-    /* Add a filter function for the given severity
-     * (NOTE: will be called with an array of arguments) */
+    /* Add a filter function for the given severity. Messages returning `false`
+     * will be shown; ones returning `true` will be filtered out.
+     * Util.Log("message", 1, 2) will call func(["message", 1, 2]) */
 
   }, {
     key: "add_filter",
