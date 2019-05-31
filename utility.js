@@ -82,13 +82,6 @@ if (!Util.Defined('console')) {
   };
 }
 
-Util.Key = {};
-Util.Key.RETURN = 13;
-Util.Key.LEFT = 37;
-Util.Key.UP = 38;
-Util.Key.RIGHT = 39;
-Util.Key.DOWN = 40;
-
 /* End portability code 0}}} */
 
 /* Standard object additions and polyfills {{{0 */
@@ -123,6 +116,15 @@ if (typeof(Array.prototype.all) !== "function") {
       }
     }
     return true;
+  }
+}
+
+/* Restrict a value to a given range */
+if (typeof(Math.clamp) !== "function") {
+  Math.clamp = function _Math_clamp(value, min, max) {
+    if (value < min) value = min;
+    else if (value > max) value = max;
+    return value;
   }
 }
 
