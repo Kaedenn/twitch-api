@@ -7,6 +7,7 @@ let Twitch = {};
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
+Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
 
@@ -15,7 +16,8 @@ Twitch.URL = {};
 
 Twitch.URL.Rooms = (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`;
 Twitch.URL.Stream = (cid) => `${Twitch.Kraken}/streams?channel=${cid}`;
-Twitch.URL.Clip = (str) => `${Twitch.Kraken}/clips/${str}`;
+Twitch.URL.Clip = (slug) => `${Twitch.Helix}/clips?id=${slug}`;
+Twitch.URL.Game = (id) => `${Twitch.Helix}/games?id=${id}`;
 
 Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;

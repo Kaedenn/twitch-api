@@ -10,6 +10,7 @@ var Twitch = {};
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
+Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
 
@@ -22,8 +23,11 @@ Twitch.URL.Rooms = function (cid) {
 Twitch.URL.Stream = function (cid) {
   return Twitch.Kraken + "/streams?channel=" + cid;
 };
-Twitch.URL.Clip = function (str) {
-  return Twitch.Kraken + "/clips/" + str;
+Twitch.URL.Clip = function (slug) {
+  return Twitch.Helix + "/clips?id=" + slug;
+};
+Twitch.URL.Game = function (id) {
+  return Twitch.Helix + "/games?id=" + id;
 };
 
 Twitch.URL.Badges = function (cid) {

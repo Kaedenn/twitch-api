@@ -1191,7 +1191,27 @@ function _TwitchClient_GetHistoryLength() {
 
 /* End of history functions 0}}} */
 
-/* Badge handling functions {{{0 */
+/* Asset and API functions {{{0 */
+
+/* Return the data for the given clip slug */
+TwitchClient.prototype.GetClip =
+function _TwitchClient_GetClip(slug) {
+  return new Promise((function(resolve, reject) {
+    this._api.GetCB(Twitch.URL.Clip(slug), function(resp) {
+      resolve(resp["data"][0]);
+    }, reject);
+  }).bind(this));
+}
+
+/* Return information on the given game ID */
+TwitchClient.prototype.GetGame =
+function _TwitchClient_GetGame(game_id) {
+  return new Promise((function(resolve, reject) {
+    this._api.GetCB(Twitch.URL.Game(game_id), function(resp) {
+      resolve(resp["data"][0]);
+    }, reject);
+  }).bind(this));
+}
 
 /* Return true if the badge specified is a global badge */
 TwitchClient.prototype.IsGlobalBadge =
@@ -1271,7 +1291,7 @@ function _TwitchClient_GetChannelBadges(channel) {
   return {};
 }
 
-/* End of badge handling functions 0}}} */
+/* End of asset handling functions 0}}} */
 
 /* Websocket callbacks {{{0 */
 
