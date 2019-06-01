@@ -24,7 +24,7 @@ Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`
 Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
 Twitch.URL.Cheers = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
 Twitch.URL.AllCheers = () => `${Twitch.Kraken}/bits/actions`;
-Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`
+Twitch.URL.Emote = (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`;
 Twitch.URL.EmoteSet = (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`;
 
 Twitch.URL.FFZAllEmotes = () => `${Twitch.FFZ}/emoticons`;
@@ -61,7 +61,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
           }
         }
       }
-    }
+    };
     req.open("GET", url);
     req.send();
   };
@@ -101,14 +101,14 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
       }
     }
     req.send();
-  }
-}
+  };
+};
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
   user = user.replace(/^:/, "");
   return user.split('!')[0];
-}
+};
 
 /* Parse channel to {channel, room, roomuid} */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
@@ -128,7 +128,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
     ch = '#' + ch;
   }
   return {channel: ch, room: room, roomuid: roomuid};
-}
+};
 
 /* Format a channel name, room name, or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
@@ -157,7 +157,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
     Util.Warn("FormatChannel: don't know how to format", channel, room, roomuid);
     return `${channel}`;
   }
-}
+};
 
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
@@ -204,7 +204,7 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
     }
   }
   return result;
-}
+};
 
 /* Parse @<flags...> key,value pairs */
 Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
@@ -221,7 +221,7 @@ Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
     data[key] = val;
   }
   return data;
-}
+};
 
 /* Parse an emote specification flag */
 Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
@@ -238,7 +238,7 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
     }
   }
   return result;
-}
+};
 
 /* Format an emote specification flag */
 Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
@@ -249,13 +249,13 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
     }
   }
   return specs.join('/');
-}
+};
 
 /* Convert an emote name to a regex */
 Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
   /* NOTE: Emotes from Twitch are already regexes; dont escape them */
   return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
-}
+};
 
 /* Generate emote specifications for the given emotes [eid, ename] */
 Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes, escape=false) {
@@ -273,7 +273,7 @@ Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes, escape=false) {
     }
   }
   return results;
-}
+};
 
 /* Parse a line received through the Twitch websocket */
 Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
@@ -450,7 +450,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     }
   }
   return result;
-}
+};
 
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
@@ -464,5 +464,5 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
     }
   }
   return msg;
-}
+};
 

@@ -88,7 +88,7 @@ Util.Defined = function _Util_Defined(identifier) {
     }
   }
   return false;
-}
+};
 
 /* End portability code 0}}} */
 

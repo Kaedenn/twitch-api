@@ -73,7 +73,7 @@ Util.Defined = function _Util_Defined(identifier) {
     }
   }
   return false;
-}
+};
 
 /* End portability code 0}}} */
 
@@ -124,7 +124,7 @@ if (typeof(Array.prototype.any) !== "function") {
       }
     }
     return false;
-  }
+  };
 }
 
 /* Return true if all of the values satisfy the function given */
@@ -137,7 +137,7 @@ if (typeof(Array.prototype.all) !== "function") {
       }
     }
     return true;
-  }
+  };
 }
 
 /* Array.concat polyfill: concatenate two or more arrays */
@@ -153,7 +153,7 @@ if (typeof(Array.prototype.concat) !== "function") {
       }
     }
     return result;
-  }
+  };
 }
 
 /* Append one or more arrays, in-place */
@@ -163,7 +163,7 @@ Array.prototype.extend = function _Array_extend(...args) {
       this.push(i);
     }
   }
-}
+};
 
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
@@ -179,7 +179,7 @@ Array.prototype.max = function _Array_max(cmp) {
     }
   }
   return max_elem;
-}
+};
 
 /* Obtain the minimal element from an array */
 Array.prototype.min = function _Array_min(cmp) {
@@ -195,14 +195,14 @@ Array.prototype.min = function _Array_min(cmp) {
     }
   }
   return min_elem;
-}
+};
 
 /* Construct an empty array with a specific number of entries */
 Array.range = function _Array_range(nelem, dflt=null) {
   let a = [];
   for (let i = 0; i < nelem; ++i) a.push(dflt);
   return a;
-}
+};
 
 /* Remove `chrs` from the beginning and end of the string */
 String.prototype.strip = function _String_strip(chrs) {
@@ -223,7 +223,7 @@ String.prototype.strip = function _String_strip(chrs) {
     ei -= 1;
   }
   return si < ei ? this.substring(si, ei+1) : "";
-}
+};
 
 /* Escape a string for proper HTML printing */
 String.prototype.escape = function _String_escape() {
@@ -234,7 +234,7 @@ String.prototype.escape = function _String_escape() {
   result = result.replace(/"/g, '&quot;');
   result = result.replace(/'/g, '&apos;');
   return result;
-}
+};
 
 /* Implement Array.map for strings */
 String.prototype.map = function _String_map(func) {
@@ -243,7 +243,7 @@ String.prototype.map = function _String_map(func) {
     result += func(ch);
   }
   return result;
-}
+};
 
 /* Ensure String.trimStart is present */
 if (typeof(("").trimStart) !== "function") {
@@ -253,7 +253,7 @@ if (typeof(("").trimStart) !== "function") {
       i += 1;
     }
     return i === 0 ? this : this.substr(i);
-  }
+  };
 }
 
 /* Ensure String.trimEnd is present */
@@ -264,14 +264,14 @@ if (typeof(("").trimEnd) !== "function") {
       i -= 1;
     }
     return this.substr(0, i+1);
-  }
+  };
 }
 
 /* Ensure String.trim is present */
 if (typeof(("").trim) !== "function") {
   String.prototype.trim = function() {
     return this.trimStart().trimEnd();
-  }
+  };
 }
 
 /* Create function to compare two strings as lower-case */
@@ -279,14 +279,14 @@ String.prototype.equalsLowerCase = function _String_equalsLowerCase(str) {
   let s1 = this.toLowerCase();
   let s2 = str.toLowerCase();
   return s1 === s2;
-}
+};
 
 /* Create function to compare two strings as upper-case */
 String.prototype.equalsUpperCase = function _String_equalsUpperCase(str) {
   let s1 = this.toUpperCase();
   let s2 = str.toUpperCase();
   return s1 === s2;
-}
+};
 
 /* Map the numeric transformation over the string's characters */
 String.prototype.transform = function _String_transform(func) {
@@ -295,18 +295,18 @@ String.prototype.transform = function _String_transform(func) {
     result.push(String.fromCharCode(func(ch.charCodeAt(0))));
   }
   return result.join("");
-}
+};
 
 /* Per-character XOR with the byte given  */
 String.prototype.xor = function _String_xor(byte) {
   return this.transform((i) => i^byte);
-}
+};
 
 /* Escape a string for use in regex */
 if (typeof(RegExp.escape) !== "function") {
   RegExp.escape = function _RegExp_escape(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  }
+  };
 }
 
 /* End standard object additions 0}}} */
@@ -323,7 +323,7 @@ Util.IsArray = function _Util_IsArray(value) {
   } else {
     return false;
   }
-}
+};
 
 /* Zip two (or more) sequences together */
 Util.Zip = function _Util_Zip(...sequences) {
@@ -352,12 +352,12 @@ Util.Zip = function _Util_Zip(...sequences) {
   }
   /* And we're done */
   return result;
-}
+};
 
 /* Convert an arguments object to an Array */
 Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
   return Array.of.apply(Array, argobj);
-}
+};
 
 /* End array and sequence functions 0}}} */
 
@@ -382,7 +382,7 @@ Util.URL = function _Util_URL(url) {
     }
   }
   return url;
-}
+};
 
 class _Util_API {
   constructor(headers=null, args=null) {
@@ -422,11 +422,11 @@ class _Util_API {
         if (this.readyState === XMLHttpRequest.DONE) {
           resolve(JSON.parse(this.responseText));
         }
-      }
+      };
       r.onerror = function _XHR_onerror(e) {
         e._stacktrace = stack;
         reject(e);
-      }
+      };
       r.open(parms.method || "GET", url);
       for (let [k, v] of Object.entries(this._headers)) {
         r.setRequestHeader(k, v);
@@ -463,7 +463,7 @@ Util.SplitPath = function _Util_SplitPath(path) {
   } else {
     return ["", path];
   }
-}
+};
 
 /* Join a directory and a filename */
 Util.JoinPath = function _Util_JoinPath(dir, file) {
@@ -472,7 +472,7 @@ Util.JoinPath = function _Util_JoinPath(dir, file) {
   } else {
     return file;
   }
-}
+};
 
 /* Strip a common prefix from an array of paths */
 Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
@@ -513,7 +513,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   }
   /* Join the paths back together */
   return pieces.map((v) => Util.JoinPath(v[0].join('/'), v[1]));
-}
+};
 
 /* End URL handling 0}}} */
 
@@ -526,7 +526,7 @@ Util.Throw = function _Util_Throw(type, msg) {
   e._stacktrace = Util.ParseStack(Util.GetStack()) || [];
   e._stacktrace.shift();
   throw e;
-}
+};
 
 /* End error handling 0}}} */
 
@@ -544,36 +544,36 @@ Util._stack_trim_end_level = [0];
 /* Save the current top-stack trim level and push a new value to use */
 Util.PushStackTrimBegin = function _Util_PushStackTrimBegin(level) {
   Util._stack_trim_begin_level.push(level);
-}
+};
 
 /* Restore the saved top-stack trim level */
 Util.PopStackTrimBegin = function _Util_PopStackTrimBegin() {
   if (Util._stack_trim_begin_level.length > 1) {
     Util._stack_trim_begin_level.pop();
   }
-}
+};
 
 /* Save the current bottom-stack trim level and push a new value to use */
 Util.PushStackTrimEnd = function _Util_PushStackTrimEnd(level) {
   Util._stack_trim_end_level.push(level);
-}
+};
 
 /* Restore the saved bottom-stack trim level */
 Util.PopStackTrimEnd = function _Util_PopStackTrimEnd() {
   if (Util._stack_trim_end_level.length > 1) {
     Util._stack_trim_end_level.pop();
   }
-}
+};
 
 /* Get the current top-stack trim level */
 Util.GetStackTrimBegin = function _Util_GetStackTrimBegin() {
   return Util._stack_trim_begin_level[Util._stack_trim_begin_level.length-1];
-}
+};
 
 /* Get the current bottom-stack trim level */
 Util.GetStackTrimEnd = function _Util_GetStackTrimEnd() {
   return Util._stack_trim_end_level[Util._stack_trim_end_level.length-1];
-}
+};
 
 /* Obtain a stacktrace, applying the current stack trim levels */
 Util.GetStack = function _Util_GetStack() {
@@ -587,7 +587,7 @@ Util.GetStack = function _Util_GetStack() {
     lines.pop();
   }
   return lines;
-}
+};
 
 /* Parse a given stacktrace */
 Util.ParseStack = function _Util_ParseStack(lines) {
@@ -624,7 +624,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     frames.push(frame);
   }
   return frames;
-}
+};
 
 /* Format stack frames for output */
 Util.FormatStack = function _Util_FormatStack(stack) {
@@ -644,7 +644,7 @@ Util.FormatStack = function _Util_FormatStack(stack) {
     }
   }
   return result.join("\n");
-}
+};
 
 /* Logger object */
 class LoggerUtility {
@@ -717,7 +717,7 @@ class LoggerUtility {
    *     Filter if log_args.toString().indexOf(string) > -1 */
   add_filter(filter_obj, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
-    let func = function() { return false; }
+    let func = function() { return false; };
     if (filter_obj instanceof RegExp) {
       func = (args) => `${args}`.match(filter_obj);
     } else if (typeof(filter_obj) === "string") {
@@ -760,7 +760,7 @@ class LoggerUtility {
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
   do_log(sev, argobj, stacktrace=false, log_once=false) {
     let val = this._sev_value(sev);
-    if (!this.severity_enabled(sev)) { return }
+    if (!this.severity_enabled(sev)) { return; }
     if (this.should_filter(argobj, sev)) { return; }
     if (log_once) {
       let argstr = JSON.stringify(argobj);
@@ -1174,7 +1174,7 @@ Util.Color = class _Util_Color {
    *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
    *  "#ff0000" -> hsl -> "#ff0000"
    */
-}
+};
 
 /* Parse a CSS color.
  * Overloads
@@ -1198,7 +1198,7 @@ Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
     }
   }
   return [r, g, b, a];
-}
+};
 
 /* Calculate the Relative Luminance of a color.
  * Overloads:
@@ -1220,14 +1220,14 @@ Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
   let l_green = 0.7152 * c_to_cx(color_rgb[1]);
   let l_blue = 0.0722 * c_to_cx(color_rgb[2]);
   return l_red + l_green + l_blue;
-}
+};
 
 /* Calculate the Contrast Ratio between two colors */
 Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
   let l1 = Util.RelativeLuminance(c1);
   let l2 = Util.RelativeLuminance(c2);
   return (l1 < l2 ? (l2 + 0.05) / (l1 + 0.05) : (l1 + 0.05) / (l2 + 0.05));
-}
+};
 
 /* Determine which color contrasts the best with the given color
  * Overloads:
@@ -1250,7 +1250,7 @@ Util.GetMaxContrast = function _Util_GetMaxContrast(c1, ...colors) {
     }
   }
   return best_color;
-}
+};
 
 /* End color handling 0}}} */
 
@@ -1336,7 +1336,7 @@ Util.RandomGenerator = class _Util_Random {
     parts.forEach(([s, l]) => result.push(h.substr(s, l)));
     return result.join("-");
   }
-}
+};
 
 Util.Random = new Util.RandomGenerator();
 
@@ -1351,12 +1351,12 @@ Util._events_default = null;
 Util.Bind = function _Util_Bind(evname, evcallback) {
   if (!Util._events[evname]) Util._events[evname] = [];
   Util._events[evname].push(evcallback);
-}
+};
 
 /* Call a function if an event is unbound */
 Util.BindDefault = function _Util_BindDefault(callback) {
   Util._events_default = callback;
-}
+};
 
 /* Unbind a callback from an event */
 Util.Unbind = function _Util_Unbind(evname, evcallback) {
@@ -1368,7 +1368,7 @@ Util.Unbind = function _Util_Unbind(evname, evcallback) {
     }
   }
   return false;
-}
+};
 
 /* Fire an event: dispatchEvent with a _stacktrace attribute  */
 Util.FireEvent = function _Util_FireEvent(e) {
@@ -1392,7 +1392,7 @@ Util.FireEvent = function _Util_FireEvent(e) {
   if (!fired && Util._events_default) {
     Util._events_default(e);
   }
-}
+};
 
 /* End event handling 0}}} */
 
@@ -1420,7 +1420,7 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
     j += r.length;
   }
   return [result, map];
-}
+};
 
 /* Number formatting */
 Util.Pad = function _Util_Pad(n, digits, padChr) {
@@ -1428,7 +1428,7 @@ Util.Pad = function _Util_Pad(n, digits, padChr) {
     padChr = '0';
   }
   return (new String(n)).padStart(digits, padChr);
-}
+};
 
 /* Convert a string to an array of character codes */
 Util.StringToCodes = function _Util_StringToCodes(str) {
@@ -1437,7 +1437,7 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
     result.push(str.charCodeAt(i));
   }
   return result;
-}
+};
 
 /* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
 Util.FormatDate = function _Util_FormatDate(date) {
@@ -1448,7 +1448,7 @@ Util.FormatDate = function _Util_FormatDate(date) {
            Util.Pad(h, 2), Util.Pad(mi, 2), Util.Pad(s, 2),
            Util.Pad(ms, 3)];
   return `${p[0]}-${p[1]}-${p[2]} ${p[3]}:${p[4]}:${p[5]}.${p[6]}`;
-}
+};
 
 /* Format an interval in seconds to "Xh Ym Zs" */
 Util.FormatInterval = function _Util_FormatInterval(time) {
@@ -1468,7 +1468,7 @@ Util.FormatInterval = function _Util_FormatInterval(time) {
     parts.unshift(`${time}h`);
   }
   return parts.join(" ");
-}
+};
 
 /* Decode flags ("0101" or "5d" little endian) into an array of bits */
 Util.DecodeFlags = function _Util_DecodeFlags(f, nbits=null) {
@@ -1489,12 +1489,12 @@ Util.DecodeFlags = function _Util_DecodeFlags(f, nbits=null) {
     }
   }
   return bits;
-}
+};
 
 /* Encode an array of bits into a flag string ("0101") */
 Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   return bits.map((b) => (b ? "1" : "0")).join("");
-}
+};
 
 /* Build a character escape sequence for the code given */
 Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
@@ -1506,7 +1506,7 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
   } else {
     return `\\x${code.toString(16).padStart(2, '0')}`;
   }
-}
+};
 
 /* Strip escape characters from a string */
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
@@ -1520,7 +1520,7 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
       result = result.concat(ch);
   }
   return result;
-}
+};
 
 /* Split a string by the tokens given; all tokens must be present.
  *   matchfunc: function to apply to the matched segments */
@@ -1541,12 +1541,12 @@ Util.SplitByMatches = function _Util_SplitByMatches(str, matches, matchfunc=null
     result.push(str.substr(pos));
   }
   return result;
-}
+};
 
 /* Clone an object using JSON */
 Util.JSONClone = function _Util_JSONClone(obj) {
   return JSON.parse(JSON.stringify(obj));
-}
+};
 
 /* End parsing, formatting, escaping, and string functions 0}}} */
 
@@ -1565,7 +1565,7 @@ Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
     let key = JSON.parse(window.localStorage.getItem(Util.__wscfg));
     return key; /* may be null */
   }
-}
+};
 
 /* Select the localStorage key to use */
 Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
@@ -1575,7 +1575,7 @@ Util.SetWebStorageKey = function _Util_SetWebStorageKey(key) {
     Util.__wskey = key;
     window.localStorage.setItem(Util.__wscfg, JSON.stringify(key));
   }
-}
+};
 
 /* Get and decode value, using either the configured key or the one given */
 Util.GetWebStorage = function _Util_GetWebStorage(...args) {
@@ -1610,7 +1610,7 @@ Util.GetWebStorage = function _Util_GetWebStorage(...args) {
     if (v === "") return "";
     return Util.StorageParse(v, opts);
   }
-}
+};
 
 /* JSON encode and store a localStorage value
  * Overloads:
@@ -1642,7 +1642,7 @@ Util.SetWebStorage = function _Util_SetWebStorage(...args) {
   } else {
     window.localStorage.setItem(key, Util.StorageFormat(value, opts));
   }
-}
+};
 
 /* Append a value to the given localStorage key */
 Util.StorageAppend = function _Util_StorageAppend(key, value) {
@@ -1657,7 +1657,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
     new_v.push(value);
   }
   Util.SetWebStorage(key, new_v);
-}
+};
 
 /* Parse a raw localStorage string using the options given */
 Util.StorageParse = function _Util_StorageParse(s, opts=null) {
@@ -1674,7 +1674,7 @@ Util.StorageParse = function _Util_StorageParse(s, opts=null) {
     }
   }
   return use_json ? JSON.parse(s) : s;
-}
+};
 
 /* Format an object for storing into localStorage */
 Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
@@ -1689,7 +1689,7 @@ Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
     }
   }
   return s;
-}
+};
 
 /* Disables localStorage suppport entirely */
 Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
@@ -1705,7 +1705,7 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
   Util.StorageAppend = wsapi_wrapper(Util.StorageAppend);
   Util.StorageParse = wsapi_wrapper(Util.StorageParse);
   Util.StorageFormat = wsapi_wrapper(Util.StorageFormat);
-}
+};
 
 /* End configuration and localStorage functions 0}}} */
 
@@ -1754,7 +1754,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
     }
   }
   return obj;
-}
+};
 
 /* Format a query string (including leading "?") */
 Util.FormatQueryString = function _Util_FormatQueryString(query) {
@@ -1765,7 +1765,7 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
     parts.push(`${key}=${val}`);
   }
   return "?" + parts.join("&");
-}
+};
 
 /* End query string handling 0}}} */
 
@@ -1778,12 +1778,12 @@ Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
   } else {
     return false;
   }
-}
+};
 
 /* Return whether or not the position is inside the given DOMRect */
 Util.RectContains = function _Util_RectContains(x, y, rect) {
   return Util.BoxContains(x, y, rect.left, rect.top, rect.right, rect.bottom);
-}
+};
 
 /* Return whether or not the position is over the HTML element */
 Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
@@ -1802,7 +1802,7 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
     }
   }
   return false;
-}
+};
 
 /* End point-box functions 0}}} */
 
@@ -1818,7 +1818,7 @@ Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
     }
   }
   return null;
-}
+};
 
 /* Given a stylesheet, obtain a rule definition by name */
 Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
@@ -1828,7 +1828,7 @@ Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
     }
   }
   return null;
-}
+};
 
 /* Given a rule, enumerate the defined properties' names */
 Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
@@ -1837,7 +1837,7 @@ Util.CSS.GetPropertyNames = function _Util_CSS_GetPropertyNames(rule) {
     styles.push(rule.style[i]);
   }
   return styles;
-}
+};
 
 /* Obtain the value of the given property
  * Overloads
@@ -1851,7 +1851,7 @@ Util.CSS.GetProperty = function _Util_CSS_GetProperty(...args) {
     p = args[1];
   }
   return getComputedStyle(e).getPropertyValue(p).trim();
-}
+};
 
 /* Set the property to the value giveni
  * Overloads
@@ -1867,7 +1867,7 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
     v = args[2];
   }
   e.style.setProperty(p, v);
-}
+};
 
 /* End CSS functions 0}}} */
 
@@ -1879,7 +1879,7 @@ Util.AddScript = function _Util_AddScript(src) {
   s.setAttribute("type", "text/javascript");
   s.setAttribute("src", src);
   document.head.appendChild(s);
-}
+};
 
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
@@ -1897,7 +1897,7 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
     }
   }
   return results;
-}
+};
 
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
@@ -1915,7 +1915,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
     Util.Warn("Not sure how to create a node from", obj);
     return new Text(JSON.stringify(obj));
   }
-}
+};
 
 /* Obtain a node's HTML */
 Util.GetHTML = function _Util_GetHTML(node) {
@@ -1928,7 +1928,7 @@ Util.GetHTML = function _Util_GetHTML(node) {
   } else {
     return `${node}`;
   }
-}
+};
 
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
@@ -1940,7 +1940,7 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   if (offset.top + offset.height > window.innerHeight) {
     offset.top = window.innerHeight - offset.height;
   }
-}
+};
 
 /* End DOM functions 0}}} */
 
@@ -1953,7 +1953,7 @@ Util.Open = function _Util_Open(url, id, attrs) {
     a.push(`${k}=${v}`);
   }
   return window.open(url, id, a.join(","));
-}
+};
 
 /* Get a value from an object by path: "key1.key2" -> o[key1][key2] */
 Util.ObjectGet = function _Util_ObjectGet(obj, path) {
@@ -1968,7 +1968,7 @@ Util.ObjectGet = function _Util_ObjectGet(obj, path) {
     }
   }
   return cobj;
-}
+};
 
 /* Set an object's value by path: "key1.key2" -> o[key1][key2] */
 Util.ObjectSet = function _Util_ObjectSet(obj, path, value) {
@@ -1983,7 +1983,7 @@ Util.ObjectSet = function _Util_ObjectSet(obj, path, value) {
     }
   }
   cobj[items[0]] = value;
-}
+};
 
 /* Return whether or not an object contains the given path */
 Util.ObjectHas = function _Util_ObjectHas(obj, path) {
@@ -1997,7 +1997,7 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
     }
   }
   return true;
-}
+};
 
 /* End miscellaneous functions 0}}} */
 

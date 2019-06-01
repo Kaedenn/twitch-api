@@ -29,14 +29,14 @@ module.exports = {
         "no-self-compare": "warn",
         "no-throw-literal": "warn",
         "no-unused-expressions": "warn",
-        "no-use-before-define": "warn"
+        "no-use-before-define": "warn",
+        "semi": "warn"
     },
     "overrides": [
         {
             "files": ["utility.js"],
             "rules": {
-                "no-console": "off",
-                "no-unexpected-multiline": "off"
+                "no-console": "off"
             }
         }
     ]

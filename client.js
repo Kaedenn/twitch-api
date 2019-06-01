@@ -234,7 +234,7 @@ class TwitchSubEvent extends TwitchEvent {
     } else if (plan === TwitchSubEvent.PLAN_TIER3) {
       return "Tier 3";
     } else {
-      return `"${plan}"`
+      return `"${plan}"`;
     }
   }
 
@@ -318,9 +318,9 @@ function TwitchClient(opts) {
 
   /* Let the client be used as an arbitrary key-value store */
   this._kv = {};
-  this.get = function _Client_get(k) { return this._kv[k]; }
-  this.set = function _Client_set(k, v) { this._kv[k] = v; }
-  this.has = function _Client_has(k) { return this._kv.hasOwnProperty(k); }
+  this.get = function _Client_get(k) { return this._kv[k]; };
+  this.set = function _Client_set(k, v) { this._kv[k] = v; };
+  this.has = function _Client_has(k) { return this._kv.hasOwnProperty(k); };
 
   /* Handle authentication and password management */
   this._authed = cfg_pass ? true : false;
@@ -337,7 +337,7 @@ function TwitchClient(opts) {
 
   /* Construct the Twitch API object */
   let pub_headers = {};
-  let priv_headers = {}
+  let priv_headers = {};
   if (this._has_clientid) { pub_headers["Client-Id"] = cfg_clientid; }
   if (this._authed) { priv_headers["Authorization"] = oauth_header; }
   this._api = new Twitch.API(pub_headers, priv_headers);
@@ -427,19 +427,19 @@ TwitchClient.DEFAULT_MAX_MESSAGES = 100;
 TwitchClient.prototype.bind =
 function _TwitchClient_bind(event, callback) {
   Util.Bind(event, callback);
-}
+};
 
 /* Bind a function to catch events not bound */
 TwitchClient.prototype.bindDefault =
 function _TwitchClient_bindDefault(callback) {
   Util.BindDefault(callback);
-}
+};
 
 /* Unbind a function from the TwitchChat event specified */
 TwitchClient.prototype.unbind =
 function _TwitchClient_unbind(event, callback) {
   Util.Unbind(event, callback);
-}
+};
 
 /* End event handling 0}}} */
 
@@ -455,7 +455,7 @@ function _TwitchClient__selfUserState(channel, value) {
     }
   }
   return null;
-}
+};
 
 /* Private: Ensure the user specified is in reduced form */
 TwitchClient.prototype._ensureUser =
@@ -465,7 +465,7 @@ function _TwitchClient__ensureUser(user) {
   } else {
     return user;
   }
-}
+};
 
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureChannel =
@@ -475,7 +475,7 @@ function _TwitchClient__ensureChannel(channel) {
   } else {
     return channel;
   }
-}
+};
 
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureRoom =
@@ -493,9 +493,9 @@ function _TwitchClient__ensureRoom(channel) {
       online: false,    /* Currently streaming */
       stream: {},       /* Stream status */
       streams: []       /* Stream statuses */
-    }
+    };
   }
-}
+};
 
 /* Private: Called when a user joins a channel */
 TwitchClient.prototype._onJoin =
@@ -515,7 +515,7 @@ function _TwitchClient__onJoin(channel, user) {
   if (!this._rooms[channel.channel].userInfo.hasOwnProperty(user)) {
     this._rooms[channel.channel].userInfo[user] = {};
   }
-}
+};
 
 /* Private: Called when a user parts a channel */
 TwitchClient.prototype._onPart =
@@ -528,7 +528,7 @@ function _TwitchClient__onPart(channel, user) {
     let idx = this._rooms[cname].users.indexOf(user);
     this._rooms[cname].users.splice(idx, 1);
   }
-}
+};
 
 /* Private: Called when the client receives a MODE +o event */
 TwitchClient.prototype._onOp =
@@ -540,7 +540,7 @@ function _TwitchClient__onOp(channel, user) {
   if (!this._rooms[cname].operators.includes(user)) {
     this._rooms[cname].operators.push(user);
   }
-}
+};
 
 /* Private: Called when the client receives a MODE -o event */
 TwitchClient.prototype._onDeOp =
@@ -553,7 +553,7 @@ function _TwitchClient__onDeOp(channel, user) {
   if (idx > -1) {
     this._rooms[cname].operators = this._rooms[cname].operators.splice(idx, 1);
   }
-}
+};
 
 /* Private: Load in the extra chatrooms a streamer may or may not have */
 TwitchClient.prototype._getRooms =
@@ -566,7 +566,7 @@ function _TwitchClient__getRooms(cname, cid) {
       this._rooms[cname].rooms[room_def["name"]] = room_def;
     }
   }).bind(this), {}, true);
-}
+};
 
 /* Private: Load in the channel badges for a given channel name and ID */
 TwitchClient.prototype._getChannelBadges =
@@ -581,7 +581,7 @@ function _TwitchClient__getChannelBadges(cname, cid) {
       this._channel_badges[cname][badge_name] = json[badge_name];
     }
   }).bind(this), {}, false);
-}
+};
 
 /* Private: Load in the channel cheermotes for a given channel name and ID */
 TwitchClient.prototype._getChannelCheers =
@@ -595,12 +595,12 @@ function _TwitchClient__getChannelCheers(cname, cid) {
     for (let cdef of json.actions) {
       /* Simplify things later by adding the regexps here */
       cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
-      cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
-      cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig')
+      cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
+      cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
       this._channel_cheers[cname][cdef.prefix] = cdef;
     }
   }).bind(this), {}, false);
-}
+};
 
 /* Private: Load in the global and per-channel FFZ emotes */
 TwitchClient.prototype._getFFZEmotes =
@@ -646,7 +646,7 @@ function _TwitchClient__getFFZEmotes(cname, cid) {
       Util.LogOnly(`Channel ${cname}:${cid} has no FFZ emotes`);
     }
   }));
-}
+};
 
 /* Private: Load in the global and per-channel BTTV emotes */
 TwitchClient.prototype._getBTTVEmotes =
@@ -689,7 +689,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
       Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
     }
   }));
-}
+};
 
 /* Private: Load in the global badges  */
 TwitchClient.prototype._getGlobalBadges =
@@ -711,7 +711,7 @@ function _TwitchClient__getGlobalBadges() {
       }
     }).bind(this));
   }
-}
+};
 
 /* Private: Build a faux PRIVMSG event from the chat message given */
 TwitchClient.prototype._buildChatEvent =
@@ -755,10 +755,10 @@ function _TwitchClient__buildChatEvent(chobj, message) {
     if (typeof(val) !== "undefined" && val !== null) {
       flag_arr.push(`${n}=${val}`);
     }
-  }
+  };
   let addObjFlag = (n) => addFlag(n, flag_obj[n]);
   if (flag_obj["badges"]) {
-    let badges = []
+    let badges = [];
     for (let [b, r] of flag_obj["badges"]) {
       badges.push(`${b}/${r}`);
     }
@@ -812,7 +812,7 @@ function _TwitchClient__buildChatEvent(chobj, message) {
     message: message,
     synthetic: true /* mark the event as synthetic */
   }));
-}
+};
 
 /* End private functions section 0}}} */
 
@@ -829,32 +829,32 @@ function _TwitchClient_ConnectionStatus() {
     identified: this._has_clientid,
     authed: this.IsAuthed()
   };
-}
+};
 
 /* Return whether or not we're connected to Twitch */
 TwitchClient.prototype.Connected =
 function _TwitchClient_Connected() {
   return this._connected;
-}
+};
 
 /* Return whether or not FFZ support is enabled */
 TwitchClient.prototype.FFZEnabled =
 function _TwitchClient_FFZEnabled() {
   return !this._no_assets && this._enable_ffz;
-}
+};
 
 /* Return whether or not BTTV support is enabled */
 TwitchClient.prototype.BTTVEnabled =
 function _TwitchClient_BTTVEnabled() {
   return !this._no_assets && this._enable_bttv;
-}
+};
 
 TwitchClient.prototype.SelfUserState =
 function _TwitchClient_SelfUserState() {
   let obj = Util.JSONClone(this._self_userstate);
   obj.userid = this._self_userid;
   return obj;
-}
+};
 
 /* Return true if the client has been granted the capability specified. Values
  * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
@@ -868,19 +868,19 @@ function _TwitchClient_HasCapability(test_cap) {
     }
   }
   return false;
-}
+};
 
 /* Get the client's current username */
 TwitchClient.prototype.GetName =
 function _TwitchClient_GetName() {
   return this._username;
-}
+};
 
 /* Return whether or not the numeric user ID refers to the client itself */
 TwitchClient.prototype.IsUIDSelf =
 function _TwitchClient_IsUIDSelf(userid) {
   return userid === this._self_userid;
-}
+};
 
 /* End of general status functions 0}}} */
 
@@ -890,31 +890,31 @@ function _TwitchClient_IsUIDSelf(userid) {
 TwitchClient.prototype.IsAuthed =
 function _TwitchClient_IsAuthed() {
   return this._authed;
-}
+};
 
 /* Return true if the client is a subscriber in the channel given */
 TwitchClient.prototype.IsSub =
 function _TwitchClient_IsSub(channel) {
   return this._selfUserState(channel, "sub");
-}
+};
 
 /* Return true if the client is a VIP in the channel given */
 TwitchClient.prototype.IsVIP =
 function _TwitchClient_IsVIP(channel) {
   return this._selfUserState(channel, "vip");
-}
+};
 
 /* Return true if the client is a moderator in the channel given */
 TwitchClient.prototype.IsMod =
 function _TwitchClient_IsMod(channel) {
   return this._selfUserState(channel, "mod");
-}
+};
 
 /* Return true if the client is the broadcaster for the channel given */
 TwitchClient.prototype.IsCaster =
 function _TwitchClient_IsCaster(channel) {
   return this._selfUserState(channel, "broadcaster");
-}
+};
 
 /* Timeout the specific user in the specified channel */
 TwitchClient.prototype.Timeout =
@@ -924,13 +924,13 @@ function _TwitchClient_Timeout(channel, user, duration="600s", reason=null) {
     reason = `Timed out by ${this._username} from ${channel.channel} for ${duration}`;
   }
   this.SendMessage(channel, `/timeout ${user} ${duration} "${reason}"`);
-}
+};
 
 /* Un-timeout the specific user in the specified channel */
 TwitchClient.prototype.UnTimeout =
 function _TwitchClient_UnTimeout(channel, user) {
   this.SendMessage(channel, `/untimeout ${user}`);
-}
+};
 
 /* Ban the specific user from the specified channel */
 TwitchClient.prototype.Ban =
@@ -940,13 +940,13 @@ function _TwitchClient_Ban(channel, user, reason=null) {
     reason = `Banned from ${channel.channel} by ${this._username}`;
   }
   this.SendMessage(channel, `/ban ${user} ${reason}`);
-}
+};
 
 /* Unban the specific user from the specified channel */
 TwitchClient.prototype.UnBan =
 function _TwitchClient_UnBan(channel, user) {
   this.SendMessage(channel, `/unban ${user}`);
-}
+};
 
 /* End of role and moderation functions 0}}} */
 
@@ -966,7 +966,7 @@ function _TwitchClient_JoinChannel(channel) {
   } else if (this._pending_channels.indexOf(ch) === -1) {
     this._pending_channels.push(ch);
   }
-}
+};
 
 /* Request the client to leave the channel specified */
 TwitchClient.prototype.LeaveChannel =
@@ -982,7 +982,7 @@ function _TwitchClient_LeaveChannel(channel) {
       Util.Warn(`LeaveChannel: Not in channel ${ch}`);
     }
   }
-}
+};
 
 /* Return whether or not the client is in the channel specified */
 TwitchClient.prototype.IsInChannel =
@@ -997,20 +997,20 @@ function _TwitchClient_IsInChannel(channel) {
   } else {
     return false;
   }
-}
+};
 
 /* Get the list of currently-joined channels */
 TwitchClient.prototype.GetJoinedChannels =
 function _TwitchClient_GetJoinedChannels() {
   return this._channels;
-}
+};
 
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetChannelInfo =
 function _TwitchClient_GetChannelInfo(channel) {
   let cname = this._ensureChannel(channel).channel;
   return this._rooms[cname] || {};
-}
+};
 
 /* End channel functions 0}}} */
 
@@ -1028,7 +1028,7 @@ function _TwitchClient_IsCheer(channel, word) {
     }
   }
   return false;
-}
+};
 
 /* Return all of the cheers found in the message */
 TwitchClient.prototype.FindCheers =
@@ -1059,19 +1059,19 @@ function _TwitchClient_FindCheers(channel, message) {
     }
   }
   return matches;
-}
+};
 
 /* Obtain information about a given cheermote */
 TwitchClient.prototype.GetCheer =
 function _TwitchClient_GetCheer(cname, name) {
-  let cheer = null
+  let cheer = null;
   if (this._channel_cheers.hasOwnProperty(cname)) {
     if (this._channel_cheers[cname].hasOwnProperty(name)) {
       cheer = this._channel_cheers[cname][name];
     }
   }
   return cheer;
-}
+};
 
 /* Return the emotes the client is allowed to use */
 TwitchClient.prototype.GetEmotes =
@@ -1081,7 +1081,7 @@ function _TwitchClient_GetEmotes() {
     emotes[v] = this.GetEmote(k);
   }
   return emotes;
-}
+};
 
 /* Return the URL to the image for the emote and size specified (id or name) */
 TwitchClient.prototype.GetEmote =
@@ -1095,19 +1095,19 @@ function _TwitchClient_GetEmote(emote_id, size="1.0") {
       }
     }
   }
-}
+};
 
 /* Obtain the FFZ emotes for a channel */
 TwitchClient.prototype.GetFFZEmotes =
 function _TwitchClient_GetFFZEmotes(channel) {
   return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
-}
+};
 
 /* Obtain global BTTV emotes */
 TwitchClient.prototype.GetGlobalBTTVEmotes =
 function _TwitchClient_GetGlobalBTTVEmotes() {
   return Util.JSONClone(this._bttv_global_emotes);
-}
+};
 
 /* Obtain the BTTV emotes for the channel specified */
 TwitchClient.prototype.GetBTTVEmotes =
@@ -1119,7 +1119,7 @@ function _TwitchClient_GetBTTVEmotes(channel) {
     Util.Log("Channel", channel, "has no BTTV emotes stored");
     return {};
   }
-}
+};
 
 /* End of functions related to cheers and emotes 0}}} */
 
@@ -1144,7 +1144,7 @@ function _TwitchClient_SendMessage(channel, message, bypassFaux=false) {
     let chname = Twitch.FormatChannel(channel);
     Util.Warn(`Unable to send "${message}" to ${chname}: not connected or not authed`);
   }
-}
+};
 
 /* Send a message to every connected channel */
 TwitchClient.prototype.SendMessageToAll =
@@ -1156,13 +1156,13 @@ function _TwitchClient_SendMessageToAll(message) {
   } else {
     Util.Warn(`Unable to send "${message}" to all channels: not connected`);
   }
-}
+};
 
 /* Send text to the Twitch servers, bypassing any special logic */
 TwitchClient.prototype.SendRaw =
 function _TwitchClient_SendRaw(raw_msg) {
   this.send(raw_msg.trimEnd() + "\r\n");
-}
+};
 
 /* End of functions for sending messages 0}}} */
 
@@ -1178,14 +1178,14 @@ function _TwitchClient_AddHistory(message) {
       this._history.pop();
     }
   }
-}
+};
 
 /* Obtain the history of sent messages */
 TwitchClient.prototype.GetHistory =
 function _TwitchClient_GetHistory() {
   /* Make a copy to prevent unexpected modification */
   return this._history.map((x) => x);
-}
+};
 
 /* Obtain the nth most recently sent message */
 TwitchClient.prototype.GetHistoryItem =
@@ -1194,19 +1194,19 @@ function _TwitchClient_GetHistoryItem(n) {
     return this._history[n];
   }
   return null;
-}
+};
 
 /* Obtain the maximum number of history items */
 TwitchClient.prototype.GetHistoryMax =
 function _TwitchClient_GetHistoryMax() {
   return this._hist_max;
-}
+};
 
 /* Obtain the current number of history items */
 TwitchClient.prototype.GetHistoryLength =
 function _TwitchClient_GetHistoryLength() {
   return this._history.length;
-}
+};
 
 /* End of history functions 0}}} */
 
@@ -1220,7 +1220,7 @@ function _TwitchClient_GetClip(slug) {
       resolve(resp["data"][0]);
     }, reject);
   }).bind(this));
-}
+};
 
 /* Return information on the given game ID */
 TwitchClient.prototype.GetGame =
@@ -1230,7 +1230,7 @@ function _TwitchClient_GetGame(game_id) {
       resolve(resp["data"][0]);
     }, reject);
   }).bind(this));
-}
+};
 
 /* Return true if the badge specified is a global badge */
 TwitchClient.prototype.IsGlobalBadge =
@@ -1245,7 +1245,7 @@ function _TwitchClient_IsGlobalBadge(badge_name, badge_version=null) {
     }
   }
   return false;
-}
+};
 
 /* Return true if the badge specified exists as a channel badge */
 TwitchClient.prototype.IsChannelBadge =
@@ -1259,7 +1259,7 @@ function _TwitchClient_IsChannelBadge(channel, badge_name) {
     }
   }
   return false;
-}
+};
 
 /* Returns Object {
  *   image_url_1x: "https://static-cdn.jtvnw.net/badges/...",
@@ -1281,7 +1281,7 @@ function _TwitchClient_GetGlobalBadge(badge_name, badge_version=null) {
     }
   }
   return {};
-}
+};
 
 /* Returns Object {
  *   alpha: "https://static-cdn.jtvnw.net/chat-badges/<badge>.png",
@@ -1292,13 +1292,13 @@ TwitchClient.prototype.GetChannelBadge =
 function _TwitchClient_GetChannelBadge(channel, badge_name) {
   channel = this._ensureChannel(channel);
   return this._channel_badges[channel.channel][badge_name];
-}
+};
 
 /* Obtain all of the global badges */
 TwitchClient.prototype.GetGlobalBadges =
 function _TwitchClient_GetGlobalBadges() {
   return Util.JSONClone(this._global_badges);
-}
+};
 
 /* Obtain all of the channel badges for the specified channel */
 TwitchClient.prototype.GetChannelBadges =
@@ -1308,7 +1308,7 @@ function _TwitchClient_GetChannelBadges(channel) {
     return Util.JSONClone(this._channel_badges[channel.channel]);
   }
   return {};
-}
+};
 
 /* End of asset handling functions 0}}} */
 
@@ -1335,7 +1335,7 @@ function _TwitchClient__onWebsocketOpen(name, pass) {
   this._pending_channels = [];
   this._getGlobalBadges();
   Util.FireEvent(new TwitchEvent("OPEN", null, {"has-clientid": this._has_clientid}));
-}
+};
 
 /* Callback: called when the websocket receives a message */
 TwitchClient.prototype._onWebsocketMessage =
@@ -1540,14 +1540,14 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
       }
     }
   }
-}
+};
 
 /* Callback: called when the websocket receives an error */
 TwitchClient.prototype._onWebsocketError =
 function _TwitchClient__onWebsocketError(event) {
   Util.Error(event);
   Util.FireEvent(new TwitchEvent("ERROR", event));
-}
+};
 
 /* Callback: called when the websocket is closed */
 TwitchClient.prototype._onWebsocketClose =
@@ -1560,7 +1560,7 @@ function _TwitchClient__onWebsocketClose(event) {
   this._channels = [];
   Util.Log("WebSocket Closed", event);
   Util.FireEvent(new TwitchEvent("CLOSE", event));
-}
+};
 
 /* End websocket callbacks 0}}} */
 
