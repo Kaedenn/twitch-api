@@ -348,9 +348,7 @@ function TwitchClient(opts) {
       this._ws.close();
     }
 
-    for (let c of this._channels) {
-      this._pending_channels.push(c);
-    }
+    this._pending_channels = this._pending_channels.concat(this._channels);
     this._channels = [];
     this._rooms = {};
     this._capabilities = [];
@@ -358,17 +356,15 @@ function TwitchClient(opts) {
     this._is_open = false;
     this._connected = false;
 
-    let self = this;
-
     this._endpoint = "wss://irc-ws.chat.twitch.tv";
     this._ws = new WebSocket(this._endpoint);
     this._ws.client = this;
     this._ws.onopen = (function _ws_onopen(/*event*/) {
       try {
         Util.LogOnly("ws open>", this.url);
-        self._connected = false;
-        self._is_open = true;
-        self._onWebsocketOpen(cfg_name, oauth);
+        this.client._connected = false;
+        this.client._is_open = true;
+        this.client._onWebsocketOpen(cfg_name, oauth);
       } catch (e) {
         alert("ws.onopen error: " + e.toString());
         throw e;
@@ -378,7 +374,7 @@ function TwitchClient(opts) {
       try {
         let data = Twitch.StripCredentials(JSON.stringify(event.data));
         Util.TraceOnly('ws recv>', data);
-        self._onWebsocketMessage(event);
+        this.client._onWebsocketMessage(event);
       } catch (e) {
         alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
         throw e;
@@ -387,8 +383,8 @@ function TwitchClient(opts) {
     this._ws.onerror = (function _ws_onerror(event) {
       try {
         Util.LogOnly('ws error>', event);
-        self._connected = false;
-        self._onWebsocketError(event);
+        this.client._connected = false;
+        this.client._onWebsocketError(event);
       } catch (e) {
         alert("ws.onerror error: " + e.toString());
         throw e;
@@ -397,9 +393,9 @@ function TwitchClient(opts) {
     this._ws.onclose = (function _ws_onclose(event) {
       try {
         Util.LogOnly('ws close>', event);
-        self._connected = false;
-        self._is_open = false;
-        self._onWebsocketClose(event);
+        this.client._connected = false;
+        this.client._is_open = false;
+        this.client._onWebsocketClose(event);
       } catch (e) {
         alert("ws.onclose error: " + e.toString());
         throw e;
@@ -408,7 +404,7 @@ function TwitchClient(opts) {
     this.send = (function _TwitchClient_send(m) {
       try {
         this._ws.send(m);
-        Util.DebugOnly('ws send>', JSON.stringify(Twitch.StripCredentials(m)));
+        Util.DebugOnly('ws send>', Twitch.StripCredentials(JSON.stringify(m)));
       } catch (e) {
         alert("this.send error: " + e.toString());
         throw e;

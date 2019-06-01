@@ -1,5 +1,13 @@
 "use strict";
 
+/* TODO:
+ * Rename Logger functions: "" -> "Stack", "Only" -> ""
+ *  Logger.${Sev} -> Logger.${Sev}Stack
+ *  Logger.${Sev}Only -> Logger.${Sev}
+ *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
+ * Color replacement API (see KapChat)
+ */
+
 /** Generic Utility-ish Functions for the Twitch Chat API
  *
  * Provides the following APIs, among others:
@@ -25,10 +33,6 @@
  *    https://www.w3.org/TR/2008/REC-WCAG20-20081211/#contrast-ratiodef
  *  Maximizing contrast
  *    Inspired by https://ux.stackexchange.com/a/107319
- */
-
-/* TODO:
- * Color replacement API (see KapChat)
  */
 
 /* General Utilities */
@@ -93,6 +97,15 @@ if (typeof(Math.divmod) !== "function") {
   }
 }
 
+/* Restrict a value to a given range */
+if (typeof(Math.clamp) !== "function") {
+  Math.clamp = function _Math_clamp(value, min, max) {
+    if (value < min) value = min;
+    else if (value > max) value = max;
+    return value;
+  }
+}
+
 /* Return true if any of the values satisfy the function given */
 if (typeof(Array.prototype.any) !== "function") {
   Array.prototype.any = function _Array_any(func) {
@@ -119,12 +132,28 @@ if (typeof(Array.prototype.all) !== "function") {
   }
 }
 
-/* Restrict a value to a given range */
-if (typeof(Math.clamp) !== "function") {
-  Math.clamp = function _Math_clamp(value, min, max) {
-    if (value < min) value = min;
-    else if (value > max) value = max;
-    return value;
+/* Array.concat polyfill: concatenate two or more arrays */
+if (typeof(Array.prototype.concat) !== "function") {
+  Array.prototype.concat = function _Array_concat(...args) {
+    let result = [];
+    for (let i of this) {
+      result.push(i);
+    }
+    for (let seq of args) {
+      for (let i of seq) {
+        result.push(i);
+      }
+    }
+    return result;
+  }
+}
+
+/* Append one or more arrays, in-place */
+Array.prototype.extend = function _Array_extend(...args) {
+  for (let seq of args) {
+    for (let i of seq) {
+      this.push(i);
+    }
   }
 }
 
@@ -624,6 +653,7 @@ class LoggerUtility {
   constructor() {
     this._hooks = {};
     this._filters = {};
+    this._logged_messages = {};
     for (let v of Object.values(LoggerUtility.SEVERITIES)) {
       this._hooks[v] = [];
       this._filters[v] = [];
@@ -708,10 +738,19 @@ class LoggerUtility {
   }
 
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
-  do_log(sev, argobj, stacktrace=false) {
+  do_log(sev, argobj, stacktrace=false, log_once=false) {
+    let val = this._sev_value(sev);
     if (!this.severity_enabled(sev)) { return }
     if (this.should_filter(argobj, sev)) { return; }
-    let val = this._sev_value(sev);
+    if (log_once) {
+      let argstr = JSON.stringify(argobj);
+      let msg_key = JSON.stringify([val, argstr]);
+      if (this._logged_messages[msg_key]) {
+        return;
+      } else {
+        this._logged_messages[msg_key] = 1;
+      }
+    }
     for (let hook of this._hooks[val]) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
       hook.apply(hook, args);
@@ -777,32 +816,68 @@ class LoggerUtility {
   }
 
   /* Log the arguments given with a stacktrace */
-  Trace(...args) { this.do_log("TRACE", args, true); }
-  Debug(...args) { this.do_log("DEBUG", args, true); }
-  Info(...args) { this.do_log("INFO", args, true); }
-  Warn(...args) { this.do_log("WARN", args, true); }
-  Error(...args) { this.do_log("ERROR", args, true); }
+  Trace(...args) { this.do_log("TRACE", args, true, false); }
+  Debug(...args) { this.do_log("DEBUG", args, true, false); }
+  Info(...args) { this.do_log("INFO", args, true, false); }
+  Warn(...args) { this.do_log("WARN", args, true, false); }
+  Error(...args) { this.do_log("ERROR", args, true, false); }
 
   /* Log the arguments given without a stacktrace */
-  TraceOnly(...args) { this.do_log("TRACE", args, false); }
-  DebugOnly(...args) { this.do_log("DEBUG", args, false); }
-  InfoOnly(...args) { this.do_log("INFO", args, false); }
-  WarnOnly(...args) { this.do_log("WARN", args, false); }
-  ErrorOnly(...args) { this.do_log("ERROR", args, false); }
+  TraceOnly(...args) { this.do_log("TRACE", args, false, false); }
+  DebugOnly(...args) { this.do_log("DEBUG", args, false, false); }
+  InfoOnly(...args) { this.do_log("INFO", args, false, false); }
+  WarnOnly(...args) { this.do_log("WARN", args, false, false); }
+  ErrorOnly(...args) { this.do_log("ERROR", args, false, false); }
+
+  /* Log the arguments given with a stacktrace, once */
+  TraceOnce(...args) { this.do_log("TRACE", args, true, true); }
+  DebugOnce(...args) { this.do_log("DEBUG", args, true, true); }
+  InfoOnce(...args) { this.do_log("INFO", args, true, true); }
+  WarnOnce(...args) { this.do_log("WARN", args, true, true); }
+  ErrorOnce(...args) { this.do_log("ERROR", args, true, true); }
+
+  /* Log the arguments given without a stacktrace, once */
+  TraceOnlyOnce(...args) { this.do_log("TRACE", args, false, true); }
+  DebugOnlyOnce(...args) { this.do_log("DEBUG", args, false, true); }
+  InfoOnlyOnce(...args) { this.do_log("INFO", args, false, true); }
+  WarnOnlyOnce(...args) { this.do_log("WARN", args, false, true); }
+  ErrorOnlyOnce(...args) { this.do_log("ERROR", args, false, true); }
 }
 
-/* Logger instance and shortcut functions */
+/* Logger instance  */
 Util.Logger = new LoggerUtility();
+
+/* Log with stacktrace */
 Util.Trace = Util.Logger.Trace.bind(Util.Logger);
 Util.Debug = Util.Logger.Debug.bind(Util.Logger);
 Util.Log = Util.Logger.Info.bind(Util.Logger);
+Util.Info = Util.Logger.Info.bind(Util.Logger);
 Util.Warn = Util.Logger.Warn.bind(Util.Logger);
 Util.Error = Util.Logger.Error.bind(Util.Logger);
+
+/* Log without stacktrace */
 Util.TraceOnly = Util.Logger.TraceOnly.bind(Util.Logger);
 Util.DebugOnly = Util.Logger.DebugOnly.bind(Util.Logger);
 Util.LogOnly = Util.Logger.InfoOnly.bind(Util.Logger);
+Util.InfoOnly = Util.Logger.InfoOnly.bind(Util.Logger);
 Util.WarnOnly = Util.Logger.WarnOnly.bind(Util.Logger);
 Util.ErrorOnly = Util.Logger.ErrorOnly.bind(Util.Logger);
+
+/* Log once with stacktrace */
+Util.TraceOnce = Util.Logger.TraceOnce.bind(Util.Logger);
+Util.DebugOnce = Util.Logger.DebugOnce.bind(Util.Logger);
+Util.LogOnce = Util.Logger.InfoOnce.bind(Util.Logger);
+Util.InfoOnce = Util.Logger.InfoOnce.bind(Util.Logger);
+Util.WarnOnce = Util.Logger.WarnOnce.bind(Util.Logger);
+Util.ErrorOnce = Util.Logger.ErrorOnce.bind(Util.Logger);
+
+/* Log once without stacktrace */
+Util.TraceOnlyOnce = Util.Logger.TraceOnlyOnce.bind(Util.Logger);
+Util.DebugOnlyOnce = Util.Logger.DebugOnlyOnce.bind(Util.Logger);
+Util.LogOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
+Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
+Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
+Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 
 /* End logging 0}}} */
 
