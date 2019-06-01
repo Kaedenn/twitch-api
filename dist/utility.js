@@ -88,37 +88,48 @@ Util.Defined = function _Util_Defined(identifier) {
     }
   }
   return false;
-};
-
-if (!Util.Defined('console')) {
-  window.console = {
-    debug: function debug() {},
-    log: function log() {},
-    info: function info() {},
-    warn: function warn() {},
-    error: function error() {},
-    trace: function trace() {}
-  };
 }
 
 /* End portability code 0}}} */
 
 /* Standard object additions and polyfills {{{0 */
 
-/* Calculates the divmod of the values given */
-if (typeof Math.divmod !== "function") {
-  Math.divmod = function _Math_divmod(n, r) {
-    return [n / r, n % r];
-  };
-}
+/* Drop-in polyfills */
+(function (G) {
+  function polyfillIf(obj, cond, attr, val) {
+    if (cond) {
+      obj[attr] = val;
+    }
+  }
+  function polyfill(obj, attr, val) {
+    polyfillIf(obj, !obj[attr], attr, val);
+  }
 
-/* Restrict a value to a given range */
-if (typeof Math.clamp !== "function") {
-  Math.clamp = function _Math_clamp(value, min, max) {
-    if (value < min) value = min;else if (value > max) value = max;
-    return value;
-  };
-}
+  /* console */
+
+  polyfill(G, "console", {});
+  polyfill(G.console, "assert", function _console_assert(cond) {
+    if (!cond) {
+      G.console.error("Assertion failed: " + cond);
+    }
+  });
+  polyfill(G.console, "group", function _console_group(name) {
+    G.console.log(">>> " + name);
+  });
+  polyfill(G.console, "groupEnd", function _console_groupEnd() {});
+
+  /* Math */
+
+  /* Calculates the divmod of the values given */
+  polyfill(Math, "divmod", function _Math_divmod(r, n) {
+    return [n / r, n % r];
+  });
+
+  /* Restrict a value to a given range */
+  polyfill(Math, "clamp", function _Math_clamp(value, min, max) {
+    return value < min ? min : value > max ? max : value;
+  });
+})(window);
 
 /* Return true if any of the values satisfy the function given */
 if (typeof Array.prototype.any !== "function") {
@@ -1233,16 +1244,6 @@ Util.FormatStack = function _Util_FormatStack(stack) {
   return result.join("\n");
 };
 
-/* (internal) Output args to a console using the given func  */
-Util._toConsole = function _Util__toConsole(func, args) {
-  var stack = Util.ParseStack(Util.GetStack());
-  stack.shift(); /* Discard Util._toConsole */
-  stack.shift(); /* Discard Util._toConsole caller */
-  console.group("From " + Util.FormatStack(stack));
-  func.apply(console, args);
-  console.groupEnd();
-};
-
 /* Logger object */
 
 var LoggerUtility = function () {
@@ -1279,7 +1280,7 @@ var LoggerUtility = function () {
     }
   }
 
-  /* Object of severity name to severity number */
+  /* (internal) Output args to a console using the given func  */
 
 
   _createClass(LoggerUtility, [{
@@ -1297,7 +1298,7 @@ var LoggerUtility = function () {
     key: "_assert_sev",
     value: function _assert_sev(sev) {
       if (this._hooks[this._sev_value(sev)] === undefined) {
-        console.exception("Logger: invalid severity " + sev);
+        console.error("Logger: invalid severity " + sev);
         return false;
       }
       return true;
@@ -1487,44 +1488,13 @@ var LoggerUtility = function () {
         }
       }
 
+      var func = LoggerUtility.FUNCTION_MAP[val];
       if (stacktrace) {
         Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
-        switch (val) {
-          case LoggerUtility.SEVERITIES.TRACE:
-            Util._toConsole(console.debug, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.DEBUG:
-            Util._toConsole(console.debug, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.INFO:
-            Util._toConsole(console.log, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.WARN:
-            Util._toConsole(console.warn, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.ERROR:
-            Util._toConsole(console.error, argobj);
-            break;
-        }
+        LoggerUtility._toConsole(func, argobj);
         Util.PopStackTrimBegin();
       } else {
-        switch (val) {
-          case LoggerUtility.SEVERITIES.TRACE:
-            console.debug.apply(console, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.DEBUG:
-            console.debug.apply(console, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.INFO:
-            console.log.apply(console, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.WARN:
-            console.warn.apply(console, argobj);
-            break;
-          case LoggerUtility.SEVERITIES.ERROR:
-            console.error.apply(console, argobj);
-            break;
-        }
+        func.apply(console, argobj);
       }
     }
 
@@ -1763,9 +1733,37 @@ var LoggerUtility = function () {
       this.do_log("ERROR", args, false, true);
     }
   }], [{
+    key: "_toConsole",
+    value: function _toConsole(func, args) {
+      var stack = Util.ParseStack(Util.GetStack());
+      stack.shift(); /* Discard _toConsole */
+      stack.shift(); /* Discard _toConsole caller */
+      console.group("From " + Util.FormatStack(stack));
+      func.apply(console, args);
+      console.groupEnd();
+    }
+
+    /* Map severity name to severity number */
+
+  }, {
     key: "SEVERITIES",
     get: function get() {
       return { ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1 };
+    }
+
+    /* Map severity number to console function */
+
+  }, {
+    key: "FUNCTION_MAP",
+    get: function get() {
+      var map = {};
+      map[LoggerUtility.SEVERITIES.ALL] = console.debug;
+      map[LoggerUtility.SEVERITIES.ERROR] = console.error;
+      map[LoggerUtility.SEVERITIES.WARN] = console.warn;
+      map[LoggerUtility.SEVERITIES.INFO] = console.info;
+      map[LoggerUtility.SEVERITIES.DEBUG] = console.debug;
+      map[LoggerUtility.SEVERITIES.TRACE] = console.trace;
+      return map;
     }
   }]);
 

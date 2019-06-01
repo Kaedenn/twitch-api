@@ -35,7 +35,8 @@ module.exports = {
         {
             "files": ["utility.js"],
             "rules": {
-                "no-console": "off"
+                "no-console": "off",
+                "no-unexpected-multiline": "off"
             }
         }
     ]
