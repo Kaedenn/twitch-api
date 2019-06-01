@@ -284,9 +284,9 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   if (value.length === 0) {
     /* Translate empty strings to null */
     result = null;
-  } else if (value.match(/^[0-9]+$/)) {
+  } else if (!Number.isNaN(Number.parseInt(value))) {
     /* Translate numeric values to numbers */
-    result = parseInt(value);
+    result = Number.parseInt(value);
   } else {
     /* Values requiring special handling */
     switch (key) {
@@ -362,7 +362,7 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
         break;
       case "emote-sets":
         result = value.split(',').map(function (e) {
-          return parseInt(e);
+          return Number.parseInt(e);
         });
         break;
       default:
@@ -434,7 +434,7 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
       var emote_def = _step7.value;
 
       var seppos = emote_def.indexOf(':');
-      var emote_id = parseInt(emote_def.substr(0, seppos));
+      var emote_id = Number.parseInt(emote_def.substr(0, seppos));
       var _iteratorNormalCompletion8 = true;
       var _didIteratorError8 = false;
       var _iteratorError8 = undefined;
@@ -450,8 +450,8 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
 
           result.push({ id: emote_id,
             name: null,
-            start: parseInt(start),
-            end: parseInt(end) });
+            start: Number.parseInt(start),
+            end: Number.parseInt(end) });
         }
       } catch (err) {
         _didIteratorError8 = true;

@@ -1200,20 +1200,23 @@ TwitchClient.prototype._getGlobalBadges = function _TwitchClient__getGlobalBadge
 
 /* Private: Build a faux PRIVMSG event from the chat message given */
 TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(chobj, message) {
-  /* Construct the parsed flags object */
   var flag_obj = {};
   var emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
   var chstr = Twitch.FormatChannel(chobj);
-  flag_obj["badges"] = this._self_userstate[chstr]["badges"];
+  var userstate = this._self_userstate[chstr] || {};
+
+  /* Construct the parsed flags object */
+  flag_obj["badge-info"] = userstate["badge-info"];
+  flag_obj["badges"] = userstate["badges"];
   if (!flag_obj["badges"]) {
     flag_obj["badges"] = [];
   }
-  flag_obj["color"] = this._self_userstate[chstr]["color"];
-  flag_obj["subscriber"] = this._self_userstate[chstr]["subscriber"];
-  flag_obj["mod"] = this._self_userstate[chstr]["mod"];
-  flag_obj["vip"] = this._self_userstate[chstr]["vip"] || null;
-  flag_obj["broadcaster"] = this._self_userstate[chstr]["broadcaster"] || null;
-  flag_obj["display-name"] = this._self_userstate[chstr]["display-name"];
+  flag_obj["color"] = userstate["color"];
+  flag_obj["subscriber"] = userstate["subscriber"];
+  flag_obj["mod"] = userstate["mod"];
+  flag_obj["vip"] = userstate["vip"] || null;
+  flag_obj["broadcaster"] = userstate["broadcaster"] || null;
+  flag_obj["display-name"] = userstate["display-name"];
   flag_obj["emotes"] = emote_obj;
   flag_obj["id"] = Util.Random.uuid();
   flag_obj["user-id"] = this._self_userid;
@@ -1221,10 +1224,27 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
   flag_obj["tmi-sent-ts"] = new Date().getTime();
   flag_obj["turbo"] = 0;
   flag_obj["user-type"] = "";
+  flag_obj["__synthetic"] = 1;
 
   /* Construct the formatted flags string */
-  var flag_str = "@";
-  flag_str += "badges=";
+  var flag_arr = [];
+  var addFlag = function addFlag(n, v) {
+    var t = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+
+    /* Undefined and null values are treated as empty strings */
+    var val = typeof v === "undefined" || v === null ? "" : v;
+    /* If specified, apply the function to the value */
+    if (typeof t === "function") {
+      val = t(val);
+    }
+    /* if t(val) returns null or undefined, skip the flag */
+    if (typeof val !== "undefined" && val !== null) {
+      flag_arr.push(n + "=" + val);
+    }
+  };
+  var addObjFlag = function addObjFlag(n) {
+    return addFlag(n, flag_obj[n]);
+  };
   if (flag_obj["badges"]) {
     var badges = [];
     var _iteratorNormalCompletion14 = true;
@@ -1257,34 +1277,39 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
       }
     }
 
-    flag_str += badges.join(",");
+    addFlag("badges", badges.join(","));
+  } else {
+    addFlag("badges", "");
   }
-  flag_str += ";color=" + flag_obj["color"];
-  flag_str += ";display-name=" + flag_obj["display-name"];
-  flag_str += ";subscriber=" + flag_obj["subscriber"];
-  flag_str += ";mod=" + flag_obj["mod"];
-  /* Only populate vip and broadcaster attributes if set */
+  addObjFlag("color");
+  addObjFlag("display-name");
+  addObjFlag("subscriber");
+  addObjFlag("mod");
   if (flag_obj["vip"]) {
-    flag_str += ";vip=" + flag_obj["vip"];
+    addObjFlag("vip");
   }
   if (flag_obj["broadcaster"]) {
-    flag_str += ";broadcaster=" + flag_obj["broadcaster"];
+    addObjFlag("broadcaster");
   }
-  flag_str += ";emotes=" + Twitch.FormatEmoteFlag(flag_obj["emotes"]);
-  flag_str += ";id=" + flag_obj["id"];
-  flag_str += ";user-id=" + flag_obj["user-id"];
-  flag_str += ";room-id=" + flag_obj["room-id"];
-  flag_str += ";tmi-sent-ts=" + flag_obj["tmi-sent-ts"];
-  flag_str += ";turbo=" + flag_obj["turbo"];
-  flag_str += ";user-type=" + flag_obj["user-type"];
+  addFlag("emotes", Twitch.FormatEmoteFlag(flag_obj["emotes"]));
+  addObjFlag("id");
+  addObjFlag("user-id");
+  addObjFlag("room-id");
+  addObjFlag("tmi-sent-ts");
+  addObjFlag("turbo");
+  addObjFlag("user-type");
+  addObjFlag("__synthetic");
+  addFlag("__synthetic", "1");
+  var flag_str = flag_arr.join(";");
 
   /* Build the raw and parsed objects */
-  var user = this._self_userstate[chstr]["display-name"].toLowerCase();
+  var user = userstate["display-name"].toLowerCase();
   var useruri = ":" + user + "!" + user + "@" + user + ".tmi.twitch.tv";
   var channel = Twitch.FormatChannel(chobj);
-
   /* @<flags> <useruri> PRIVMSG <channel> :<message> */
-  var raw_line = flag_str + " " + useruri + " PRIVMSG " + channel + " :";
+  var raw_line = "@" + flag_str + " " + useruri + " PRIVMSG " + channel + " :";
+
+  /* Handle /me */
   if (message.startsWith('/me ')) {
     raw_line += '\x01ACTION ' + message + '\x01';
     message = message.substr('/me '.length);
@@ -1300,7 +1325,7 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
     user: Twitch.ParseUser(useruri),
     channel: chobj,
     message: message,
-    synthesized: true /* mark the object as synthesized */
+    synthetic: true /* mark the event as synthetic */
   });
 };
 
@@ -1311,6 +1336,8 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
 /* Obtain connection status information */
 TwitchClient.prototype.ConnectionStatus = function _TwitchClient_ConnectionStatus() {
   return {
+    endpoint: this._endpoint,
+    capabilities: Util.JSONClone(this._capabilities),
     open: this._is_open,
     connected: this.Connected(),
     identified: this._has_clientid,
