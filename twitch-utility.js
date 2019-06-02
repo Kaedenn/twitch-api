@@ -199,11 +199,11 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
       result.push([badge_name, badge_rev]);
     }
   } else if (key === "emotes") {
-    result = Twitch.ParseEmote(value);
+    result = value.length > 0 ? Twitch.ParseEmote(value) : "";
   } else if (key === "emote-sets") {
     result = value.split(',').map(e => Number.parse(e));
   } else {
-    result = Twitch.DecodeFlag(value);
+    result = value.length > 0 ? Twitch.DecodeFlag(value) : "";
   }
   if (typeof(result) === "string") {
     let temp = Number.parse(result);
@@ -387,6 +387,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.issub = (result.sub_kind !== null);
     result.israid = (result.flags["msg-id"] === "raid");
     result.isritual = (result.flags["msg-id"] === "ritual");
+    result.ismysterygift = (result.flags["msg-id"] === "submysterygift");
     if (result.israid) {
       result.viewer_count = result.flags["msg-param-viewerCount"];
       result.raider = result.flags["msg-param-displayName"];

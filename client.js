@@ -84,6 +84,7 @@ class TwitchEvent {
       GIFTSUB: "GIFTSUB",
       ANONGIFTSUB: "ANONGIFTSUB",
       NEWUSER: "NEWUSER",
+      MYSTERYGIFT: "MYSTERYGIFT",
       OTHERUSERNOTICE: "OTHERUSERNOTICE",
       RAID: "RAID",
       OPEN: "OPEN",
@@ -1500,6 +1501,8 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           Util.FireEvent(new TwitchEvent("RAID", line, result));
         } else if (result.isritual && result.ritual_kind === "new_chatter") {
           Util.FireEvent(new TwitchEvent("NEWUSER", line, result));
+        } else if (result.ismysterygift) {
+          Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
         } else {
           Util.FireEvent(new TwitchEvent("OTHERUSERNOTICE", line, result));
           Util.Warn("Unknown USERNOTICE type", line, result);
