@@ -8,7 +8,7 @@ var Twitch = {};
 
 /* Escape sequences {{{0 */
 
-Twitch.FlagEscapes = [["\\s", /\\s/g, " ", / /g], ["\\:", /\\:/g, ";", /;/g], ["\\r", /\\r/g, "\r", /\r/g], ["\\n", /\\n/g, "\n", /\n/g], ["\\", /\\\\/g, "\\", /\\/g]];
+Twitch.FLAG_ESCAPE_RULES = [["\\s", /\\s/g, " ", / /g], ["\\:", /\\:/g, ";", /;/g], ["\\r", /\\r/g, "\r", /\r/g], ["\\n", /\\n/g, "\n", /\n/g], ["\\\\", /\\\\/g, "\\", /\\/g]];
 
 /* End escape sequences 0}}} */
 
@@ -292,7 +292,7 @@ Twitch.DecodeFlag = function _Twitch_DecodeFlag(value) {
   var _iteratorError4 = undefined;
 
   try {
-    for (var _iterator4 = Twitch.FlagEscapes[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
+    for (var _iterator4 = Twitch.FLAG_ESCAPE_RULES[Symbol.iterator](), _step4; !(_iteratorNormalCompletion4 = (_step4 = _iterator4.next()).done); _iteratorNormalCompletion4 = true) {
       var row = _step4.value;
 
       result = result.replace(row[1], row[2]);
@@ -323,7 +323,7 @@ Twitch.EncodeFlag = function _Twitch_EncodeFlag(value) {
   var _iteratorError5 = undefined;
 
   try {
-    for (var _iterator5 = Twitch.FlagEscapes[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+    for (var _iterator5 = Twitch.FLAG_ESCAPE_RULES.reverse()[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
       var row = _step5.value;
 
       result = result.replace(row[3], row[0]);

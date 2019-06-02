@@ -5,12 +5,12 @@ let Twitch = {};
 
 /* Escape sequences {{{0 */
 
-Twitch.FlagEscapes = [
+Twitch.FLAG_ESCAPE_RULES = [
   ["\\s", /\\s/g, " ", / /g],
   ["\\:", /\\:/g, ";", /;/g],
   ["\\r", /\\r/g, "\r", /\r/g],
   ["\\n", /\\n/g, "\n", /\n/g],
-  ["\\", /\\\\/g, "\\", /\\/g]
+  ["\\\\", /\\\\/g, "\\", /\\/g]
 ];
 
 /* End escape sequences 0}}} */
@@ -174,7 +174,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
 /* Parse Twitch flag escape sequences */
 Twitch.DecodeFlag = function _Twitch_DecodeFlag(value) {
   let result = value;
-  for (let row of Twitch.FlagEscapes) {
+  for (let row of Twitch.FLAG_ESCAPE_RULES) {
     result = result.replace(row[1], row[2]);
   }
   return result;
@@ -183,7 +183,7 @@ Twitch.DecodeFlag = function _Twitch_DecodeFlag(value) {
 /* Format Twitch flag escape sequences */
 Twitch.EncodeFlag = function _Twitch_EncodeFlag(value) {
   let result = value;
-  for (let row of Twitch.FlagEscapes) {
+  for (let row of Twitch.FLAG_ESCAPE_RULES.reverse()) {
     result = result.replace(row[3], row[0]);
   }
   return result;
