@@ -679,9 +679,9 @@ class LoggerUtility {
     map[LoggerUtility.SEVERITIES.ALL] = console.debug;
     map[LoggerUtility.SEVERITIES.ERROR] = console.error;
     map[LoggerUtility.SEVERITIES.WARN] = console.warn;
-    map[LoggerUtility.SEVERITIES.INFO] = console.info;
-    map[LoggerUtility.SEVERITIES.DEBUG] = console.debug;
-    map[LoggerUtility.SEVERITIES.TRACE] = console.trace;
+    map[LoggerUtility.SEVERITIES.INFO] = console.log;
+    map[LoggerUtility.SEVERITIES.DEBUG] = console.info;
+    map[LoggerUtility.SEVERITIES.TRACE] = console.debug;
     return map;
   }
 
