@@ -280,11 +280,12 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
 
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
-  var result = undefined;
+  /* TODO: parse keys before values */
+  var result = null;
   if (value.length === 0) {
     /* Translate empty strings to null */
     result = null;
-  } else if (!Number.isNaN(Number.parseInt(value))) {
+  } else if (value.match(/^[0-9]+$/) && !Number.isNaN(Number.parseInt(value))) {
     /* Translate numeric values to numbers */
     result = Number.parseInt(value);
   } else {
