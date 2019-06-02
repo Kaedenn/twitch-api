@@ -309,6 +309,11 @@ if (typeof(RegExp.escape) !== "function") {
   };
 }
 
+/* Parse a number (calling Util.ParseNumber) */
+Number.parse = function _Number_parse(str, base=10) {
+  return Util.ParseNumber(str,base);
+};
+
 /* End standard object additions 0}}} */
 
 /* Array and sequence functions {{{0 */
@@ -888,6 +893,7 @@ class ColorParser {
     this._rgba_pat = /rgba\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
     this._cache = {};
   }
+
   _parse(color) {
     if (this._cache[color]) {
       return this._cache[color];
@@ -917,6 +923,7 @@ class ColorParser {
     this._cache[color] = res;
     return res;
   }
+
   static parse(color, failQuiet=false) {
     if (Util._ColorParser === null) {
       Util._ColorParser = new ColorParser();
@@ -1398,6 +1405,46 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* Parsing, formatting, escaping, and string functions {{{0 */
 
+/* Return whether or not a string is a number */
+Util.IsNumber = function _Util_IsNumber(str) {
+  let temp = Util.ParseNumber(str);
+  return typeof(temp) === "number" && !Number.isNaN(temp);
+};
+
+/* Parse a number */
+Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
+  const validBases = [2, 8, 10, 16];
+  if (validBases.indexOf(base) === -1) {
+    throw new Error(`Invalid base ${base}; expected one of [2, 8, 10, 16]`);
+  }
+  if (str === "null") {
+    /* Technically not a number, but parse anyway */
+    return null;
+  } else if (str === "true" || str === "false") {
+    /* Technically not a number, but parse anyway */
+    return Boolean(str);
+  } else if (str === "Infinity") {
+    return Infinity;
+  } else if (str === "-Infinity") {
+    return -Infinity;
+  } else if (str === "NaN") {
+    return NaN;
+  } else if (str.match(/^\d*\.\d+(?:e\d+)?$/)) {
+    return Number.parseFloat(str);
+  } else if (base === 2 && str.match(/^[+-]?[01]+$/)) {
+    return Number.parseInt(str, 2);
+  } else if (base === 8 && str.match(/^[+-]?[0-7]+$/)) {
+    return Number.parseInt(str, 8);
+  } else if (base === 10 && str.match(/^[+-]?(?:0|(?:[1-9]\d*))$/)) {
+    return Number.parseInt(str, 10);
+  } else if (base === 16 && str.match(/^[+-]?0[Xx][0-9a-fA-F]+$/)) {
+    return Number.parseInt(str, 16);
+  } else {
+    /* Failed to parse */
+    return NaN;
+  }
+};
+
 /* Characters requiring HTML escaping (used by String.escape) */
 Util.EscapeChars = {
   "<": "&lt;",
@@ -1583,25 +1630,21 @@ Util.GetWebStorage = function _Util_GetWebStorage(...args) {
     Util.WarnOnly("Local Storage disabled");
     return {};
   }
-  function parseArgs(...arglist) {
-    let k = null;
-    let o = {};
-    if (arglist.length === 1) {
-      if (typeof(arglist[0]) === "string") {
-        k = arglist[0];
-      } else {
-        o = arglist[0];
-      }
-    } else if (arglist.length >= 2) {
-      k = arglist[0];
-      o = arglist[1];
+  let key = null;
+  let opts = {};
+  if (args.length === 1) {
+    if (typeof(args[0]) === "string") {
+      key = args[0];
+    } else {
+      opts = args[0];
     }
-    if (k === null) {
-      k = Util.GetWebStorageKey();
-    }
-    return [k, o];
+  } else if (args.length >= 2) {
+    key = args[0];
+    opts = args[1];
   }
-  let [key, opts] = parseArgs(...args);
+  if (key === null) {
+    key = Util.GetWebStorageKey();
+  }
   if (!key) {
     Util.Error("Util.GetWebStorage called without a key configured");
   } else {
@@ -1722,35 +1765,39 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
  *  `key=1.0` gives {key: 1.0} for any floating-point value
  *  `key=null` gives {key: null}
  */
-Util.ParseQueryString = function _Util_ParseQueryString(query) {
-  if (!query) query = window.location.search;
-  if (query.startsWith('?')) query = query.substr(1);
+Util.ParseQueryString = function _Util_ParseQueryString(query=null) {
   let obj = {};
-  for (let part of query.split('&')) {
-    if (part.indexOf('=') === -1) {
-      obj[part] = true;
-    } else if (part.startsWith('base64=')) {
-      let val = decodeURIComponent(part.substr(part.indexOf('=')+1));
-      for (let [k, v] of Object.entries(Util.ParseQueryString(atob(val)))) {
-        obj[k] = v;
-      }
+  let split = (part) => {
+    if (part.indexOf('=') !== -1) {
+      return [
+        part.substr(0, part.indexOf('=')),
+        decodeURIComponent(part.substr(part.indexOf('=') + 1))
+      ];
     } else {
-      let key = part.substr(0, part.indexOf('='));
-      let val = part.substr(part.indexOf('=')+1);
-      val = decodeURIComponent(val);
-      if (val.length === 0)
-        val = false;
-      else if (val === "true")
-        val = true;
-      else if (val === "false")
-        val = false;
-      else if (val.match(/^[+-]?[1-9][0-9]*$/))
-        val = parseInt(val);
-      else if (val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/))
-        val = parseFloat(val);
-      else if (val === "null")
-        val = null;
-      obj[key] = val;
+      return [part, "true"];
+    }
+  };
+  if (!query) {
+    query = window.location.search;
+  }
+  query = query.replace(/^\?/, "");
+  for (let part of query.split('&')) {
+    let [k, v] = split(part);
+    if (k === "base64") {
+      let val = split(part)[1];
+      for (let [k2, v2] of Object.entries(Util.ParseQueryString(atob(val)))) {
+        obj[k2] = v2;
+      }
+    } else if (v.length === 0) {
+      obj[k] = true;
+    } else if (v === "true" || v === "false") {
+      obj[k] = Boolean(v);
+    } else if (v === "null") {
+      obj[k] = null;
+    } else if (Util.IsNumber(v)) {
+      obj[k] = Number.parse(v);
+    } else {
+      obj[k] = v;
     }
   }
   return obj;

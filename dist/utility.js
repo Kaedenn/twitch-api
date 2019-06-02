@@ -617,6 +617,13 @@ if (typeof RegExp.escape !== "function") {
   };
 }
 
+/* Parse a number (calling Util.ParseNumber) */
+Number.parse = function _Number_parse(str) {
+  var base = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 10;
+
+  return Util.ParseNumber(str, base);
+};
+
 /* End standard object additions 0}}} */
 
 /* Array and sequence functions {{{0 */
@@ -2691,6 +2698,48 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* Parsing, formatting, escaping, and string functions {{{0 */
 
+/* Return whether or not a string is a number */
+Util.IsNumber = function _Util_IsNumber(str) {
+  var temp = Util.ParseNumber(str);
+  return typeof temp === "number" && !Number.isNaN(temp);
+};
+
+/* Parse a number */
+Util.ParseNumber = function _Util_ParseNumber(str) {
+  var base = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 10;
+
+  var validBases = [2, 8, 10, 16];
+  if (validBases.indexOf(base) === -1) {
+    throw new Error("Invalid base " + base + "; expected one of [2, 8, 10, 16]");
+  }
+  if (str === "null") {
+    /* Technically not a number, but parse anyway */
+    return null;
+  } else if (str === "true" || str === "false") {
+    /* Technically not a number, but parse anyway */
+    return Boolean(str);
+  } else if (str === "Infinity") {
+    return Infinity;
+  } else if (str === "-Infinity") {
+    return -Infinity;
+  } else if (str === "NaN") {
+    return NaN;
+  } else if (str.match(/^\d*\.\d+(?:e\d+)?$/)) {
+    return Number.parseFloat(str);
+  } else if (base === 2 && str.match(/^[+-]?[01]+$/)) {
+    return Number.parseInt(str, 2);
+  } else if (base === 8 && str.match(/^[+-]?[0-7]+$/)) {
+    return Number.parseInt(str, 8);
+  } else if (base === 10 && str.match(/^[+-]?(?:0|(?:[1-9]\d*))$/)) {
+    return Number.parseInt(str, 10);
+  } else if (base === 16 && str.match(/^[+-]?0[Xx][0-9a-fA-F]+$/)) {
+    return Number.parseInt(str, 16);
+  } else {
+    /* Failed to parse */
+    return NaN;
+  }
+};
+
 /* Characters requiring HTML escaping (used by String.escape) */
 Util.EscapeChars = {
   "<": "&lt;",
@@ -2957,30 +3006,21 @@ Util.GetWebStorage = function _Util_GetWebStorage() {
     Util.WarnOnly("Local Storage disabled");
     return {};
   }
-  function parseArgs() {
-    var k = null;
-    var o = {};
-    if (arguments.length === 1) {
-      if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === "string") {
-        k = arguments.length <= 0 ? undefined : arguments[0];
-      } else {
-        o = arguments.length <= 0 ? undefined : arguments[0];
-      }
-    } else if (arguments.length >= 2) {
-      k = arguments.length <= 0 ? undefined : arguments[0];
-      o = arguments.length <= 1 ? undefined : arguments[1];
+  var key = null;
+  var opts = {};
+  if (arguments.length === 1) {
+    if (typeof (arguments.length <= 0 ? undefined : arguments[0]) === "string") {
+      key = arguments.length <= 0 ? undefined : arguments[0];
+    } else {
+      opts = arguments.length <= 0 ? undefined : arguments[0];
     }
-    if (k === null) {
-      k = Util.GetWebStorageKey();
-    }
-    return [k, o];
+  } else if (arguments.length >= 2) {
+    key = arguments.length <= 0 ? undefined : arguments[0];
+    opts = arguments.length <= 1 ? undefined : arguments[1];
   }
-
-  var _parseArgs = parseArgs.apply(undefined, arguments),
-      _parseArgs2 = _slicedToArray(_parseArgs, 2),
-      key = _parseArgs2[0],
-      opts = _parseArgs2[1];
-
+  if (key === null) {
+    key = Util.GetWebStorageKey();
+  }
   if (!key) {
     Util.Error("Util.GetWebStorage called without a key configured");
   } else {
@@ -3151,10 +3191,21 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
  *  `key=1.0` gives {key: 1.0} for any floating-point value
  *  `key=null` gives {key: null}
  */
-Util.ParseQueryString = function _Util_ParseQueryString(query) {
-  if (!query) query = window.location.search;
-  if (query.startsWith('?')) query = query.substr(1);
+Util.ParseQueryString = function _Util_ParseQueryString() {
+  var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
   var obj = {};
+  var split = function split(part) {
+    if (part.indexOf('=') !== -1) {
+      return [part.substr(0, part.indexOf('=')), decodeURIComponent(part.substr(part.indexOf('=') + 1))];
+    } else {
+      return [part, "true"];
+    }
+  };
+  if (!query) {
+    query = window.location.search;
+  }
+  query = query.replace(/^\?/, "");
   var _iteratorNormalCompletion36 = true;
   var _didIteratorError36 = false;
   var _iteratorError36 = undefined;
@@ -3163,10 +3214,13 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
     for (var _iterator36 = query.split('&')[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
       var part = _step36.value;
 
-      if (part.indexOf('=') === -1) {
-        obj[part] = true;
-      } else if (part.startsWith('base64=')) {
-        var val = decodeURIComponent(part.substr(part.indexOf('=') + 1));
+      var _split = split(part),
+          _split2 = _slicedToArray(_split, 2),
+          k = _split2[0],
+          v = _split2[1];
+
+      if (k === "base64") {
+        var val = split(part)[1];
         var _iteratorNormalCompletion37 = true;
         var _didIteratorError37 = false;
         var _iteratorError37 = undefined;
@@ -3177,10 +3231,10 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
 
             var _ref18 = _slicedToArray(_ref17, 2);
 
-            var k = _ref18[0];
-            var v = _ref18[1];
+            var k2 = _ref18[0];
+            var v2 = _ref18[1];
 
-            obj[k] = v;
+            obj[k2] = v2;
           }
         } catch (err) {
           _didIteratorError37 = true;
@@ -3196,12 +3250,16 @@ Util.ParseQueryString = function _Util_ParseQueryString(query) {
             }
           }
         }
+      } else if (v.length === 0) {
+        obj[k] = true;
+      } else if (v === "true" || v === "false") {
+        obj[k] = Boolean(v);
+      } else if (v === "null") {
+        obj[k] = null;
+      } else if (Util.IsNumber(v)) {
+        obj[k] = Number.parse(v);
       } else {
-        var key = part.substr(0, part.indexOf('='));
-        var _val = part.substr(part.indexOf('=') + 1);
-        _val = decodeURIComponent(_val);
-        if (_val.length === 0) _val = false;else if (_val === "true") _val = true;else if (_val === "false") _val = false;else if (_val.match(/^[+-]?[1-9][0-9]*$/)) _val = parseInt(_val);else if (_val.match(/^[-+]?(?:[0-9]*\.[0-9]+|[0-9]+)$/)) _val = parseFloat(_val);else if (_val === "null") _val = null;
-        obj[key] = _val;
+        obj[k] = v;
       }
     }
   } catch (err) {
