@@ -3,6 +3,18 @@
 /* Twitch utilities */
 let Twitch = {};
 
+/* Escape sequences {{{0 */
+
+Twitch.FlagEscapes = [
+  ["\\s", /\\s/g, " ", / /g],
+  ["\\:", /\\:/g, ";", /;/g],
+  ["\\r", /\\r/g, "\r", /\r/g],
+  ["\\n", /\\n/g, "\n", /\n/g],
+  ["\\", /\\\\/g, "\\", /\\/g]
+];
+
+/* End escape sequences 0}}} */
+
 /* API URLs {{{0 */
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
@@ -159,49 +171,44 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   }
 };
 
+/* Parse Twitch flag escape sequences */
+Twitch.DecodeFlag = function _Twitch_DecodeFlag(value) {
+  let result = value;
+  for (let row of Twitch.FlagEscapes) {
+    result = result.replace(row[1], row[2]);
+  }
+  return result;
+};
+
+/* Format Twitch flag escape sequences */
+Twitch.EncodeFlag = function _Twitch_EncodeFlag(value) {
+  let result = value;
+  for (let row of Twitch.FlagEscapes) {
+    result = result.replace(row[3], row[0]);
+  }
+  return result;
+};
+
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
-  /* TODO: parse keys before values */
   let result = null;
-  if (value.length === 0) {
-    /* Translate empty strings to null */
-    result = null;
-  } else if (value.match(/^[0-9]+$/) && !Number.isNaN(Number.parseInt(value))) {
-    /* Translate numeric values to numbers */
-    result = Number.parseInt(value);
+  if (key === "badge-info" || key === "badges") {
+    result = [];
+    for (let badge of value.split(',')) {
+      let [badge_name, badge_rev] = badge.split('/');
+      result.push([badge_name, badge_rev]);
+    }
+  } else if (key === "emotes") {
+    result = Twitch.ParseEmote(value);
+  } else if (key === "emote-sets") {
+    result = value.split(',').map(e => Number.parse(e));
   } else {
-    /* Values requiring special handling */
-    switch (key) {
-      case "badge-info":
-        if (value.length > 0) {
-          result = [];
-          for (let badge of value.split(',')) {
-            let [badge_name, badge_rev] = badge.split('/');
-            result.push([badge_name, badge_rev]);
-          }
-        }
-        break;
-      case "badges":
-        result = [];
-        for (let badge of value.split(',')) {
-          let [badge_name, badge_rev] = badge.split('/');
-          result.push([badge_name, badge_rev]);
-        }
-        break;
-      case "emotes":
-        result = Twitch.ParseEmote(value);
-        break;
-      case "emote-sets":
-        result = value.split(',').map(e => Number.parseInt(e));
-        break;
-      default:
-        result = value;
-        result = result.replace(/\\s/g, ' ');
-        result = result.replace(/\\:/g, ';');
-        result = result.replace(/\\r/g, '\r');
-        result = result.replace(/\\n/g, '\n');
-        result = result.replace(/\\\\/g, '\\');
-        break;
+    result = Twitch.DecodeFlag(value);
+  }
+  if (typeof(result) === "string") {
+    let temp = Number.parse(result);
+    if (!Number.isNaN(temp)) {
+      result = temp;
     }
   }
   return result;
