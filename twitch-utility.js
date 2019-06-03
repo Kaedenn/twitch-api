@@ -192,18 +192,20 @@ Twitch.EncodeFlag = function _Twitch_EncodeFlag(value) {
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   let result = null;
-  if (key === "badge-info" || key === "badges") {
+  if (value.length === 0) {
+    result = "";
+  } else if (key === "badge-info" || key === "badges") {
     result = [];
     for (let badge of value.split(',')) {
       let [badge_name, badge_rev] = badge.split('/');
       result.push([badge_name, badge_rev]);
     }
   } else if (key === "emotes") {
-    result = value.length > 0 ? Twitch.ParseEmote(value) : "";
+    result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
     result = value.split(',').map(e => Number.parse(e));
   } else {
-    result = value.length > 0 ? Twitch.DecodeFlag(value) : "";
+    result = Twitch.DecodeFlag(value);
   }
   if (typeof(result) === "string") {
     let temp = Number.parse(result);

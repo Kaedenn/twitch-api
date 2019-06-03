@@ -349,7 +349,9 @@ Twitch.EncodeFlag = function _Twitch_EncodeFlag(value) {
 /* Parse an individual @<flags...> key,value pair */
 Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   var result = null;
-  if (key === "badge-info" || key === "badges") {
+  if (value.length === 0) {
+    result = "";
+  } else if (key === "badge-info" || key === "badges") {
     result = [];
     var _iteratorNormalCompletion6 = true;
     var _didIteratorError6 = false;
@@ -381,13 +383,13 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
       }
     }
   } else if (key === "emotes") {
-    result = value.length > 0 ? Twitch.ParseEmote(value) : "";
+    result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
     result = value.split(',').map(function (e) {
       return Number.parse(e);
     });
   } else {
-    result = value.length > 0 ? Twitch.DecodeFlag(value) : "";
+    result = Twitch.DecodeFlag(value);
   }
   if (typeof result === "string") {
     var temp = Number.parse(result);
