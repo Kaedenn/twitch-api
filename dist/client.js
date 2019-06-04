@@ -260,7 +260,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
   _createClass(TwitchChatEvent, [{
     key: "has_badge",
     value: function has_badge(badge) {
-      var rev = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : undefined;
+      var rev = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
       if (!this.flags.badges) return false;
       var _iteratorNormalCompletion2 = true;
@@ -277,7 +277,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
           var badge_rev = _ref2[1];
 
           if (badge_name === badge) {
-            if (rev !== undefined) {
+            if (rev !== null) {
               return badge_rev === rev;
             } else {
               return true;
@@ -817,7 +817,9 @@ TwitchClient.prototype._getRooms = function _TwitchClient__getRooms(cname, cid) 
       for (var _iterator3 = json["rooms"][Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
         var room_def = _step3.value;
 
-        if (this._rooms[cname].rooms === undefined) this._rooms[cname].rooms = {};
+        if (!this._rooms[cname].rooms) {
+          this._rooms[cname].rooms = {};
+        }
         this._rooms[cname].rooms[room_def["name"]] = room_def;
       }
     } catch (err) {
@@ -2165,7 +2167,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
 
                 if (users.indexOf(result.user) > -1) {
                   var ffz_badges = event.flags['ffz-badges'];
-                  if (ffz_badges === undefined) ffz_badges = [];
+                  if (!ffz_badges) ffz_badges = [];
                   ffz_badges.push(_this3._ffz_badges[badge_nr]);
                   event.flags['ffz-badges'] = ffz_badges;
                 }

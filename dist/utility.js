@@ -351,7 +351,7 @@ Array.prototype.max = function _Array_max(cmp) {
     };
   }
   if (this.length === 0) {
-    return undefined;
+    return;
   }
   if (this.length === 1) {
     return this[0];
@@ -397,7 +397,7 @@ Array.prototype.min = function _Array_min(cmp) {
     };
   }
   if (this.length === 0) {
-    return undefined;
+    return;
   }
   if (this.length === 1) {
     return this[0];
@@ -687,7 +687,7 @@ Util.Zip = function _Util_Zip() {
       var _seq = _step14.value;
 
       while (_seq.length < max_len) {
-        _seq.push(undefined);
+        _seq.push(null);
       }
     }
   } catch (err) {
@@ -709,7 +709,7 @@ Util.Zip = function _Util_Zip() {
   /* Perform the zip operation */
   for (var i = 0; i < max_len; ++i) {
     var row = Array.from(curr, function () {
-      return undefined;
+      return null;
     });
     for (var j = 0; j < curr.length; ++j) {
       row[j] = curr[j][i];
@@ -1304,7 +1304,7 @@ var LoggerUtility = function () {
   }, {
     key: "_assert_sev",
     value: function _assert_sev(sev) {
-      if (this._hooks[this._sev_value(sev)] === undefined) {
+      if (!this._hooks.hasOwnProperty(this._sev_value(sev))) {
         console.error("Logger: invalid severity " + sev);
         return false;
       }
@@ -1524,7 +1524,7 @@ var LoggerUtility = function () {
         for (var _iterator27 = args[Symbol.iterator](), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
           var arg = _step27.value;
 
-          if (arg === null) result.push("null");else if (typeof arg === "undefined") result.push("undefined");else if (typeof arg === "string") result.push(JSON.stringify(arg));else if (typeof arg === "number") result.push("" + arg);else if (typeof arg === "boolean") result.push("" + arg);else if ((typeof arg === "undefined" ? "undefined" : _typeof(arg)) === "symbol") result.push(arg.toString());else if (typeof arg === "function") {
+          if (arg === null) result.push("null");else if (typeof arg === "undefined") result.push("(undefined)");else if (typeof arg === "string") result.push(JSON.stringify(arg));else if (typeof arg === "number") result.push("" + arg);else if (typeof arg === "boolean") result.push("" + arg);else if ((typeof arg === "undefined" ? "undefined" : _typeof(arg)) === "symbol") result.push(arg.toString());else if (typeof arg === "function") {
             result.push(("" + arg).replace(/\n/, "\\n"));
           } else {
             result.push(JSON.stringify(arg));
@@ -1862,7 +1862,7 @@ var ColorParser = function () {
       var g = Number(rgbtuple[1]);g = Number.isNaN(g) ? 0 : g;
       var b = Number(rgbtuple[2]);b = Number.isNaN(b) ? 0 : b;
       var res = [r, g, b];
-      if (rgbtuple.length === 4 && rgbtuple[3] !== undefined) {
+      if (rgbtuple.length === 4 && rgbtuple[3]) {
         var a = Number(rgbtuple[3]);a = Number.isNaN(a) ? 0 : a;
         res.push(a);
       }
@@ -1967,7 +1967,7 @@ Util.Color = function () {
           b = args[2],
           a = args[3];
 
-      if (a === undefined) {
+      if (args.length < 4) {
         return [r / 255, g / 255, b / 255];
       } else {
         return [r / 255, g / 255, b / 255, a / 255];
@@ -1988,7 +1988,7 @@ Util.Color = function () {
           b = args[2],
           a = args[3];
 
-      if (a === undefined) {
+      if (args.length < 4) {
         return [r * 255, g * 255, b * 255];
       } else {
         return [r * 255, g * 255, b * 255, a * 255];
@@ -2767,7 +2767,7 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
 
 /* Number formatting */
 Util.Pad = function _Util_Pad(n, digits, padChr) {
-  if (padChr === undefined) {
+  if (typeof padChr !== "string") {
     padChr = '0';
   }
   return new String(n).padStart(digits, padChr);

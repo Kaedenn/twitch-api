@@ -165,12 +165,12 @@ class TwitchChatEvent extends TwitchEvent {
   get isvip() {
     return this.has_badge("vip");
   }
-  has_badge(badge, rev=undefined) {
+  has_badge(badge, rev=null) {
     if (!this.flags.badges)
       return false;
     for (let [badge_name, badge_rev] of this.flags.badges) {
       if (badge_name === badge) {
-        if (rev !== undefined) {
+        if (rev !== null) {
           return badge_rev === rev;
         } else {
           return true;
@@ -562,8 +562,9 @@ function _TwitchClient__getRooms(cname, cid) {
   if (this._no_assets) return;
   this._api.GetCB(Twitch.URL.Rooms(cid), (function _rooms_cb(json) {
     for (let room_def of json["rooms"]) {
-      if (this._rooms[cname].rooms === undefined)
+      if (!this._rooms[cname].rooms) {
         this._rooms[cname].rooms = {};
+      }
       this._rooms[cname].rooms[room_def["name"]] = room_def;
     }
   }).bind(this), {}, true);
@@ -1433,7 +1434,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           for (let [badge_nr, users] of Object.entries(this._ffz_badge_users)) {
             if (users.indexOf(result.user) > -1) {
               let ffz_badges = event.flags['ffz-badges'];
-              if (ffz_badges === undefined) ffz_badges = [];
+              if (!ffz_badges) ffz_badges = [];
               ffz_badges.push(this._ffz_badges[badge_nr]);
               event.flags['ffz-badges'] = ffz_badges;
             }

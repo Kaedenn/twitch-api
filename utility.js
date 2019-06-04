@@ -168,7 +168,7 @@ Array.prototype.extend = function _Array_extend(...args) {
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
-  if (this.length === 0) { return undefined; }
+  if (this.length === 0) { return; }
   if (this.length === 1) { return this[0]; }
   let max_value = cmp(this[0]);
   let max_elem = this[0];
@@ -184,7 +184,7 @@ Array.prototype.max = function _Array_max(cmp) {
 /* Obtain the minimal element from an array */
 Array.prototype.min = function _Array_min(cmp) {
   if (!(cmp instanceof Function)) { cmp = ((x) => x); }
-  if (this.length === 0) { return undefined; }
+  if (this.length === 0) { return; }
   if (this.length === 1) { return this[0]; }
   let min_value = cmp(this[0]);
   let min_elem = this[0];
@@ -343,13 +343,13 @@ Util.Zip = function _Util_Zip(...sequences) {
   /* Ensure all arrays have the same size */
   for (let seq of curr) {
     while (seq.length < max_len) {
-      seq.push(undefined);
+      seq.push(null);
     }
   }
   let result = [];
   /* Perform the zip operation */
   for (let i = 0; i < max_len; ++i) {
-    let row = Array.from(curr, () => undefined);
+    let row = Array.from(curr, () => null);
     for (let j = 0; j < curr.length; ++j) {
       row[j] = curr[j][i];
     }
@@ -697,7 +697,7 @@ class LoggerUtility {
 
   /* Validate that the given severity exists */
   _assert_sev(sev) {
-    if (this._hooks[this._sev_value(sev)] === undefined) {
+    if (!this._hooks.hasOwnProperty(this._sev_value(sev))) {
       console.error(`Logger: invalid severity ${sev}`);
       return false;
     }
@@ -795,7 +795,7 @@ class LoggerUtility {
     let result = [];
     for (let arg of args) {
       if (arg === null) result.push("null");
-      else if (typeof(arg) === "undefined") result.push("undefined");
+      else if (typeof(arg) === "undefined") result.push("(undefined)");
       else if (typeof(arg) === "string") result.push(JSON.stringify(arg));
       else if (typeof(arg) === "number") result.push(`${arg}`);
       else if (typeof(arg) === "boolean") result.push(`${arg}`);
@@ -916,7 +916,7 @@ class ColorParser {
     let g = Number(rgbtuple[1]); g = Number.isNaN(g) ? 0 : g;
     let b = Number(rgbtuple[2]); b = Number.isNaN(b) ? 0 : b;
     let res = [r, g, b];
-    if (rgbtuple.length === 4 && rgbtuple[3] !== undefined) {
+    if (rgbtuple.length === 4 && rgbtuple[3]) {
       let a = Number(rgbtuple[3]); a = Number.isNaN(a) ? 0 : a;
       res.push(a);
     }
@@ -1004,7 +1004,7 @@ Util.Color = class _Util_Color {
   /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
   static Renorm1(...args) {
     let [r, g, b, a] = args;
-    if (a === undefined) {
+    if (args.length < 4) {
       return [r / 255, g / 255, b / 255];
     } else {
       return [r / 255, g / 255, b / 255, a / 255];
@@ -1014,7 +1014,7 @@ Util.Color = class _Util_Color {
   /* Renormalize (r, g, b[, a]) from 0~255 to 0~1 */
   static Renorm255(...args) {
     let [r, g, b, a] = args;
-    if (a === undefined) {
+    if (args.length < 4) {
       return [r * 255, g * 255, b * 255];
     } else {
       return [r * 255, g * 255, b * 255, a * 255];
@@ -1471,7 +1471,7 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
 
 /* Number formatting */
 Util.Pad = function _Util_Pad(n, digits, padChr) {
-  if (padChr === undefined) {
+  if (typeof(padChr) !== "string") {
     padChr = '0';
   }
   return (new String(n)).padStart(digits, padChr);
