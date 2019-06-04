@@ -1890,7 +1890,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
         this._onPart(result.channel, result.user);
         break;
       case "RECONNECT":
-        /* Reconnecting is the responsibility of the driving code */
+        this.Connect();
         break;
       case "MODE":
         if (result.modeflag === "+o") {
@@ -2007,8 +2007,8 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
     /* Obtain emotes the client is able to use */
     if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        let eset_str = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
-        this._api.GetCB(eset_str, (function _emoteset_cb(json) {
+        let eset_url = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
+        this._api.GetCB(eset_url, (function _emoteset_cb(json) {
           for (let eset of Object.keys(json["emoticon_sets"])) {
             for (let edef of json["emoticon_sets"][eset]) {
               this._self_emotes[edef.id] = edef.code;

@@ -2952,7 +2952,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
         _this3._onPart(result.channel, result.user);
         break;
       case "RECONNECT":
-        /* Reconnecting is the responsibility of the driving code */
+        _this3.Connect();
         break;
       case "MODE":
         if (result.modeflag === "+o") {
@@ -3122,8 +3122,8 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
     /* Obtain emotes the client is able to use */
     if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        var eset_str = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
-        _this3._api.GetCB(eset_str, function _emoteset_cb(json) {
+        var eset_url = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
+        _this3._api.GetCB(eset_url, function _emoteset_cb(json) {
           var _iteratorNormalCompletion41 = true;
           var _didIteratorError41 = false;
           var _iteratorError41 = undefined;
