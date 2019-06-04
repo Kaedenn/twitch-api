@@ -6,6 +6,7 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
+ * Matrix multiplication function to simplify color math
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -15,12 +16,11 @@
  * Extensions to the standard JavaScript classes (String, Array)
  * Logging functions including stack-trace handling
  * Functions for color arithmetic
- * An "improved" random number generator
+ * A random number generator that can generate version 4 UUIDs
  * Shortcut functions for a number of trivial tasks (fireEvent, formatting)
  * Functions for localStorage management
  * Functions for point-in-box calculation
  * Functions for handling location.search (query string) management
- * Functions for generating version 4 (random) UUIDs
  *
  * Citations:
  *  PRNG and UUID generation
@@ -1268,16 +1268,20 @@ Util.RandomGenerator = class _Util_Random {
     return a;
   }
 
+  /* Convenience function: sprintf %02x */
   numToHex(num, pad=2) {
     return num.toString("16").padStart(pad, "0");
   }
 
+  /* Convenience function: "hexlify" string */
   bytesToHex(bytes) {
     let h = "";
     for (let byte of bytes) { h += this.numToHex(byte); }
     return h;
   }
 
+  /* Generate a sequence of random bytes. Encoding is either hex or
+   * none (default) */
   randBytes(num_bytes, encoding=null) {
     let values;
     if (this._crypto !== null) {
@@ -1292,11 +1296,13 @@ Util.RandomGenerator = class _Util_Random {
     }
   }
 
+  /* Return 8, 16, 32, or 64 random bits, as a hex string */
   hex8() { return this.randBytes(1, 'hex'); }
   hex16() { return this.randBytes(2, 'hex'); }
   hex32() { return this.randBytes(4, 'hex'); }
   hex64() { return this.randBytes(8, 'hex'); }
 
+  /* Generate a random UUID */
   uuid() {
     let a = this.randBytes(16);
     a[6] = (a[6] & 0x0f) | 0x40;
@@ -1319,9 +1325,9 @@ Util._events = {};
 Util._events_default = null;
 
 /* Bind a function to an event by name */
-Util.Bind = function _Util_Bind(evname, evcallback) {
-  if (!Util._events[evname]) Util._events[evname] = [];
-  Util._events[evname].push(evcallback);
+Util.Bind = function _Util_Bind(name, callback) {
+  if (!Util._events[name]) Util._events[name] = [];
+  Util._events[name].push(callback);
 };
 
 /* Call a function if an event is unbound */
@@ -1330,11 +1336,10 @@ Util.BindDefault = function _Util_BindDefault(callback) {
 };
 
 /* Unbind a callback from an event */
-Util.Unbind = function _Util_Unbind(evname, evcallback) {
-  if (Util._events[evname]) {
-    let i = Util._events[evname].indexOf(evcallback);
-    if (i > -1) {
-      Util._events[evname] = Util._events[evname].filter((e) => e !== evcallback);
+Util.Unbind = function _Util_Unbind(name, callback) {
+  if (Util._events[name]) {
+    if (Util._events[name].indexOf(callback) > -1) {
+      Util._events[name] = Util._events[name].filter((e) => e !== callback);
       return true;
     }
   }

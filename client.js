@@ -7,26 +7,27 @@
  */
 
 /* FIXME:
- *  Only the first channel-specific sub badge seems to appear; longer-duration
- *  badges don't display.
- *  Inconsistent code:
- *    _ensureChannel().channel vs FormatChannel() ???
+ * Ensure longer-duration channel-specific sub badges show correctly
+ * JoinChannel doesn't look at room or roomuid
+ * Inconsistent code:
+ *   _ensureChannel().channel vs {Parse,Format}Channel()
+ *   Use FormatChannel() value instead of ParseChannel().channel?
  */
 
 /* TODO:
- *  Remove either Twitch.API or Util.API
- *  Fix the following:
- *    Join specific room (JoinChannel only looks at channel.channel)
- *  USERNOTICEs:
- *    rewardgift
- *    giftpaidupgrade
- *      msg-param-promo-gift-total
- *      msg-param-promo-name
- *    anongiftpaidupgrade
- *      msg-param-promo-gift-total
- *      msg-param-promo-name
- *    unraid
- *    bitsbadgetier
+ * Remove either Twitch.API or Util.API object
+ * Fix the following:
+ *   Join specific room (JoinChannel only looks at channel.channel)
+ * USERNOTICEs:
+ *   rewardgift
+ *   giftpaidupgrade
+ *     msg-param-promo-gift-total
+ *     msg-param-promo-name
+ *   anongiftpaidupgrade
+ *     msg-param-promo-gift-total
+ *     msg-param-promo-name
+ *   unraid
+ *   bitsbadgetier
  */
 
 /* Twitch utilities {{{0 */
