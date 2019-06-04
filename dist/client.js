@@ -31,10 +31,6 @@
 
 /* Twitch utilities {{{0 */
 
-/* Twitch utilities */
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
@@ -49,11 +45,13 @@ var Twitch = {};
 
 /* Escape sequences {{{1 */
 
-Twitch.FLAG_ESCAPE_RULES = [["\\s", /\\s/g, " ", / /g], ["\\:", /\\:/g, ";", /;/g], ["\\r", /\\r/g, "\r", /\r/g], ["\\n", /\\n/g, "\n", /\n/g], ["\\\\", /\\\\/g, "\\", /\\/g]];
+Twitch.FLAG_ESCAPE_RULES = [
+/* escaped character, escaped regex, raw character, raw regex */
+["\\s", /\\s/g, " ", / /g], ["\\:", /\\:/g, ";", /;/g], ["\\r", /\\r/g, "\r", /\r/g], ["\\n", /\\n/g, "\n", /\n/g], ["\\\\", /\\\\/g, "\\", /\\/g]];
 
 /* End escape sequences 1}}} */
 
-/* API URLs {{{1 */
+/* API URL definitions {{{1 */
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
@@ -128,7 +126,7 @@ Twitch.URL.BTTVEmote = function (eid) {
   return Twitch.BTTV + "/emote/" + eid + "/1x";
 };
 
-/* End of API URLs 1}}} */
+/* End API URL definitions 1}}} */
 
 /* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */
 Twitch.API = function _Twitch_API(global_headers, private_headers) {
@@ -270,26 +268,33 @@ Twitch.ParseUser = function _Twitch_ParseUser(user) {
 
 /* Parse channel to {channel, room, roomuid} */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
-  var ch = channel;
-  var room = null;
-  var roomuid = null;
-  var parts = ch.split(':');
-  if (parts.length === 1) {
-    ch = parts[0];
-  } else if (parts.length === 3) {
-    var _parts = _slicedToArray(parts, 3);
-
-    ch = _parts[0];
-    room = _parts[1];
-    roomuid = _parts[2];
+  if (typeof channel === "string") {
+    var chobj = {
+      channel: "",
+      room: null,
+      roomuid: null
+    };
+    var parts = channel.split(':');
+    if (parts.length === 1) {
+      chobj.channel = parts[0];
+    } else if (parts.length === 3) {
+      chobj.channel = parts[0];
+      chobj.room = parts[1];
+      chobj.roomuid = parts[2];
+    } else {
+      Util.Warn("ParseChannel: " + channel + " not in expected format");
+      chobj.channel = parts[0];
+    }
+    if (chobj.channel.indexOf('#') !== 0) {
+      chobj.channel = '#' + chobj.channel;
+    }
+    return chobj;
+  } else if (channel && channel.channel) {
+    return Twitch.ParseChannel(channel.channel, channel.room, channel.roomuid);
   } else {
-    Util.Warn("ParseChannel: " + ch + " not in expected format");
-    ch = parts[0];
+    Util.Warn("ParseChannel: don't know how to parse", channel);
+    return { channel: "GLOBAL", room: null, roomuid: null };
   }
-  if (ch.indexOf('#') !== 0) {
-    ch = '#' + ch;
-  }
-  return { channel: ch, room: room, roomuid: roomuid };
 };
 
 /* Format a channel name, room name, or channel object */
@@ -729,8 +734,6 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.channel = Twitch.ParseChannel(parts[2]);
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
       result.message = argFrom(line, ":", parts[2]);
-    } else {
-      result.message = "";
     }
     result.sub_kind = TwitchSubEvent.FromMsgID(result.flags["msg-id"]);
     result.issub = result.sub_kind !== null;
@@ -881,25 +884,23 @@ var TwitchEvent = function () {
     _classCallCheck(this, TwitchEvent);
 
     this._cmd = type;
-    this._raw = raw_line ? raw_line : "";
-    this._parsed = parsed ? parsed : {};
+    this._raw = raw_line || "";
+    this._parsed = parsed || {};
     if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
       Util.Error("Command " + this._cmd + " not enumerated in this.COMMANDS");
     }
     /* Ensure certain flags have expected types */
-    if (this._parsed) {
-      if (typeof this._parsed.message !== "string") {
-        this._parsed.message = "" + this._parsed.message;
-      }
-      if (typeof this._parsed.user !== "string") {
-        this._parsed.user = "" + this._parsed.user;
-      }
-      if (_typeof(this._parsed.flags) !== "object") {
-        this._parsed.flags = {};
-      }
-      if (!this._parsed.channel) {
-        this._parsed.channel = { channel: "GLOBAL", room: null, roomuid: null };
-      }
+    if (!this._parsed.message) {
+      this._parsed.message = "";
+    }
+    if (!this._parsed.user) {
+      this._parsed.user = null;
+    }
+    if (!this._parsed.flags) {
+      this._parsed.flags = {};
+    }
+    if (!this._parsed.channel) {
+      this._parsed.channel = { channel: "GLOBAL", room: null, roomuid: null };
     }
   }
 
@@ -907,11 +908,6 @@ var TwitchEvent = function () {
     key: "has_value",
     value: function has_value(key) {
       return this._parsed.hasOwnProperty(key);
-    }
-  }, {
-    key: "value",
-    value: function value(key) {
-      return this._parsed[key];
     }
   }, {
     key: "flag",
