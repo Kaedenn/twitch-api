@@ -90,8 +90,6 @@ Util.Defined = function _Util_Defined(identifier) {
     polyfillIf(obj, !obj[attr], attr, val);
   }
 
-  /* console */
-
   polyfill(G, "console", {});
   polyfill(G.console, "assert", function _console_assert(cond) {
     if (!cond) { G.console.error(`Assertion failed: ${cond}`); }
@@ -100,8 +98,6 @@ Util.Defined = function _Util_Defined(identifier) {
     G.console.log(">>> " + name);
   });
   polyfill(G.console, "groupEnd", function _console_groupEnd() { });
-
-  /* Math */
 
   /* Calculates the divmod of the values given */
   polyfill(Math, "divmod", function _Math_divmod(r, n) {
@@ -112,37 +108,31 @@ Util.Defined = function _Util_Defined(identifier) {
   polyfill(Math, "clamp", function _Math_clamp(value, min, max) {
     return (value < min ? min : (value > max ? max : value));
   });
-})(window);
 
-/* Return true if any of the values satisfy the function given */
-if (typeof(Array.prototype.any) !== "function") {
-  Array.prototype.any = function _Array_any(func) {
-    if (!func) func = (b) => b ? true : false;
+  /* Return true if any of the values satisfy the function given */
+  polyfill(Array.prototype, "any", function(func) {
+    let f = func ? func : (b) => Boolean(b);
     for (let e of this) {
-      if (func(e)) {
+      if (f(e)) {
         return true;
       }
     }
     return false;
-  };
-}
+  });
 
-/* Return true if all of the values satisfy the function given */
-if (typeof(Array.prototype.all) !== "function") {
-  Array.prototype.all = function _Array_all(func) {
-    if (!func) func = (b) => b ? true : false;
+  /* Return true if all of the values satisfy the function given */
+  polyfill(Array.prototype, "all", function(func) {
+    let f = func ? func : (b) => Boolean(b);
     for (let e of this) {
-      if (!func(e)) {
+      if (!f(e)) {
         return false;
       }
     }
     return true;
-  };
-}
+  });
 
-/* Array.concat polyfill: concatenate two or more arrays */
-if (typeof(Array.prototype.concat) !== "function") {
-  Array.prototype.concat = function _Array_concat(...args) {
+  /* Concatenate two or more arrays */
+  polyfill(Array.prototype, "concat", function(...args) {
     let result = [];
     for (let i of this) {
       result.push(i);
@@ -153,8 +143,37 @@ if (typeof(Array.prototype.concat) !== "function") {
       }
     }
     return result;
-  };
-}
+  });
+
+  /* Ensure String.trimStart is present */
+  polyfill(String.prototype, "trimStart", function() {
+    let i = 0;
+    while (i < this.length && this[i] === ' ') {
+      i += 1;
+    }
+    return i === 0 ? this : this.substr(i);
+  });
+
+  /* Ensure String.trimEnd is present */
+  polyfill(String.prototype, "trimEnd", function() {
+    let i = this.length-1;
+    while (i > 0 && this[i] === ' ') {
+      i -= 1;
+    }
+    return this.substr(0, i+1);
+  });
+
+  /* Ensure String.trim is present */
+  polyfill(String.prototype, "trim", function() {
+    return this.trimStart().trimEnd();
+  });
+
+  /* Escape regex characters in a string */
+  polyfill(RegExp, "escape", function(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  });
+
+})(window);
 
 /* Append one or more arrays, in-place */
 Array.prototype.extend = function _Array_extend(...args) {
@@ -245,35 +264,6 @@ String.prototype.map = function _String_map(func) {
   return result;
 };
 
-/* Ensure String.trimStart is present */
-if (typeof(("").trimStart) !== "function") {
-  String.prototype.trimStart = function() {
-    let i = 0;
-    while (i < this.length && this[i] === ' ') {
-      i += 1;
-    }
-    return i === 0 ? this : this.substr(i);
-  };
-}
-
-/* Ensure String.trimEnd is present */
-if (typeof(("").trimEnd) !== "function") {
-  String.prototype.trimEnd = function() {
-    let i = this.length-1;
-    while (i > 0 && this[i] === ' ') {
-      i -= 1;
-    }
-    return this.substr(0, i+1);
-  };
-}
-
-/* Ensure String.trim is present */
-if (typeof(("").trim) !== "function") {
-  String.prototype.trim = function() {
-    return this.trimStart().trimEnd();
-  };
-}
-
 /* Create function to compare two strings as lower-case */
 String.prototype.equalsLowerCase = function _String_equalsLowerCase(str) {
   let s1 = this.toLowerCase();
@@ -301,13 +291,6 @@ String.prototype.transform = function _String_transform(func) {
 String.prototype.xor = function _String_xor(byte) {
   return this.transform((i) => i^byte);
 };
-
-/* Escape a string for use in regex */
-if (typeof(RegExp.escape) !== "function") {
-  RegExp.escape = function _RegExp_escape(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  };
-}
 
 /* Parse a number (calling Util.ParseNumber) */
 Number.parse = function _Number_parse(str, base=10) {
@@ -1778,7 +1761,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query=null) {
         obj[k2] = v2;
       }
     } else if (v.length === 0) {
-      obj[k] = true;
+      obj[k] = false;
     } else if (v === "true" || v === "false") {
       obj[k] = Boolean(v);
     } else if (v === "null") {
@@ -1904,14 +1887,6 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 /* End CSS functions 0}}} */
 
 /* DOM functions {{{0 */
-
-/* Add the javascript file to the document's <head> */
-Util.AddScript = function _Util_AddScript(src) {
-  let s = document.createElement("script");
-  s.setAttribute("type", "text/javascript");
-  s.setAttribute("src", src);
-  document.head.appendChild(s);
-};
 
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {

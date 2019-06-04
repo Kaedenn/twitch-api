@@ -105,8 +105,6 @@ Util.Defined = function _Util_Defined(identifier) {
     polyfillIf(obj, !obj[attr], attr, val);
   }
 
-  /* console */
-
   polyfill(G, "console", {});
   polyfill(G.console, "assert", function _console_assert(cond) {
     if (!cond) {
@@ -118,8 +116,6 @@ Util.Defined = function _Util_Defined(identifier) {
   });
   polyfill(G.console, "groupEnd", function _console_groupEnd() {});
 
-  /* Math */
-
   /* Calculates the divmod of the values given */
   polyfill(Math, "divmod", function _Math_divmod(r, n) {
     return [n / r, n % r];
@@ -129,13 +125,11 @@ Util.Defined = function _Util_Defined(identifier) {
   polyfill(Math, "clamp", function _Math_clamp(value, min, max) {
     return value < min ? min : value > max ? max : value;
   });
-})(window);
 
-/* Return true if any of the values satisfy the function given */
-if (typeof Array.prototype.any !== "function") {
-  Array.prototype.any = function _Array_any(func) {
-    if (!func) func = function func(b) {
-      return b ? true : false;
+  /* Return true if any of the values satisfy the function given */
+  polyfill(Array.prototype, "any", function (func) {
+    var f = func ? func : function (b) {
+      return Boolean(b);
     };
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
@@ -145,7 +139,7 @@ if (typeof Array.prototype.any !== "function") {
       for (var _iterator = this[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
         var e = _step.value;
 
-        if (func(e)) {
+        if (f(e)) {
           return true;
         }
       }
@@ -165,14 +159,12 @@ if (typeof Array.prototype.any !== "function") {
     }
 
     return false;
-  };
-}
+  });
 
-/* Return true if all of the values satisfy the function given */
-if (typeof Array.prototype.all !== "function") {
-  Array.prototype.all = function _Array_all(func) {
-    if (!func) func = function func(b) {
-      return b ? true : false;
+  /* Return true if all of the values satisfy the function given */
+  polyfill(Array.prototype, "all", function (func) {
+    var f = func ? func : function (b) {
+      return Boolean(b);
     };
     var _iteratorNormalCompletion2 = true;
     var _didIteratorError2 = false;
@@ -182,7 +174,7 @@ if (typeof Array.prototype.all !== "function") {
       for (var _iterator2 = this[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
         var e = _step2.value;
 
-        if (!func(e)) {
+        if (!f(e)) {
           return false;
         }
       }
@@ -202,12 +194,10 @@ if (typeof Array.prototype.all !== "function") {
     }
 
     return true;
-  };
-}
+  });
 
-/* Array.concat polyfill: concatenate two or more arrays */
-if (typeof Array.prototype.concat !== "function") {
-  Array.prototype.concat = function _Array_concat() {
+  /* Concatenate two or more arrays */
+  polyfill(Array.prototype, "concat", function () {
     var result = [];
     var _iteratorNormalCompletion3 = true;
     var _didIteratorError3 = false;
@@ -286,8 +276,36 @@ if (typeof Array.prototype.concat !== "function") {
     }
 
     return result;
-  };
-}
+  });
+
+  /* Ensure String.trimStart is present */
+  polyfill(String.prototype, "trimStart", function () {
+    var i = 0;
+    while (i < this.length && this[i] === ' ') {
+      i += 1;
+    }
+    return i === 0 ? this : this.substr(i);
+  });
+
+  /* Ensure String.trimEnd is present */
+  polyfill(String.prototype, "trimEnd", function () {
+    var i = this.length - 1;
+    while (i > 0 && this[i] === ' ') {
+      i -= 1;
+    }
+    return this.substr(0, i + 1);
+  });
+
+  /* Ensure String.trim is present */
+  polyfill(String.prototype, "trim", function () {
+    return this.trimStart().trimEnd();
+  });
+
+  /* Escape regex characters in a string */
+  polyfill(RegExp, "escape", function (string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  });
+})(window);
 
 /* Append one or more arrays, in-place */
 Array.prototype.extend = function _Array_extend() {
@@ -529,35 +547,6 @@ String.prototype.map = function _String_map(func) {
   return result;
 };
 
-/* Ensure String.trimStart is present */
-if (typeof "".trimStart !== "function") {
-  String.prototype.trimStart = function () {
-    var i = 0;
-    while (i < this.length && this[i] === ' ') {
-      i += 1;
-    }
-    return i === 0 ? this : this.substr(i);
-  };
-}
-
-/* Ensure String.trimEnd is present */
-if (typeof "".trimEnd !== "function") {
-  String.prototype.trimEnd = function () {
-    var i = this.length - 1;
-    while (i > 0 && this[i] === ' ') {
-      i -= 1;
-    }
-    return this.substr(0, i + 1);
-  };
-}
-
-/* Ensure String.trim is present */
-if (typeof "".trim !== "function") {
-  String.prototype.trim = function () {
-    return this.trimStart().trimEnd();
-  };
-}
-
 /* Create function to compare two strings as lower-case */
 String.prototype.equalsLowerCase = function _String_equalsLowerCase(str) {
   var s1 = this.toLowerCase();
@@ -609,13 +598,6 @@ String.prototype.xor = function _String_xor(byte) {
     return i ^ byte;
   });
 };
-
-/* Escape a string for use in regex */
-if (typeof RegExp.escape !== "function") {
-  RegExp.escape = function _RegExp_escape(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  };
-}
 
 /* Parse a number (calling Util.ParseNumber) */
 Number.parse = function _Number_parse(str) {
@@ -3228,7 +3210,7 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
           }
         }
       } else if (v.length === 0) {
-        obj[k] = true;
+        obj[k] = false;
       } else if (v === "true" || v === "false") {
         obj[k] = Boolean(v);
       } else if (v === "null") {
@@ -3482,14 +3464,6 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
 /* End CSS functions 0}}} */
 
 /* DOM functions {{{0 */
-
-/* Add the javascript file to the document's <head> */
-Util.AddScript = function _Util_AddScript(src) {
-  var s = document.createElement("script");
-  s.setAttribute("type", "text/javascript");
-  s.setAttribute("src", src);
-  document.head.appendChild(s);
-};
 
 /* Walk a DOM tree searching for nodes matching the predicate given */
 Util.SearchTree = function _Util_SearchTree(root, pred) {
