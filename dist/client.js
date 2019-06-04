@@ -15,10 +15,7 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
- *  Clip information
- *    https://api.twitch.tv/kraken/clips/<string>
  *  USERNOTICEs:
- *    submysterygift
  *    rewardgift
  *    giftpaidupgrade
  *      msg-param-promo-gift-total
@@ -383,7 +380,8 @@ var TwitchSubEvent = function (_TwitchEvent2) {
 
     /* Methods below apply to all sub kinds */
     get: function get() {
-      return this.first_flag('msg-param-login', 'display-name') || this._parsed.user;
+      var name = this.first_flag('msg-param-login', 'display-name');
+      return name || this._parsed.user;
     }
   }, {
     key: "plan",
@@ -620,7 +618,7 @@ function TwitchClient(opts) {
     this._endpoint = "wss://irc-ws.chat.twitch.tv";
     this._ws = new WebSocket(this._endpoint);
     this._ws.client = this;
-    this._ws.onopen = function _ws_onopen() /*event*/{
+    this._ws.onopen = function _ws_onopen(event) {
       try {
         Util.LogOnly("ws open>", this.url);
         this.client._connected = false;
@@ -890,10 +888,10 @@ TwitchClient.prototype._getChannelCheers = function _TwitchClient__getChannelChe
       for (var _iterator5 = json.actions[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
         var cdef = _step5.value;
 
+        var p = RegExp.escape(cdef.prefix);
         /* Simplify things later by adding the regexps here */
-        cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
-        cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
-        cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
+        cdef.word_pattern = new RegExp("^(" + p + ")([1-9][0-9]*)$", 'i');
+        cdef.line_pattern = new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", 'ig');
         this._channel_cheers[cname][cdef.prefix] = cdef;
       }
     } catch (err) {
@@ -1035,6 +1033,7 @@ TwitchClient.prototype._getFFZEmotes = function _TwitchClient__getFFZEmotes(cnam
 TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")), function _bttv_global_emotes_cb(json) {
+    var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
     var bttv = this._bttv_channel_emotes[cname];
     var _iteratorNormalCompletion9 = true;
     var _didIteratorError9 = false;
@@ -1049,7 +1048,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
           'code': emote.code,
           'channel': emote.channel,
           'image-type': emote.imageType,
-          'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id).replace('{{image}}', '1x'))
+          'url': Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
         };
       }
     } catch (err) {
@@ -1074,6 +1073,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
 
   this._bttv_global_emotes = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVAllEmotes(), function _bttv_all_emotes_cb(json) {
+    var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
     var _iteratorNormalCompletion10 = true;
     var _didIteratorError10 = false;
     var _iteratorError10 = undefined;
@@ -1087,7 +1087,7 @@ TwitchClient.prototype._getBTTVEmotes = function _TwitchClient__getBTTVEmotes(cn
           'code': emote.code,
           'channel': emote.channel,
           'image-type': emote.imageType,
-          'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id).replace('{{image}}', '1x'))
+          'url': Util.URL(url_base.replace('{{id}}', emote.id))
         };
       }
     } catch (err) {
@@ -1513,15 +1513,7 @@ TwitchClient.prototype.LeaveChannel = function _TwitchClient_LeaveChannel(channe
 /* Return whether or not the client is in the channel specified */
 TwitchClient.prototype.IsInChannel = function _TwitchClient_IsInChannel(channel) {
   var ch = this._ensureChannel(channel).channel;
-  if (this._is_open) {
-    if (this._channels.indexOf(ch) > -1) {
-      return true;
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
+  return this._is_open && this._channels.indexOf(ch) > -1;
 };
 
 /* Get the list of currently-joined channels */
@@ -1745,14 +1737,14 @@ TwitchClient.prototype.GetFFZEmotes = function _TwitchClient_GetFFZEmotes(channe
 
 /* Obtain global BTTV emotes */
 TwitchClient.prototype.GetGlobalBTTVEmotes = function _TwitchClient_GetGlobalBTTVEmotes() {
-  return Util.JSONClone(this._bttv_global_emotes);
+  return this._bttv_global_emotes;
 };
 
 /* Obtain the BTTV emotes for the channel specified */
 TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(channel) {
   var ch = Twitch.FormatChannel(channel);
   if (this._bttv_channel_emotes[ch]) {
-    return Util.JSONClone(this._bttv_channel_emotes[ch]);
+    return this._bttv_channel_emotes[ch];
   } else {
     Util.Log("Channel", channel, "has no BTTV emotes stored");
     return {};
@@ -2061,11 +2053,6 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
     /* Fire twitch-message for every line received */
     Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
 
-    /* Make sure the room is tracked */
-    if (result.channel && result.channel.channel) {
-      _this3._ensureRoom(result.channel);
-    }
-
     /* Don't handle messages with NULL commands */
     if (!result.cmd) {
       Util.Error('result.cmd is NULL for', result, line);
@@ -2135,7 +2122,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
         _this3._onPart(result.channel, result.user);
         break;
       case "RECONNECT":
-        /* Reconnect is responsibility of hooking code */
+        /* Reconnecting is the responsibility of the driving code */
         break;
       case "MODE":
         if (result.modeflag === "+o") {
@@ -2260,7 +2247,7 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
             room.online = false;
           }
           Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-        }.bind(_this3));
+        });
         break;
       case "USERNOTICE":
         if (result.sub_kind === "SUB") {
@@ -2305,7 +2292,8 @@ TwitchClient.prototype._onWebsocketMessage = function _TwitchClient__onWebsocket
     /* Obtain emotes the client is able to use */
     if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        _this3._api.GetCB(Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')), function _emoteset_cb(json) {
+        var eset_str = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
+        _this3._api.GetCB(eset_str, function _emoteset_cb(json) {
           var _iteratorNormalCompletion28 = true;
           var _didIteratorError28 = false;
           var _iteratorError28 = undefined;

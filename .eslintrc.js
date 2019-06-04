@@ -20,17 +20,22 @@ module.exports = {
         "ecmaVersion": 2018
     },
     "rules": {
-        "no-unused-vars": "warn",
+        "eqeqeq": "warn",
         "no-shadow": "warn",
         "no-trailing-spaces": "warn",
-        "eqeqeq": "warn",
+        'no-unused-vars': ['warn', {
+            args: 'none',
+            ignoreRestSiblings: true
+        }],
         "no-implied-eval": "warn",
-        "no-invalid-this": "error",
         "no-self-compare": "warn",
         "no-throw-literal": "warn",
         "no-unused-expressions": "warn",
-        "no-use-before-define": "warn",
-        "semi": "warn"
+        "semi": "warn",
+        "no-self-compare": "warn",
+        /*"no-param-reassign": "warn",*/
+        "no-lonely-if": "warn",
+        "no-tabs": "error"
     },
     "overrides": [
         {

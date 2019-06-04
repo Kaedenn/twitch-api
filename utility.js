@@ -322,8 +322,9 @@ Number.parse = function _Number_parse(str, base=10) {
 Util.IsArray = function _Util_IsArray(value) {
   /* Values are considered "arrays" if value[Symbol.iterator] is a function
    * and that object is not a string */
-  if (typeof(value) === "string") return false;
-  if (value && typeof(value[Symbol.iterator]) === "function") {
+  if (typeof(value) === "string") {
+    return false;
+  } else if (value && typeof(value[Symbol.iterator]) === "function") {
     return true;
   } else {
     return false;
@@ -512,7 +513,9 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   if (ref_path !== null) {
     for (let i = 0; i < ref_path.length; ++i) {
       if (pieces.every((p) => (p[0][0] === ref_path[i]))) {
-        for (let piece of pieces) { piece[0] = piece[0].slice(1); }
+        for (let piece of pieces) {
+          piece[0] = piece[0].slice(1);
+        }
       }
     }
   }
@@ -880,18 +883,20 @@ Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 /* Store instance to active color parser */
 Util._ColorParser = null;
 
-/* Create a class for parsing colors */
+/* Class for parsing colors */
 class ColorParser {
   constructor() {
+    this._cache = {};
+    /* Create the color parser div */
     this._e = document.createElement('div');
     this._e.setAttribute("style", "position: absolute; z-index: -100");
     this._e.setAttribute("id", "color-parser-div");
     this._e.setAttribute("width", "0px");
     this._e.setAttribute("height", "0px");
     document.body.appendChild(this._e);
+    /* Define parsing regexes */
     this._rgb_pat = /rgb\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
     this._rgba_pat = /rgba\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
-    this._cache = {};
   }
 
   _parse(color) {
@@ -909,7 +914,7 @@ class ColorParser {
     if (m !== null) {
       rgbtuple = m.slice(1);
     } else {
-      /* Shouldn't ever happen */
+      /* Shouldn't ever happen unless getComputedStyle breaks */
       Util.Throw(`Failed to parse computed color ${rgbstr}`);
     }
     let r = Number(rgbtuple[0]); r = Number.isNaN(r) ? 0 : r;
@@ -949,7 +954,7 @@ Util.Color = class _Util_Color {
     let max = Math.max(r, g, b);
     let min = Math.min(r, g, b);
     let d = max - min;
-    let h;
+    let h = 0;
     if (d === 0) h = 0;
     else if (max === r) h = (g - b) / d % 6;
     else if (max === g) h = (b - r) / d + 2;
@@ -964,7 +969,7 @@ Util.Color = class _Util_Color {
     let c = (1 - Math.abs(2 * l - 1)) * s;
     let hp = h / 60.0;
     let x = c * (1 - Math.abs((hp % 2) - 1));
-    let rgb1;
+    let rgb1 = [0, 0, 0];
     if (isNaN(h)) rgb1 = [0, 0, 0];
     else if (hp <= 1) rgb1 = [c, x, 0];
     else if (hp <= 2) rgb1 = [x, c, 0];
@@ -1062,7 +1067,7 @@ Util.Color = class _Util_Color {
       if (arg instanceof Util.Color) {
         [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
         this.scale = arg.scale;
-      } else if (typeof(arg) === "string" || arg instanceof String) {
+      } else if (typeof(arg) === "string") {
         let [r, g, b, a] = ColorParser.parse(arg);
         [this.r, this.g, this.b, this.a] = [r, g, b, a];
       } else {
@@ -1151,7 +1156,7 @@ Util.Color = class _Util_Color {
       if (c < 0.03928) {
         return c / 12.92;
       } else {
-        return Math.pow((c+0.055)/1.055, 2.4);
+        return Math.pow((c + 0.055) / 1.055, 2.4);
       }
     }
     return 0.2126 * c_to_cx(r) + 0.7152 * c_to_cx(g) + 0.0722 * c_to_cx(b);
@@ -1183,30 +1188,6 @@ Util.Color = class _Util_Color {
    */
 };
 
-/* Parse a CSS color.
- * Overloads
- *  Util.ParseCSSColor('css color spec')
- *  Util.ParseCSSColor([r, g, b])
- *  Util.ParseCSSColor([r, g, b, a])
- *  Util.ParseCSSColor(r, g, b[, a]) */
-Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
-  let r = 0, g = 0, b = 0, a = 0;
-  if (color.length === 1) { color = color[0]; }
-  if (typeof(color) === "string") {
-    [r, g, b, a] = ColorParser.parse(color);
-  } else if (typeof(color) === "object") {
-    if (color.length === 3 || color.length === 4) {
-      r = color[0];
-      g = color[1];
-      b = color[2];
-      if (color.length === 4) {
-        a = color[4];
-      }
-    }
-  }
-  return [r, g, b, a];
-};
-
 /* Calculate the Relative Luminance of a color.
  * Overloads:
  *  Util.RelativeLuminance('css color spec')
@@ -1214,13 +1195,13 @@ Util.ParseCSSColor = function _Util_ParseCSSColor(...color) {
  *  Util.RelativeLuminance([r, g, b, a])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
-  let color = Util.ParseCSSColor(args.length === 1 ? args[0] : args);
+  let color = ColorParser.parse(args.length === 1 ? args[0] : args);
   let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
   function c_to_cx(c) {
     if (c < 0.03928) {
       return c / 12.92;
     } else {
-      return Math.pow((c+0.055)/1.055, 2.4);
+      return Math.pow((c + 0.055) / 1.055, 2.4);
     }
   }
   let l_red = 0.2126 * c_to_cx(color_rgb[0]);
@@ -1461,7 +1442,10 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
   let i = 0, j = 0;
   while (i < s.length) {
     map.push(j);
-    let r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
+    let r = s[i];
+    if (Util.EscapeChars.hasOwnProperty(s[i])) {
+      r = Util.EscapeChars[s[i]];
+    }
     result = result + r;
     i += 1;
     j += r.length;
@@ -1474,7 +1458,7 @@ Util.Pad = function _Util_Pad(n, digits, padChr) {
   if (typeof(padChr) !== "string") {
     padChr = '0';
   }
-  return (new String(n)).padStart(digits, padChr);
+  return `${n}`.padStart(digits, padChr);
 };
 
 /* Convert a string to an array of character codes */
@@ -1488,13 +1472,13 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
 
 /* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
 Util.FormatDate = function _Util_FormatDate(date) {
+  let pad2 = (n) => Util.Pad(n, 2);
   let [y, m, d] = [date.getFullYear(), date.getMonth(), date.getDay()];
   let [h, mi, s] = [date.getHours(), date.getMinutes(), date.getSeconds()];
   let ms = date.getMilliseconds();
-  let p = [y, Util.Pad(m, 2), Util.Pad(d, 2),
-           Util.Pad(h, 2), Util.Pad(mi, 2), Util.Pad(s, 2),
-           Util.Pad(ms, 3)];
-  return `${p[0]}-${p[1]}-${p[2]} ${p[3]}:${p[4]}:${p[5]}.${p[6]}`;
+  let ymd = `${y}-${pad2(m)}-${pad2(d)}`;
+  let hms = `${pad2(h)}:${pad2(mi)}:${pad2(s)}.${Util.Pad(ms, 3)}`;
+  return `${ymd} ${hms}`;
 };
 
 /* Format an interval in seconds to "Xh Ym Zs" */
@@ -1505,10 +1489,14 @@ Util.FormatInterval = function _Util_FormatInterval(time) {
     parts.push('-');
     time *= -1;
   }
-  if (time % 60 !== 0) { parts.unshift(`${time % 60}s`); }
+  if (time % 60 !== 0) {
+    parts.unshift(`${time % 60}s`);
+  }
   time = Math.floor(time / 60);
   if (time > 0) {
-    if (time % 60 !== 0) { parts.unshift(`${time % 60}m`); }
+    if (time % 60 !== 0) {
+      parts.unshift(`${time % 60}m`);
+    }
     time = Math.floor(time / 60);
   }
   if (time > 0) {
@@ -1559,26 +1547,27 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   let result = "";
   for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
-    if (cn < 0x20)
+    if (cn < 0x20) {
       result = result.concat(Util.EscapeCharCode(cn));
-    else if (ch === '\\')
+    } else if (ch === '\\') {
       result = result.concat('\\\\');
-    else
+    } else {
       result = result.concat(ch);
+    }
   }
   return result;
 };
 
 /* Split a string by the tokens given; all tokens must be present.
- *   matchfunc: function to apply to the matched segments */
-Util.SplitByMatches = function _Util_SplitByMatches(str, matches, matchfunc=null) {
+ *   func: function to apply to the matched segments */
+Util.SplitByMatches = function _Util_SplitByMatches(str, matches, func=null) {
   let result = [];
   let pos = 0;
   for (let match of matches) {
     let mpos = str.indexOf(match, pos);
     result.push(str.substr(pos, mpos - pos));
-    if (matchfunc) {
-      result.push(matchfunc(match));
+    if (func) {
+      result.push(func(match));
     } else {
       result.push(match);
     }
@@ -1693,7 +1682,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
   let new_v = [];
   if (v === null) {
     new_v = [value];
-  } else if (!(v instanceof Array)) {
+  } else if (!Util.IsArray(v)) {
     new_v = [v, value];
   } else {
     new_v = v;
@@ -1820,11 +1809,7 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
 /* Return whether or not the position is inside the box */
 Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
-  if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
-    return true;
-  } else {
-    return false;
-  }
+  return x >= x0 && x <= x1 && y >= y0 && y <= y1;
 };
 
 /* Return whether or not the position is inside the given DOMRect */
@@ -1979,14 +1964,8 @@ Util.GetHTML = function _Util_GetHTML(node) {
 
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
-  if (offset.top < 0) offset.top = 0;
-  if (offset.left < 0) offset.left = 0;
-  if (offset.left + offset.width > window.innerWidth) {
-    offset.left = window.innerWidth - offset.width;
-  }
-  if (offset.top + offset.height > window.innerHeight) {
-    offset.top = window.innerHeight - offset.height;
-  }
+  offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
+  offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.top);
 };
 
 /* End DOM functions 0}}} */

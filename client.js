@@ -15,10 +15,7 @@
 /* TODO:
  *  Fix the following:
  *    Join specific room (JoinChannel only looks at channel.channel)
- *  Clip information
- *    https://api.twitch.tv/kraken/clips/<string>
  *  USERNOTICEs:
- *    submysterygift
  *    rewardgift
  *    giftpaidupgrade
  *      msg-param-promo-gift-total
@@ -241,10 +238,8 @@ class TwitchSubEvent extends TwitchEvent {
 
   /* Methods below apply to all sub kinds */
   get user() {
-    return this.first_flag(
-      'msg-param-login',
-      'display-name'
-    ) || this._parsed.user;
+    let name = this.first_flag('msg-param-login', 'display-name');
+    return name || this._parsed.user;
   }
 
   get plan() { return this.flags['msg-param-sub-plan-name']; }
@@ -339,8 +334,12 @@ function TwitchClient(opts) {
   /* Construct the Twitch API object */
   let pub_headers = {};
   let priv_headers = {};
-  if (this._has_clientid) { pub_headers["Client-Id"] = cfg_clientid; }
-  if (this._authed) { priv_headers["Authorization"] = oauth_header; }
+  if (this._has_clientid) {
+    pub_headers["Client-Id"] = cfg_clientid;
+  }
+  if (this._authed) {
+    priv_headers["Authorization"] = oauth_header;
+  }
   this._api = new Twitch.API(pub_headers, priv_headers);
 
   /* TwitchClient.Connect() */
@@ -360,7 +359,7 @@ function TwitchClient(opts) {
     this._endpoint = "wss://irc-ws.chat.twitch.tv";
     this._ws = new WebSocket(this._endpoint);
     this._ws.client = this;
-    this._ws.onopen = (function _ws_onopen(/*event*/) {
+    this._ws.onopen = (function _ws_onopen(event) {
       try {
         Util.LogOnly("ws open>", this.url);
         this.client._connected = false;
@@ -595,10 +594,10 @@ function _TwitchClient__getChannelCheers(cname, cid) {
   }
   this._api.GetCB(Twitch.URL.Cheers(cid), (function _cheers_cb(json) {
     for (let cdef of json.actions) {
+      let p = RegExp.escape(cdef.prefix);
       /* Simplify things later by adding the regexps here */
-      cdef.word_pattern = new RegExp('^(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)$', 'i');
-      cdef.line_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
-      cdef.split_pattern = new RegExp('(?:\\b[\\s]|^)(' + RegExp.escape(cdef.prefix) + '[1-9][0-9]*)(?:\\b|[\\s]|$)', 'ig');
+      cdef.word_pattern = new RegExp(`^(${p})([1-9][0-9]*)$`, 'i');
+      cdef.line_pattern = new RegExp(`(?:\\b[\\s]|^)(${p})([1-9][0-9]*)(?:\\b|[\\s]|$)`, 'ig');
       this._channel_cheers[cname][cdef.prefix] = cdef;
     }
   }).bind(this), {}, false);
@@ -656,6 +655,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_channel_emotes[cname] = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")),
                         (function _bttv_global_emotes_cb(json) {
+    let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
     let bttv = this._bttv_channel_emotes[cname];
     for (let emote of json.emotes) {
       bttv[emote.code] = {
@@ -663,8 +663,7 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
         'code': emote.code,
         'channel': emote.channel,
         'image-type': emote.imageType,
-        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id)
-                                        .replace('{{image}}', '1x'))
+        'url': Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
       };
     }
   }).bind(this), (function _bttve_onerror(resp) {
@@ -676,14 +675,14 @@ function _TwitchClient__getBTTVEmotes(cname, cid) {
   this._bttv_global_emotes = {};
   this._api.GetSimpleCB(Twitch.URL.BTTVAllEmotes(),
                         (function _bttv_all_emotes_cb(json) {
+    let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
     for (let emote of json.emotes) {
       this._bttv_global_emotes[emote.code] = {
         'id': emote.id,
         'code': emote.code,
         'channel': emote.channel,
         'image-type': emote.imageType,
-        'url': Util.URL(json.urlTemplate.replace('{{id}}', emote.id)
-                                        .replace('{{image}}', '1x'))
+        'url': Util.URL(url_base.replace('{{id}}', emote.id))
       };
     }
   }).bind(this), (function _bttve_onerror(resp) {
@@ -990,15 +989,7 @@ function _TwitchClient_LeaveChannel(channel) {
 TwitchClient.prototype.IsInChannel =
 function _TwitchClient_IsInChannel(channel) {
   let ch = this._ensureChannel(channel).channel;
-  if (this._is_open) {
-    if (this._channels.indexOf(ch) > -1) {
-      return true;
-    } else {
-      return false;
-    }
-  } else {
-    return false;
-  }
+  return this._is_open && this._channels.indexOf(ch) > -1;
 };
 
 /* Get the list of currently-joined channels */
@@ -1108,7 +1099,7 @@ function _TwitchClient_GetFFZEmotes(channel) {
 /* Obtain global BTTV emotes */
 TwitchClient.prototype.GetGlobalBTTVEmotes =
 function _TwitchClient_GetGlobalBTTVEmotes() {
-  return Util.JSONClone(this._bttv_global_emotes);
+  return this._bttv_global_emotes;
 };
 
 /* Obtain the BTTV emotes for the channel specified */
@@ -1116,7 +1107,7 @@ TwitchClient.prototype.GetBTTVEmotes =
 function _TwitchClient_GetBTTVEmotes(channel) {
   let ch = Twitch.FormatChannel(channel);
   if (this._bttv_channel_emotes[ch]) {
-    return Util.JSONClone(this._bttv_channel_emotes[ch]);
+    return this._bttv_channel_emotes[ch];
   } else {
     Util.Log("Channel", channel, "has no BTTV emotes stored");
     return {};
@@ -1363,11 +1354,6 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
     /* Fire twitch-message for every line received */
     Util.FireEvent(new TwitchEvent("MESSAGE", line, result));
 
-    /* Make sure the room is tracked */
-    if (result.channel && result.channel.channel) {
-      this._ensureRoom(result.channel);
-    }
-
     /* Don't handle messages with NULL commands */
     if (!result.cmd) {
       Util.Error('result.cmd is NULL for', result, line);
@@ -1415,7 +1401,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
         this._onPart(result.channel, result.user);
         break;
       case "RECONNECT":
-        /* Reconnect is responsibility of hooking code */
+        /* Reconnecting is the responsibility of the driving code */
         break;
       case "MODE":
         if (result.modeflag === "+o") {
@@ -1476,7 +1462,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           }
         }
         this._api.GetCB(Twitch.URL.Stream(result.flags['room-id']),
-                        (function _stream_cb(resp) {
+                        function _stream_cb(resp) {
           if (resp.streams && resp.streams.length > 0) {
             room.stream = resp.streams[0];
             room.streams = resp.streams;
@@ -1487,7 +1473,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
             room.online = false;
           }
           Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-        }).bind(this));
+        });
         break;
       case "USERNOTICE":
         if (result.sub_kind === "SUB") {
@@ -1532,9 +1518,8 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
     /* Obtain emotes the client is able to use */
     if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        this._api.GetCB(
-          Twitch.URL.EmoteSet(result.flags["emote-sets"].join(',')),
-        (function _emoteset_cb(json) {
+        let eset_str = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
+        this._api.GetCB(eset_str, (function _emoteset_cb(json) {
           for (let eset of Object.keys(json["emoticon_sets"])) {
             for (let edef of json["emoticon_sets"][eset]) {
               this._self_emotes[edef.id] = edef.code;

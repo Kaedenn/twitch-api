@@ -632,8 +632,9 @@ Number.parse = function _Number_parse(str) {
 Util.IsArray = function _Util_IsArray(value) {
   /* Values are considered "arrays" if value[Symbol.iterator] is a function
    * and that object is not a string */
-  if (typeof value === "string") return false;
-  if (value && typeof value[Symbol.iterator] === "function") {
+  if (typeof value === "string") {
+    return false;
+  } else if (value && typeof value[Symbol.iterator] === "function") {
     return true;
   } else {
     return false;
@@ -1043,6 +1044,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
         try {
           for (var _iterator20 = pieces[Symbol.iterator](), _step20; !(_iteratorNormalCompletion20 = (_step20 = _iterator20.next()).done); _iteratorNormalCompletion20 = true) {
             var _piece = _step20.value;
+
             _piece[0] = _piece[0].slice(1);
           }
         } catch (err) {
@@ -1821,21 +1823,23 @@ Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 /* Store instance to active color parser */
 Util._ColorParser = null;
 
-/* Create a class for parsing colors */
+/* Class for parsing colors */
 
 var ColorParser = function () {
   function ColorParser() {
     _classCallCheck(this, ColorParser);
 
+    this._cache = {};
+    /* Create the color parser div */
     this._e = document.createElement('div');
     this._e.setAttribute("style", "position: absolute; z-index: -100");
     this._e.setAttribute("id", "color-parser-div");
     this._e.setAttribute("width", "0px");
     this._e.setAttribute("height", "0px");
     document.body.appendChild(this._e);
+    /* Define parsing regexes */
     this._rgb_pat = /rgb\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
     this._rgba_pat = /rgba\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
-    this._cache = {};
   }
 
   _createClass(ColorParser, [{
@@ -1855,7 +1859,7 @@ var ColorParser = function () {
       if (m !== null) {
         rgbtuple = m.slice(1);
       } else {
-        /* Shouldn't ever happen */
+        /* Shouldn't ever happen unless getComputedStyle breaks */
         Util.Throw("Failed to parse computed color " + rgbstr);
       }
       var r = Number(rgbtuple[0]);r = Number.isNaN(r) ? 0 : r;
@@ -1905,7 +1909,7 @@ Util.Color = function () {
       var max = Math.max(r, g, b);
       var min = Math.min(r, g, b);
       var d = max - min;
-      var h = void 0;
+      var h = 0;
       if (d === 0) h = 0;else if (max === r) h = (g - b) / d % 6;else if (max === g) h = (b - r) / d + 2;else if (max === b) h = (r - g) / d + 4;
       var l = (min + max) / 2;
       var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
@@ -1920,7 +1924,7 @@ Util.Color = function () {
       var c = (1 - Math.abs(2 * l - 1)) * s;
       var hp = h / 60.0;
       var x = c * (1 - Math.abs(hp % 2 - 1));
-      var rgb1 = void 0;
+      var rgb1 = [0, 0, 0];
       if (isNaN(h)) rgb1 = [0, 0, 0];else if (hp <= 1) rgb1 = [c, x, 0];else if (hp <= 2) rgb1 = [x, c, 0];else if (hp <= 3) rgb1 = [0, c, x];else if (hp <= 4) rgb1 = [0, x, c];else if (hp <= 5) rgb1 = [x, 0, c];else if (hp <= 6) rgb1 = [c, 0, x];
       var m = l - c * 0.5;
       var r = Math.round(255 * (rgb1[0] + m));
@@ -2074,7 +2078,7 @@ Util.Color = function () {
         this.a = _ref9[3];
 
         this.scale = arg.scale;
-      } else if (typeof arg === "string" || arg instanceof String) {
+      } else if (typeof arg === "string") {
         var _ColorParser$parse = ColorParser.parse(arg),
             _ColorParser$parse2 = _slicedToArray(_ColorParser$parse, 4),
             r = _ColorParser$parse2[0],
@@ -2341,46 +2345,6 @@ Util.Color = function () {
   return _Util_Color;
 }();
 
-/* Parse a CSS color.
- * Overloads
- *  Util.ParseCSSColor('css color spec')
- *  Util.ParseCSSColor([r, g, b])
- *  Util.ParseCSSColor([r, g, b, a])
- *  Util.ParseCSSColor(r, g, b[, a]) */
-Util.ParseCSSColor = function _Util_ParseCSSColor() {
-  for (var _len29 = arguments.length, color = Array(_len29), _key29 = 0; _key29 < _len29; _key29++) {
-    color[_key29] = arguments[_key29];
-  }
-
-  var r = 0,
-      g = 0,
-      b = 0,
-      a = 0;
-  if (color.length === 1) {
-    color = color[0];
-  }
-  if (typeof color === "string") {
-    var _ColorParser$parse3 = ColorParser.parse(color);
-
-    var _ColorParser$parse4 = _slicedToArray(_ColorParser$parse3, 4);
-
-    r = _ColorParser$parse4[0];
-    g = _ColorParser$parse4[1];
-    b = _ColorParser$parse4[2];
-    a = _ColorParser$parse4[3];
-  } else if ((typeof color === "undefined" ? "undefined" : _typeof(color)) === "object") {
-    if (color.length === 3 || color.length === 4) {
-      r = color[0];
-      g = color[1];
-      b = color[2];
-      if (color.length === 4) {
-        a = color[4];
-      }
-    }
-  }
-  return [r, g, b, a];
-};
-
 /* Calculate the Relative Luminance of a color.
  * Overloads:
  *  Util.RelativeLuminance('css color spec')
@@ -2388,11 +2352,11 @@ Util.ParseCSSColor = function _Util_ParseCSSColor() {
  *  Util.RelativeLuminance([r, g, b, a])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance() {
-  for (var _len30 = arguments.length, args = Array(_len30), _key30 = 0; _key30 < _len30; _key30++) {
-    args[_key30] = arguments[_key30];
+  for (var _len29 = arguments.length, args = Array(_len29), _key29 = 0; _key29 < _len29; _key29++) {
+    args[_key29] = arguments[_key29];
   }
 
-  var color = Util.ParseCSSColor(args.length === 1 ? args[0] : args);
+  var color = ColorParser.parse(args.length === 1 ? args[0] : args);
   var color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
   function c_to_cx(c) {
     if (c < 0.03928) {
@@ -2419,8 +2383,8 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
  *  Util.GetMaxContrast(color, c1, c2, c3, ...)
  *  Util.GetMaxContrast(color, [c1, c2, c3, ...]) */
 Util.GetMaxContrast = function _Util_GetMaxContrast(c1) {
-  for (var _len31 = arguments.length, colors = Array(_len31 > 1 ? _len31 - 1 : 0), _key31 = 1; _key31 < _len31; _key31++) {
-    colors[_key31 - 1] = arguments[_key31];
+  for (var _len30 = arguments.length, colors = Array(_len30 > 1 ? _len30 - 1 : 0), _key30 = 1; _key30 < _len30; _key30++) {
+    colors[_key30 - 1] = arguments[_key30];
   }
 
   var best_color = null;
@@ -2757,7 +2721,10 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
       j = 0;
   while (i < s.length) {
     map.push(j);
-    var r = Util.EscapeChars.hasOwnProperty(s[i]) ? Util.EscapeChars[s[i]] : s[i];
+    var r = s[i];
+    if (Util.EscapeChars.hasOwnProperty(s[i])) {
+      r = Util.EscapeChars[s[i]];
+    }
     result = result + r;
     i += 1;
     j += r.length;
@@ -2770,7 +2737,7 @@ Util.Pad = function _Util_Pad(n, digits, padChr) {
   if (typeof padChr !== "string") {
     padChr = '0';
   }
-  return new String(n).padStart(digits, padChr);
+  return ("" + n).padStart(digits, padChr);
 };
 
 /* Convert a string to an array of character codes */
@@ -2784,6 +2751,9 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
 
 /* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
 Util.FormatDate = function _Util_FormatDate(date) {
+  var pad2 = function pad2(n) {
+    return Util.Pad(n, 2);
+  };
   var _ref13 = [date.getFullYear(), date.getMonth(), date.getDay()],
       y = _ref13[0],
       m = _ref13[1],
@@ -2794,8 +2764,9 @@ Util.FormatDate = function _Util_FormatDate(date) {
       s = _ref14[2];
 
   var ms = date.getMilliseconds();
-  var p = [y, Util.Pad(m, 2), Util.Pad(d, 2), Util.Pad(h, 2), Util.Pad(mi, 2), Util.Pad(s, 2), Util.Pad(ms, 3)];
-  return p[0] + "-" + p[1] + "-" + p[2] + " " + p[3] + ":" + p[4] + ":" + p[5] + "." + p[6];
+  var ymd = y + "-" + pad2(m) + "-" + pad2(d);
+  var hms = pad2(h) + ":" + pad2(mi) + ":" + pad2(s) + "." + Util.Pad(ms, 3);
+  return ymd + " " + hms;
 };
 
 /* Format an interval in seconds to "Xh Ym Zs" */
@@ -2901,7 +2872,13 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
       var cn = _ref16[0];
       var ch = _ref16[1];
 
-      if (cn < 0x20) result = result.concat(Util.EscapeCharCode(cn));else if (ch === '\\') result = result.concat('\\\\');else result = result.concat(ch);
+      if (cn < 0x20) {
+        result = result.concat(Util.EscapeCharCode(cn));
+      } else if (ch === '\\') {
+        result = result.concat('\\\\');
+      } else {
+        result = result.concat(ch);
+      }
     }
   } catch (err) {
     _didIteratorError32 = true;
@@ -2922,9 +2899,9 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 };
 
 /* Split a string by the tokens given; all tokens must be present.
- *   matchfunc: function to apply to the matched segments */
+ *   func: function to apply to the matched segments */
 Util.SplitByMatches = function _Util_SplitByMatches(str, matches) {
-  var matchfunc = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
+  var func = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
   var result = [];
   var pos = 0;
@@ -2938,8 +2915,8 @@ Util.SplitByMatches = function _Util_SplitByMatches(str, matches) {
 
       var mpos = str.indexOf(match, pos);
       result.push(str.substr(pos, mpos - pos));
-      if (matchfunc) {
-        result.push(matchfunc(match));
+      if (func) {
+        result.push(func(match));
       } else {
         result.push(match);
       }
@@ -3069,7 +3046,7 @@ Util.StorageAppend = function _Util_StorageAppend(key, value) {
   var new_v = [];
   if (v === null) {
     new_v = [value];
-  } else if (!(v instanceof Array)) {
+  } else if (!Util.IsArray(v)) {
     new_v = [v, value];
   } else {
     new_v = v;
@@ -3324,11 +3301,7 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
 /* Return whether or not the position is inside the box */
 Util.BoxContains = function _Util_BoxContains(x, y, x0, y0, x1, y1) {
-  if (x >= x0 && x <= x1 && y >= y0 && y <= y1) {
-    return true;
-  } else {
-    return false;
-  }
+  return x >= x0 && x <= x1 && y >= y0 && y <= y1;
 };
 
 /* Return whether or not the position is inside the given DOMRect */
@@ -3611,14 +3584,8 @@ Util.GetHTML = function _Util_GetHTML(node) {
 
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
-  if (offset.top < 0) offset.top = 0;
-  if (offset.left < 0) offset.left = 0;
-  if (offset.left + offset.width > window.innerWidth) {
-    offset.left = window.innerWidth - offset.width;
-  }
-  if (offset.top + offset.height > window.innerHeight) {
-    offset.top = window.innerHeight - offset.height;
-  }
+  offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
+  offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.top);
 };
 
 /* End DOM functions 0}}} */
