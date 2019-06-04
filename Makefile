@@ -1,5 +1,5 @@
 
-SRCS = $(wildcard *.js)
+SRCS = client.js utility.js
 DIST = dist
 DISTS = $(patsubst %,$(DIST)/%,$(SRCS))
 
