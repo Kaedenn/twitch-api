@@ -8,6 +8,7 @@
 
 /* FIXME:
  * Ensure longer-duration channel-specific sub badges show correctly
+ *   Use Twitch.URL.ChannelBadges over Twitch.URL.Badges
  * JoinChannel doesn't look at room or roomuid
  * Inconsistent code:
  *   _ensureChannel().channel vs {Parse,Format}Channel()
@@ -59,6 +60,7 @@ Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
+Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {};
@@ -76,6 +78,9 @@ Twitch.URL.Game = function (id) {
   return Twitch.Helix + "/games?id=" + id;
 };
 
+Twitch.URL.ChannelBadges = function (cid) {
+  return Twitch.Badges + "/channels/" + cid + "/display?language=en";
+};
 Twitch.URL.Badges = function (cid) {
   return Twitch.Kraken + "/chat/" + cid + "/badges";
 };
@@ -2065,7 +2070,7 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
     var t = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
     /* Undefined and null values are treated as empty strings */
-    var val = typeof v === "undefined" || v === null ? "" : v;
+    var val = v ? v : "";
     /* If specified, apply the function to the value */
     if (typeof t === "function") {
       val = t(val);

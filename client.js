@@ -8,6 +8,7 @@
 
 /* FIXME:
  * Ensure longer-duration channel-specific sub badges show correctly
+ *   Use Twitch.URL.ChannelBadges over Twitch.URL.Badges
  * JoinChannel doesn't look at room or roomuid
  * Inconsistent code:
  *   _ensureChannel().channel vs {Parse,Format}Channel()
@@ -54,6 +55,7 @@ Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
+Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {};
@@ -63,6 +65,7 @@ Twitch.URL.Stream = (cid) => `${Twitch.Kraken}/streams?channel=${cid}`;
 Twitch.URL.Clip = (slug) => `${Twitch.Helix}/clips?id=${slug}`;
 Twitch.URL.Game = (id) => `${Twitch.Helix}/games?id=${id}`;
 
+Twitch.URL.ChannelBadges = (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`;
 Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
 Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
@@ -1236,7 +1239,7 @@ function _TwitchClient__buildChatEvent(chobj, message) {
   let flag_arr = [];
   let addFlag = (n, v, t=null) => {
     /* Undefined and null values are treated as empty strings */
-    let val = (typeof(v) === "undefined" || v === null) ? "" : v;
+    let val = v ? v : "";
     /* If specified, apply the function to the value */
     if (typeof(t) === "function") {
       val = t(val);
