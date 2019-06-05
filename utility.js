@@ -1135,14 +1135,14 @@ Util.Color = class _Util_Color {
   /* Calculate the Relative Luminance */
   getRelativeLuminance() {
     let [r, g, b] = this.rgb_1;
-    function c_to_cx(c) {
+    function c2cx(c) {
       if (c < 0.03928) {
         return c / 12.92;
       } else {
         return Math.pow((c + 0.055) / 1.055, 2.4);
       }
     }
-    return 0.2126 * c_to_cx(r) + 0.7152 * c_to_cx(g) + 0.0722 * c_to_cx(b);
+    return 0.2126 * c2cx(r) + 0.7152 * c2cx(g) + 0.0722 * c2cx(b);
   }
 
   /* Calculate the contrast ratio against the given color */
@@ -1180,16 +1180,16 @@ Util.Color = class _Util_Color {
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
   let color = ColorParser.parse(args.length === 1 ? args[0] : args);
   let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
-  function c_to_cx(c) {
+  function c2cx(c) {
     if (c < 0.03928) {
       return c / 12.92;
     } else {
       return Math.pow((c + 0.055) / 1.055, 2.4);
     }
   }
-  let l_red = 0.2126 * c_to_cx(color_rgb[0]);
-  let l_green = 0.7152 * c_to_cx(color_rgb[1]);
-  let l_blue = 0.0722 * c_to_cx(color_rgb[2]);
+  let l_red = 0.2126 * c2cx(color_rgb[0]);
+  let l_green = 0.7152 * c2cx(color_rgb[1]);
+  let l_blue = 0.0722 * c2cx(color_rgb[2]);
   return l_red + l_green + l_blue;
 };
 
@@ -1714,17 +1714,17 @@ Util.StorageFormat = function _Util_StorageFormat(obj, opts=null) {
 /* Disables localStorage suppport entirely */
 Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
   Util._ws_enabled = false;
-  function wsapi_wrapper(f) {
+  function wsapiWrap(f) {
     Util.Warn("Function is disabled", f);
     return null;
   }
-  Util.GetWebStorageKey = wsapi_wrapper(Util.GetWebStorageKey);
-  Util.SetWebStorageKey = wsapi_wrapper(Util.SetWebStorageKey);
-  Util.GetWebStorage = wsapi_wrapper(Util.GetWebStorage);
-  Util.SetWebStorage = wsapi_wrapper(Util.SetWebStorage);
-  Util.StorageAppend = wsapi_wrapper(Util.StorageAppend);
-  Util.StorageParse = wsapi_wrapper(Util.StorageParse);
-  Util.StorageFormat = wsapi_wrapper(Util.StorageFormat);
+  Util.GetWebStorageKey = wsapiWrap(Util.GetWebStorageKey);
+  Util.SetWebStorageKey = wsapiWrap(Util.SetWebStorageKey);
+  Util.GetWebStorage = wsapiWrap(Util.GetWebStorage);
+  Util.SetWebStorage = wsapiWrap(Util.SetWebStorage);
+  Util.StorageAppend = wsapiWrap(Util.StorageAppend);
+  Util.StorageParse = wsapiWrap(Util.StorageParse);
+  Util.StorageFormat = wsapiWrap(Util.StorageFormat);
 };
 
 /* End configuration and localStorage functions 0}}} */
