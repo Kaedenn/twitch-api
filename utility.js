@@ -1065,6 +1065,15 @@ Util.Color = class _Util_Color {
     }
   }
 
+  /* Attribute: hex color code */
+  get hex() {
+    let r = this.r.toString(16).padStart(2, "0");
+    let g = this.g.toString(16).padStart(2, "0");
+    let b = this.b.toString(16).padStart(2, "0");
+    let a = this.a !== 255 ? `${this.a}`.toString(16).padStart(2, "0") : "";
+    return `#${r}${g}${b}${a}`;
+  }
+
   /* Attribute: [r, g, b] */
   get rgb() { return [this.r, this.g, this.b]; }
 
@@ -1150,6 +1159,11 @@ Util.Color = class _Util_Color {
     let l1 = this.getRelativeLuminance();
     let l2 = (new Util.Color(c2)).getRelativeLuminance();
     return (l1 + 0.05) / (l2 + 0.05);
+  }
+
+  /* Return a color with inverted RGB values */
+  inverted() {
+    return new Util.Color(255 - this.r, 255 - this.g, 255 - this.b);
   }
 
   /* Testcases:

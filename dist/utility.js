@@ -2092,7 +2092,7 @@ Util.Color = function () {
     }
   }
 
-  /* Attribute: [r, g, b] */
+  /* Attribute: hex color code */
 
 
   _createClass(_Util_Color, [{
@@ -2126,6 +2126,14 @@ Util.Color = function () {
       return (l1 + 0.05) / (l2 + 0.05);
     }
 
+    /* Return a color with inverted RGB values */
+
+  }, {
+    key: "inverted",
+    value: function inverted() {
+      return new Util.Color(255 - this.r, 255 - this.g, 255 - this.b);
+    }
+
     /* Testcases:
      *  Color classes:
      *    Pure: 000, F00, 0F0, 00F, FF0, F0F, 0FF, FFF
@@ -2143,6 +2151,18 @@ Util.Color = function () {
      *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
      *  "#ff0000" -> hsl -> "#ff0000"
      */
+
+  }, {
+    key: "hex",
+    get: function get() {
+      var r = this.r.toString(16).padStart(2, "0");
+      var g = this.g.toString(16).padStart(2, "0");
+      var b = this.b.toString(16).padStart(2, "0");
+      var a = this.a !== 255 ? ("" + this.a).toString(16).padStart(2, "0") : "";
+      return "#" + r + g + b + a;
+    }
+
+    /* Attribute: [r, g, b] */
 
   }, {
     key: "rgb",

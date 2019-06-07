@@ -433,6 +433,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.israid = (result.flags["msg-id"] === "raid");
     result.isritual = (result.flags["msg-id"] === "ritual");
     result.ismysterygift = (result.flags["msg-id"] === "submysterygift");
+    result.isrewardgift = (result.flags["msg-id"] === "rewardgift");
     if (result.israid) {
       result.viewer_count = result.flags["msg-param-viewerCount"];
       result.raider = result.flags["msg-param-displayName"];
@@ -574,6 +575,7 @@ class TwitchEvent {
       GIFTSUB: "GIFTSUB",
       ANONGIFTSUB: "ANONGIFTSUB",
       NEWUSER: "NEWUSER",
+      REWARDGIFT: "REWARDGIFT",
       MYSTERYGIFT: "MYSTERYGIFT",
       OTHERUSERNOTICE: "OTHERUSERNOTICE",
       RAID: "RAID",
@@ -1982,6 +1984,8 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           Util.FireEvent(new TwitchEvent("NEWUSER", line, result));
         } else if (result.ismysterygift) {
           Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
+        } else if (result.isrewardgift) {
+          Util.FireEvent(new TwitchSubEvent("REWARDGIFT", line, result));
         } else {
           Util.FireEvent(new TwitchEvent("OTHERUSERNOTICE", line, result));
           Util.Warn("Unknown USERNOTICE type", line, result);
