@@ -434,6 +434,10 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.isritual = (result.flags["msg-id"] === "ritual");
     result.ismysterygift = (result.flags["msg-id"] === "submysterygift");
     result.isrewardgift = (result.flags["msg-id"] === "rewardgift");
+    result.isgiftupgrade = (result.flags["msg-id"] === "giftpaidupgrade");
+    result.isprimeupgrade = (result.flags["msg-id"] === "primepaidupgrade");
+    result.isanongiftupgrade = (result.flags["msg-id"] === "anongiftpaidupgrade");
+    result.isupgrade = result.flags["msg-id"].endsWith("paidupgrade");
     if (result.israid) {
       result.viewer_count = result.flags["msg-param-viewerCount"];
       result.raider = result.flags["msg-param-displayName"];
@@ -549,42 +553,53 @@ class TwitchEvent {
     }
   }
 
+  static get COMMAND_LIST() {
+    return [
+      "CHAT",
+      "PING",
+      "ACK",
+      "TOPIC",
+      "NAMES",
+      "JOIN",
+      "PART",
+      "RECONNECT",
+      "MODE",
+      "PRIVMSG",
+      "WHISPER",
+      "USERSTATE",
+      "ROOMSTATE",
+      "STREAMINFO",
+      "USERNOTICE",
+      "GLOBALUSERSTATE",
+      "CLEARCHAT",
+      "HOSTTARGET",
+      "NOTICE",
+      "SUB",
+      "RESUB",
+      "GIFTSUB",
+      "ANONGIFTSUB",
+      "NEWUSER",
+      "REWARDGIFT",
+      "MYSTERYGIFT",
+      "GIFTUPGRADE",
+      "PRIMEUPGRADE",
+      "ANONGIFTUPGRADE",
+      "OTHERUSERNOTICE",
+      "RAID",
+      "OPEN",
+      "CLOSE",
+      "MESSAGE",
+      "ERROR",
+      "OTHER"
+    ];
+  }
+
   static get COMMANDS() {
-    return {
-      CHAT: "CHAT",
-      PING: "PING",
-      ACK: "ACK",
-      TOPIC: "TOPIC",
-      NAMES: "NAMES",
-      JOIN: "JOIN",
-      PART: "PART",
-      RECONNECT: "RECONNECT",
-      MODE: "MODE",
-      PRIVMSG: "PRIVMSG",
-      WHISPER: "WHISPER",
-      USERSTATE: "USERSTATE",
-      ROOMSTATE: "ROOMSTATE",
-      STREAMINFO: "STREAMINFO",
-      USERNOTICE: "USERNOTICE",
-      GLOBALUSERSTATE: "GLOBALUSERSTATE",
-      CLEARCHAT: "CLEARCHAT",
-      HOSTTARGET: "HOSTTARGET",
-      NOTICE: "NOTICE",
-      SUB: "SUB",
-      RESUB: "RESUB",
-      GIFTSUB: "GIFTSUB",
-      ANONGIFTSUB: "ANONGIFTSUB",
-      NEWUSER: "NEWUSER",
-      REWARDGIFT: "REWARDGIFT",
-      MYSTERYGIFT: "MYSTERYGIFT",
-      OTHERUSERNOTICE: "OTHERUSERNOTICE",
-      RAID: "RAID",
-      OPEN: "OPEN",
-      CLOSE: "CLOSE",
-      MESSAGE: "MESSAGE",
-      ERROR: "ERROR",
-      OTHER: "OTHER"
-    };
+    let result = {};
+    for (let cmd of TwitchEvent.COMMAND_LIST) {
+      result[cmd] = cmd;
+    }
+    return result;
   }
 
   get type() { return "twitch-" + this._cmd.toLowerCase(); }
@@ -1986,9 +2001,18 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
           Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
         } else if (result.isrewardgift) {
           Util.FireEvent(new TwitchSubEvent("REWARDGIFT", line, result));
+        } else if (result.isupgrade) {
+          let command = "OTHERUSERNOTICE";
+          if (result.isgiftupgrade) {
+            command = "GIFTUPGRADE";
+          } else if (result.isprimeupgrade) {
+            command = "PRIMEUPGRADE";
+          } else if (result.isanongiftupgrade) {
+            command = "ANONGIFTUPGRADE";
+          }
+          Util.FireEvent(new TwitchEvent(command, line, result));
         } else {
           Util.FireEvent(new TwitchEvent("OTHERUSERNOTICE", line, result));
-          Util.Warn("Unknown USERNOTICE type", line, result);
         }
         break;
       case "GLOBALUSERSTATE":
