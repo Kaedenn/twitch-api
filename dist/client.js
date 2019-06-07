@@ -17,18 +17,6 @@
 
 /* TODO:
  * Remove either Twitch.API or Util.API object
- * Fix the following:
- *   Join specific room (JoinChannel only looks at channel.channel)
- * USERNOTICEs:
- *   rewardgift
- *   giftpaidupgrade
- *     msg-param-promo-gift-total
- *     msg-param-promo-name
- *   anongiftpaidupgrade
- *     msg-param-promo-gift-total
- *     msg-param-promo-name
- *   unraid
- *   bitsbadgetier
  */
 
 /* Twitch utilities {{{0 */
