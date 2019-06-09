@@ -6,7 +6,6 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
- * Matrix multiplication function to simplify color math
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -35,7 +34,7 @@
  *    Inspired by https://ux.stackexchange.com/a/107319
  */
 
-/* General Utilities */
+/* General Utilities {{{0 */
 
 var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
@@ -51,6 +50,27 @@ Util.__wscfg = "kae-twapi-local-key";
 
 /* Everyone needs an ASCII table */
 Util.ASCII = "\0\x01\x02\x03\x04\x05\x06\x07\b\t\n" + "\x0B\f\r\x0E\x0F\x10\x11\x12\x13\x14" + "\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D" + "\x1E\x1F !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" + "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7F";
+
+/* WebSocket status codes */
+Util.WSStatus = {
+  1000: "NORMAL", /* Shutdown successful / regular socket shutdown */
+  1001: "GOING_AWAY", /* Browser tab closing */
+  1002: "PROTOCOL_ERROR", /* Endpoint received malformed frame */
+  1003: "UNSUPPORTED", /* Endpoint received an unsupported frame */
+  1005: "NO_STATUS", /* Didn't receive a close status */
+  1006: "ABNORMAL", /* Abnormal closing; no close frame received */
+  1007: "UNSUPPORTED_PAYLOAD", /* Inconsistent message (e.g. invalid UTF-8) */
+  1008: "POLICY_VIOLATION", /* Generic non-1003 non-1009 message */
+  1009: "TOO_LARGE", /* Frame was too large */
+  1010: "MANDATORY_EXTENSION", /* Server refused a required extension */
+  1011: "SERVER_ERROR", /* Internal server error */
+  1012: "SERVICE_RESTART", /* Server is restarting */
+  1013: "TRY_AGAIN_LATER", /* Server temporarily blocking connections */
+  1014: "BAD_GATEWAY", /* Gateway server received an invalid response */
+  1015: "TLS_HANDSHAKE_FAIL" /* TLS handshake failure */
+};
+
+/* End of general utilities 0}}} */
 
 /* Special browser identification {{{0 */
 
@@ -95,7 +115,7 @@ Util.Defined = function _Util_Defined(identifier) {
 /* Standard object additions and polyfills {{{0 */
 
 /* Drop-in polyfills */
-(function (G) {
+(function _polyfill(G) {
   function polyfillIf(obj, cond, attr, val) {
     if (cond) {
       obj[attr] = val;
@@ -127,7 +147,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Return true if any of the values satisfy the function given */
-  polyfill(Array.prototype, "any", function (func) {
+  polyfill(Array.prototype, "any", function _Array_any(func) {
     var f = func ? func : function (b) {
       return Boolean(b);
     };
@@ -162,7 +182,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Return true if all of the values satisfy the function given */
-  polyfill(Array.prototype, "all", function (func) {
+  polyfill(Array.prototype, "all", function _Array_all(func) {
     var f = func ? func : function (b) {
       return Boolean(b);
     };
@@ -197,7 +217,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Concatenate two or more arrays */
-  polyfill(Array.prototype, "concat", function () {
+  polyfill(Array.prototype, "concat", function _Array_concat() {
     var result = [];
     var _iteratorNormalCompletion3 = true;
     var _didIteratorError3 = false;
@@ -279,7 +299,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trimStart is present */
-  polyfill(String.prototype, "trimStart", function () {
+  polyfill(String.prototype, "trimStart", function _String_trimStart() {
     var i = 0;
     while (i < this.length && this[i] === ' ') {
       i += 1;
@@ -288,7 +308,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trimEnd is present */
-  polyfill(String.prototype, "trimEnd", function () {
+  polyfill(String.prototype, "trimEnd", function _String_trimEnd() {
     var i = this.length - 1;
     while (i > 0 && this[i] === ' ') {
       i -= 1;
@@ -297,12 +317,12 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trim is present */
-  polyfill(String.prototype, "trim", function () {
+  polyfill(String.prototype, "trim", function _String_trim() {
     return this.trimStart().trimEnd();
   });
 
   /* Escape regex characters in a string */
-  polyfill(RegExp, "escape", function (string) {
+  polyfill(RegExp, "escape", function _RegExp_escape(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   });
 })(window);
@@ -830,7 +850,7 @@ var _Util_API = function () {
     key: "_fetch_xhr",
     value: function _fetch_xhr(url, parms) {
       var stack = Util.GetStack();
-      return new Promise(function (resolve, reject) {
+      return new Promise(function _fetch_xhr_promise(resolve, reject) {
         var r = new XMLHttpRequest();
         r.onreadystatechange = function _XHR_onreadystatechange() {
           if (this.readyState === XMLHttpRequest.DONE) {
@@ -1327,7 +1347,7 @@ var LoggerUtility = function () {
       if (!this._assert_sev(sev)) {
         return false;
       }
-      var func = function func() {
+      var func = function _false() {
         return false;
       };
       if (filter_obj instanceof RegExp) {

@@ -6,7 +6,6 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
- * Matrix multiplication function to simplify color math
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -35,7 +34,7 @@
  *    Inspired by https://ux.stackexchange.com/a/107319
  */
 
-/* General Utilities */
+/* General Utilities {{{0 */
 let Util = {};
 Util.__wskey = null;
 Util.__wscfg = "kae-twapi-local-key";
@@ -46,6 +45,27 @@ Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d" +
              "\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
+
+/* WebSocket status codes */
+Util.WSStatus = {
+  1000: "NORMAL", /* Shutdown successful / regular socket shutdown */
+  1001: "GOING_AWAY", /* Browser tab closing */
+  1002: "PROTOCOL_ERROR", /* Endpoint received malformed frame */
+  1003: "UNSUPPORTED", /* Endpoint received an unsupported frame */
+  1005: "NO_STATUS", /* Didn't receive a close status */
+  1006: "ABNORMAL", /* Abnormal closing; no close frame received */
+  1007: "UNSUPPORTED_PAYLOAD", /* Inconsistent message (e.g. invalid UTF-8) */
+  1008: "POLICY_VIOLATION", /* Generic non-1003 non-1009 message */
+  1009: "TOO_LARGE", /* Frame was too large */
+  1010: "MANDATORY_EXTENSION", /* Server refused a required extension */
+  1011: "SERVER_ERROR", /* Internal server error */
+  1012: "SERVICE_RESTART", /* Server is restarting */
+  1013: "TRY_AGAIN_LATER", /* Server temporarily blocking connections */
+  1014: "BAD_GATEWAY", /* Gateway server received an invalid response */
+  1015: "TLS_HANDSHAKE_FAIL" /* TLS handshake failure */
+};
+
+/* End of general utilities 0}}} */
 
 /* Special browser identification {{{0 */
 
@@ -80,7 +100,7 @@ Util.Defined = function _Util_Defined(identifier) {
 /* Standard object additions and polyfills {{{0 */
 
 /* Drop-in polyfills */
-(function(G) {
+(function _polyfill(G) {
   function polyfillIf(obj, cond, attr, val) {
     if (cond) {
       obj[attr] = val;
@@ -110,7 +130,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Return true if any of the values satisfy the function given */
-  polyfill(Array.prototype, "any", function(func) {
+  polyfill(Array.prototype, "any", function _Array_any(func) {
     let f = func ? func : (b) => Boolean(b);
     for (let e of this) {
       if (f(e)) {
@@ -121,7 +141,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Return true if all of the values satisfy the function given */
-  polyfill(Array.prototype, "all", function(func) {
+  polyfill(Array.prototype, "all", function _Array_all(func) {
     let f = func ? func : (b) => Boolean(b);
     for (let e of this) {
       if (!f(e)) {
@@ -132,7 +152,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Concatenate two or more arrays */
-  polyfill(Array.prototype, "concat", function(...args) {
+  polyfill(Array.prototype, "concat", function _Array_concat(...args) {
     let result = [];
     for (let i of this) {
       result.push(i);
@@ -146,7 +166,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trimStart is present */
-  polyfill(String.prototype, "trimStart", function() {
+  polyfill(String.prototype, "trimStart", function _String_trimStart() {
     let i = 0;
     while (i < this.length && this[i] === ' ') {
       i += 1;
@@ -155,7 +175,7 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trimEnd is present */
-  polyfill(String.prototype, "trimEnd", function() {
+  polyfill(String.prototype, "trimEnd", function _String_trimEnd() {
     let i = this.length-1;
     while (i > 0 && this[i] === ' ') {
       i -= 1;
@@ -164,12 +184,12 @@ Util.Defined = function _Util_Defined(identifier) {
   });
 
   /* Ensure String.trim is present */
-  polyfill(String.prototype, "trim", function() {
+  polyfill(String.prototype, "trim", function _String_trim() {
     return this.trimStart().trimEnd();
   });
 
   /* Escape regex characters in a string */
-  polyfill(RegExp, "escape", function(string) {
+  polyfill(RegExp, "escape", function _RegExp_escape(string) {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   });
 
@@ -405,7 +425,7 @@ class _Util_API {
   /* Fetch a resource using XMLHttpRequest */
   _fetch_xhr(url, parms) {
     let stack = Util.GetStack();
-    return new Promise((function (resolve, reject) {
+    return new Promise((function _fetch_xhr_promise(resolve, reject) {
       let r = new XMLHttpRequest();
       r.onreadystatechange = function _XHR_onreadystatechange() {
         if (this.readyState === XMLHttpRequest.DONE) {
@@ -708,7 +728,7 @@ class LoggerUtility {
    *     Filter if log_args.toString().indexOf(string) > -1 */
   add_filter(filter_obj, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
-    let func = function() { return false; };
+    let func = function _false() { return false; };
     if (filter_obj instanceof RegExp) {
       func = (args) => `${args}`.match(filter_obj);
     } else if (typeof(filter_obj) === "string") {
