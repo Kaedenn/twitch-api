@@ -7,16 +7,14 @@
  */
 
 /* FIXME:
- * Ensure longer-duration channel-specific sub badges show correctly
- *   Use Twitch.URL.ChannelBadges over Twitch.URL.Badges
+ * Remove either Twitch.API or Util.API
+ * Change Twitch.API or Util.API to use fetch()
+ * Remove Twitch.URL.Badges entirely
  * JoinChannel doesn't look at room or roomuid
  * Inconsistent code:
  *   _ensureChannel().channel vs {Parse,Format}Channel()
+ *   Remove _ensureChannel() altogether?
  *   Use FormatChannel() value instead of ParseChannel().channel?
- */
-
-/* TODO:
- * Remove either Twitch.API or Util.API object
  */
 
 /* Event classes {{{0 */
@@ -573,14 +571,26 @@ function _TwitchClient__getRooms(cname, cid) {
 /* Private: Load in the channel badges for a given channel name and ID */
 TwitchClient.prototype._getChannelBadges =
 function _TwitchClient__getChannelBadges(cname, cid) {
-  this._channel_badges[cname] = {};
-  if (!this._has_clientid) {
-    Util.Warn("Unable to get badges; no clientid");
-    return;
-  }
-  this._api.GetCB(Twitch.URL.Badges(cid), (function _badges_cb(json) {
-    for (let badge_name of Object.keys(json)) {
-      this._channel_badges[cname][badge_name] = json[badge_name];
+  let channel = this._ensureChannel(cname);
+  let c = channel.channel;
+  this._channel_badges[c] = {};
+  this._api.GetCB(Twitch.URL.ChannelBadges(cid), (function _badges_cb(json) {
+    /* badge_sets
+     *  subscriber
+     *   versions
+     *    <number of months>
+     *     image_url_1x: url
+     *     image_url_2x: url
+     *     image_url_4x: url
+     *     description: string
+     *     title: string
+     */
+    for (let [badge_name, bdef] of Object.entries(json.badge_sets)) {
+      let badge = {};
+      for (let [months, urls] of Object.entries(bdef.versions)) {
+        badge[months] = urls;
+      }
+      this._channel_badges[c][badge_name] = badge;
     }
   }).bind(this), {}, false);
 };
@@ -1243,11 +1253,12 @@ function _TwitchClient_IsGlobalBadge(badge_name, badge_version=null) {
 
 /* Return true if the badge specified exists as a channel badge */
 TwitchClient.prototype.IsChannelBadge =
-function _TwitchClient_IsChannelBadge(channel, badge_name) {
-  channel = this._ensureChannel(channel);
-  if (channel.channel in this._channel_badges) {
-    if (badge_name in this._channel_badges[channel.channel]) {
-      if (this._channel_badges[channel.channel][badge_name]) {
+function _TwitchClient_IsChannelBadge(channel, badge_name, badge_num=null) {
+  let c = this._ensureChannel(channel).channel;
+  if (c in this._channel_badges) {
+    if (badge_name in this._channel_badges[c]) {
+      let badge = this._channel_badges[c][badge_name];
+      if (badge && (badge_num === null || badge[badge_num])) {
         return true;
       }
     }
@@ -1278,14 +1289,25 @@ function _TwitchClient_GetGlobalBadge(badge_name, badge_version=null) {
 };
 
 /* Returns Object {
- *   alpha: "https://static-cdn.jtvnw.net/chat-badges/<badge>.png",
- *   image: "https://static-cdn.jtvnw.net/chat-badges/<badge>.png",
- *   svg: "https://static-cdn.jtvnw.net/chat-badges/<badge>.svg"
- * } */
+ *   image_url_1x: url,
+ *   image_url_2x: url,
+ *   image_url_4x: url
+ * }
+ * Returns the first badge if badge_num is null
+ */
 TwitchClient.prototype.GetChannelBadge =
-function _TwitchClient_GetChannelBadge(channel, badge_name) {
+function _TwitchClient_GetChannelBadge(channel, badge_name, badge_num=null) {
   channel = this._ensureChannel(channel);
-  return this._channel_badges[channel.channel][badge_name];
+  if (this.IsChannelBadge(channel, badge_name, badge_num)) {
+    let b = this._channel_badges[channel.channel][badge_name];
+    let idxs = Object.keys(b).sort();
+    if (badge_num !== null) {
+      return b[badge_num];
+    } else if (idxs.length > 0) {
+      return b[idxs[0]];
+    }
+  }
+  return null;
 };
 
 /* Obtain all of the global badges */
