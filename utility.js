@@ -206,15 +206,19 @@ Array.prototype.extend = function _Array_extend(...args) {
 
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
-  if (!(cmp instanceof Function)) { cmp = ((x) => x); }
+  let key = (x) => x;
+  if (cmp instanceof Function || typeof(cmp) === "function") {
+    key = cmp;
+  }
   if (this.length === 0) { return; }
   if (this.length === 1) { return this[0]; }
-  let max_value = cmp(this[0]);
-  let max_elem = this[0];
+  let max_value = null;
+  let max_elem = null;
   for (let e of this) {
-    if (cmp(e) > max_value) {
+    let val = key(e);
+    if (max_value === null || val > max_value) {
       max_elem = e;
-      max_value = cmp(e);
+      max_value = val;
     }
   }
   return max_elem;
@@ -222,15 +226,19 @@ Array.prototype.max = function _Array_max(cmp) {
 
 /* Obtain the minimal element from an array */
 Array.prototype.min = function _Array_min(cmp) {
-  if (!(cmp instanceof Function)) { cmp = ((x) => x); }
+  let key = (x) => x;
+  if (cmp instanceof Function || typeof(cmp) === "function") {
+    key = cmp;
+  }
   if (this.length === 0) { return; }
   if (this.length === 1) { return this[0]; }
-  let min_value = cmp(this[0]);
-  let min_elem = this[0];
+  let min_value = null;
+  let min_elem = null;
   for (let e of this) {
-    if (cmp(e) < min_value) {
+    let val = key(e);
+    if (min_value === null || val < min_value) {
       min_elem = e;
-      min_value = cmp(e);
+      min_value = val;
     }
   }
   return min_elem;
@@ -455,11 +463,11 @@ class _Util_API {
   }
 
   fetchCB(url, parms, onSuccess, onError=null) {
-    onError = onError || Util.Error;
+    let errorFunc = onError || Util.Error;
     let self = this;
     this.fetchAsync(url, parms)
       .then(function _fetchCB_then(json) { onSuccess(json, self); })
-      .catch(function _fetchCB_catch(...args) { onError(args, self); });
+      .catch(function _fetchCB_catch(...args) { errorFunc(args, self); });
   }
 }
 Util.API = _Util_API;
@@ -953,15 +961,15 @@ class ColorParser {
 Util.Color = class _Util_Color {
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
-    r /= 255; g /= 255; b /= 255;
-    let max = Math.max(r, g, b);
-    let min = Math.min(r, g, b);
+    let [r0, g0, b0] = [r / 255, g / 255, b / 255];
+    let max = Math.max(r0, g0, b0);
+    let min = Math.min(r0, g0, b0);
     let d = max - min;
     let h = 0;
     if (d === 0) h = 0;
-    else if (max === r) h = (g - b) / d % 6;
-    else if (max === g) h = (b - r) / d + 2;
-    else if (max === b) h = (r - g) / d + 4;
+    else if (max === r0) h = (g0 - b0) / d % 6;
+    else if (max === g0) h = (b0 - r0) / d + 2;
+    else if (max === b0) h = (r0 - g0) / d + 4;
     let l = (min + max) / 2;
     let s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
     return [h * 60, s, l];
@@ -1055,11 +1063,12 @@ Util.Color = class _Util_Color {
    *  Color(array)
    *  Color(string)
    */
-  constructor(...args) {
+  constructor(...argList) {
     this.r = 0;
     this.g = 0;
     this.b = 0;
     this.a = 255;
+    let args = argList;
     /* Handle Color([...]) -> Color(...) */
     if (args.length === 1 && args[0] instanceof Array) {
       args = args[0];
@@ -1241,10 +1250,11 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
 Util.GetMaxContrast = function _Util_GetMaxContrast(c1, ...colors) {
   let best_color = null;
   let best_contrast = null;
+  let clist = colors;
   if (colors.length === 1 && Util.IsArray(colors[0])) {
-    colors = colors[0];
+    clist = colors[0];
   }
-  for (let c of colors) {
+  for (let c of clist) {
     let contrast = Util.ContrastRatio(c1, c);
     if (best_color === null) {
       best_color = c;
@@ -1476,10 +1486,7 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
 };
 
 /* Number formatting */
-Util.Pad = function _Util_Pad(n, digits, padChr) {
-  if (typeof(padChr) !== "string") {
-    padChr = '0';
-  }
+Util.Pad = function _Util_Pad(n, digits, padChr="0") {
   return `${n}`.padStart(digits, padChr);
 };
 
@@ -1504,9 +1511,9 @@ Util.FormatDate = function _Util_FormatDate(date) {
 };
 
 /* Format an interval in seconds to "Xh Ym Zs" */
-Util.FormatInterval = function _Util_FormatInterval(time) {
+Util.FormatInterval = function _Util_FormatInterval(seconds) {
   let parts = [];
-  time = Math.round(time);
+  let time = Math.round(seconds);
   if (time < 0) {
     parts.push('-');
     time *= -1;
@@ -1720,14 +1727,14 @@ Util.StorageParse = function _Util_StorageParse(s, opts=null) {
   if (Util.IsArray(opts)) {
     for (let o of opts) {
       if (o === "b64") str = window.atob(str);
-      if (o === "xor") s = s.xor(127);
-      if (o === "bs") s = s.transform((i) => (i&15)*16+(i&240)/16);
-      if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
-      if (typeof(o) === "function") s = o(s);
+      if (o === "xor") str = str.xor(127);
+      if (o === "bs") str = str.transform((i) => (i&15)*16+(i&240)/16);
+      if (o.match(/^x[1-9][0-9]*/)) str = str.xor(Number(o.substr(1)));
+      if (typeof(o) === "function") str = o(str);
       if (o === "nojson") use_json = false;
     }
   }
-  return use_json ? JSON.parse(s) : s;
+  return use_json ? JSON.parse(str) : str;
 };
 
 /* Format an object for storing into localStorage */
@@ -1776,7 +1783,7 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
  *  `key=1.0` gives {key: 1.0} for any floating-point value
  *  `key=null` gives {key: null}
  */
-Util.ParseQueryString = function _Util_ParseQueryString(query=null) {
+Util.ParseQueryString = function _Util_ParseQueryString(queryString=null) {
   let obj = {};
   let split = (part) => {
     if (part.indexOf('=') !== -1) {
@@ -1788,10 +1795,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(query=null) {
       return [part, "true"];
     }
   };
-  if (!query) {
-    query = window.location.search;
-  }
-  query = query.replace(/^\?/, "");
+  let query = (queryString || window.location.search).replace(/^\?/, "");
   for (let part of query.split('&')) {
     let [k, v] = split(part);
     if (k === "base64") {

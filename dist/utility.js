@@ -383,10 +383,11 @@ Array.prototype.extend = function _Array_extend() {
 
 /* Obtain the maximal element from an array */
 Array.prototype.max = function _Array_max(cmp) {
-  if (!(cmp instanceof Function)) {
-    cmp = function cmp(x) {
-      return x;
-    };
+  var key = function key(x) {
+    return x;
+  };
+  if (cmp instanceof Function || typeof cmp === "function") {
+    key = cmp;
   }
   if (this.length === 0) {
     return;
@@ -394,8 +395,8 @@ Array.prototype.max = function _Array_max(cmp) {
   if (this.length === 1) {
     return this[0];
   }
-  var max_value = cmp(this[0]);
-  var max_elem = this[0];
+  var max_value = null;
+  var max_elem = null;
   var _iteratorNormalCompletion8 = true;
   var _didIteratorError8 = false;
   var _iteratorError8 = undefined;
@@ -404,9 +405,10 @@ Array.prototype.max = function _Array_max(cmp) {
     for (var _iterator8 = this[Symbol.iterator](), _step8; !(_iteratorNormalCompletion8 = (_step8 = _iterator8.next()).done); _iteratorNormalCompletion8 = true) {
       var e = _step8.value;
 
-      if (cmp(e) > max_value) {
+      var val = key(e);
+      if (max_value === null || val > max_value) {
         max_elem = e;
-        max_value = cmp(e);
+        max_value = val;
       }
     }
   } catch (err) {
@@ -429,10 +431,11 @@ Array.prototype.max = function _Array_max(cmp) {
 
 /* Obtain the minimal element from an array */
 Array.prototype.min = function _Array_min(cmp) {
-  if (!(cmp instanceof Function)) {
-    cmp = function cmp(x) {
-      return x;
-    };
+  var key = function key(x) {
+    return x;
+  };
+  if (cmp instanceof Function || typeof cmp === "function") {
+    key = cmp;
   }
   if (this.length === 0) {
     return;
@@ -440,8 +443,8 @@ Array.prototype.min = function _Array_min(cmp) {
   if (this.length === 1) {
     return this[0];
   }
-  var min_value = cmp(this[0]);
-  var min_elem = this[0];
+  var min_value = null;
+  var min_elem = null;
   var _iteratorNormalCompletion9 = true;
   var _didIteratorError9 = false;
   var _iteratorError9 = undefined;
@@ -450,9 +453,10 @@ Array.prototype.min = function _Array_min(cmp) {
     for (var _iterator9 = this[Symbol.iterator](), _step9; !(_iteratorNormalCompletion9 = (_step9 = _iterator9.next()).done); _iteratorNormalCompletion9 = true) {
       var e = _step9.value;
 
-      if (cmp(e) < min_value) {
+      var val = key(e);
+      if (min_value === null || val < min_value) {
         min_elem = e;
-        min_value = cmp(e);
+        min_value = val;
       }
     }
   } catch (err) {
@@ -915,7 +919,7 @@ var _Util_API = function () {
     value: function fetchCB(url, parms, onSuccess) {
       var onError = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
-      onError = onError || Util.Error;
+      var errorFunc = onError || Util.Error;
       var self = this;
       this.fetchAsync(url, parms).then(function _fetchCB_then(json) {
         onSuccess(json, self);
@@ -924,7 +928,7 @@ var _Util_API = function () {
           args[_key4] = arguments[_key4];
         }
 
-        onError(args, self);
+        errorFunc(args, self);
       });
     }
   }], [{
@@ -1907,12 +1911,15 @@ Util.Color = function () {
 
     /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
     value: function RGBToHSL(r, g, b) {
-      r /= 255;g /= 255;b /= 255;
-      var max = Math.max(r, g, b);
-      var min = Math.min(r, g, b);
+      var r0 = r / 255,
+          g0 = g / 255,
+          b0 = b / 255;
+
+      var max = Math.max(r0, g0, b0);
+      var min = Math.min(r0, g0, b0);
       var d = max - min;
       var h = 0;
-      if (d === 0) h = 0;else if (max === r) h = (g - b) / d % 6;else if (max === g) h = (b - r) / d + 2;else if (max === b) h = (r - g) / d + 4;
+      if (d === 0) h = 0;else if (max === r0) h = (g0 - b0) / d % 6;else if (max === g0) h = (b0 - r0) / d + 2;else if (max === b0) h = (r0 - g0) / d + 4;
       var l = (min + max) / 2;
       var s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
       return [h * 60, s, l];
@@ -2055,16 +2062,18 @@ Util.Color = function () {
   }]);
 
   function _Util_Color() {
-    for (var _len28 = arguments.length, args = Array(_len28), _key28 = 0; _key28 < _len28; _key28++) {
-      args[_key28] = arguments[_key28];
-    }
-
     _classCallCheck(this, _Util_Color);
 
     this.r = 0;
     this.g = 0;
     this.b = 0;
     this.a = 255;
+
+    for (var _len28 = arguments.length, argList = Array(_len28), _key28 = 0; _key28 < _len28; _key28++) {
+      argList[_key28] = arguments[_key28];
+    }
+
+    var args = argList;
     /* Handle Color([...]) -> Color(...) */
     if (args.length === 1 && args[0] instanceof Array) {
       args = args[0];
@@ -2405,21 +2414,23 @@ Util.ContrastRatio = function _Util_ContrastRatio(c1, c2) {
  *  Util.GetMaxContrast(color, c1, c2, c3, ...)
  *  Util.GetMaxContrast(color, [c1, c2, c3, ...]) */
 Util.GetMaxContrast = function _Util_GetMaxContrast(c1) {
+  var best_color = null;
+  var best_contrast = null;
+
   for (var _len30 = arguments.length, colors = Array(_len30 > 1 ? _len30 - 1 : 0), _key30 = 1; _key30 < _len30; _key30++) {
     colors[_key30 - 1] = arguments[_key30];
   }
 
-  var best_color = null;
-  var best_contrast = null;
+  var clist = colors;
   if (colors.length === 1 && Util.IsArray(colors[0])) {
-    colors = colors[0];
+    clist = colors[0];
   }
   var _iteratorNormalCompletion28 = true;
   var _didIteratorError28 = false;
   var _iteratorError28 = undefined;
 
   try {
-    for (var _iterator28 = colors[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
+    for (var _iterator28 = clist[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
       var c = _step28.value;
 
       var contrast = Util.ContrastRatio(c1, c);
@@ -2770,10 +2781,9 @@ Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
 };
 
 /* Number formatting */
-Util.Pad = function _Util_Pad(n, digits, padChr) {
-  if (typeof padChr !== "string") {
-    padChr = '0';
-  }
+Util.Pad = function _Util_Pad(n, digits) {
+  var padChr = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "0";
+
   return ("" + n).padStart(digits, padChr);
 };
 
@@ -2807,9 +2817,9 @@ Util.FormatDate = function _Util_FormatDate(date) {
 };
 
 /* Format an interval in seconds to "Xh Ym Zs" */
-Util.FormatInterval = function _Util_FormatInterval(time) {
+Util.FormatInterval = function _Util_FormatInterval(seconds) {
   var parts = [];
-  time = Math.round(time);
+  var time = Math.round(seconds);
   if (time < 0) {
     parts.push('-');
     time *= -1;
@@ -3108,12 +3118,12 @@ Util.StorageParse = function _Util_StorageParse(s) {
         var o = _step34.value;
 
         if (o === "b64") str = window.atob(str);
-        if (o === "xor") s = s.xor(127);
-        if (o === "bs") s = s.transform(function (i) {
+        if (o === "xor") str = str.xor(127);
+        if (o === "bs") str = str.transform(function (i) {
           return (i & 15) * 16 + (i & 240) / 16;
         });
-        if (o.match(/^x[1-9][0-9]*/)) s = s.xor(Number(o.substr(1)));
-        if (typeof o === "function") s = o(s);
+        if (o.match(/^x[1-9][0-9]*/)) str = str.xor(Number(o.substr(1)));
+        if (typeof o === "function") str = o(str);
         if (o === "nojson") use_json = false;
       }
     } catch (err) {
@@ -3131,7 +3141,7 @@ Util.StorageParse = function _Util_StorageParse(s) {
       }
     }
   }
-  return use_json ? JSON.parse(s) : s;
+  return use_json ? JSON.parse(str) : str;
 };
 
 /* Format an object for storing into localStorage */
@@ -3206,7 +3216,7 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
  *  `key=null` gives {key: null}
  */
 Util.ParseQueryString = function _Util_ParseQueryString() {
-  var query = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+  var queryString = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
   var obj = {};
   var split = function split(part) {
@@ -3216,10 +3226,7 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
       return [part, "true"];
     }
   };
-  if (!query) {
-    query = window.location.search;
-  }
-  query = query.replace(/^\?/, "");
+  var query = (queryString || window.location.search).replace(/^\?/, "");
   var _iteratorNormalCompletion36 = true;
   var _didIteratorError36 = false;
   var _iteratorError36 = undefined;
