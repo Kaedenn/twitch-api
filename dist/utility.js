@@ -3701,4 +3701,85 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
   return true;
 };
 
+/* Return the (first level) differences between two objects */
+Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
+  var all_keys = Object.keys(o1).concat(Object.keys(o2));
+  var results = {};
+  var _iteratorNormalCompletion46 = true;
+  var _didIteratorError46 = false;
+  var _iteratorError46 = undefined;
+
+  try {
+    for (var _iterator46 = all_keys[Symbol.iterator](), _step46; !(_iteratorNormalCompletion46 = (_step46 = _iterator46.next()).done); _iteratorNormalCompletion46 = true) {
+      var key = _step46.value;
+
+      var o1_has = Util.ObjectHas(o1, key);
+      var o2_has = Util.ObjectHas(o2, key);
+      if (o1_has && o2_has) {
+        if (_typeof(o1[key]) !== _typeof(o2[key])) {
+          results[key] = ["!type", o1[key], o2[key]];
+        } else if (_typeof(o1[key]) === "object") {
+          var o1_val = JSON.stringify(Object.entries(o1[key]).sort());
+          var o2_val = JSON.stringify(Object.entries(o2[key]).sort());
+          if (o1_val !== o2_val) {
+            results[key] = ["1", o1[key], o2[key]];
+          }
+        } else if (o1[key] !== o2[key]) {
+          results[key] = ["!", o1[key], o2[key]];
+        }
+      } else if (o1_has && !o2_has) {
+        results[key] = ["<", o1[key], null];
+      } else if (!o1_has && o2_has) {
+        results[key] = [">", null, o2[key]];
+      }
+    }
+  } catch (err) {
+    _didIteratorError46 = true;
+    _iteratorError46 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion46 && _iterator46.return) {
+        _iterator46.return();
+      }
+    } finally {
+      if (_didIteratorError46) {
+        throw _iteratorError46;
+      }
+    }
+  }
+
+  return results;
+};
+
+/* Convert the object returned by getComputedStyle to an object */
+Util.StyleToObject = function _Util_StyleToObject(style) {
+  var result = {};
+  var _iteratorNormalCompletion47 = true;
+  var _didIteratorError47 = false;
+  var _iteratorError47 = undefined;
+
+  try {
+    for (var _iterator47 = Object.values(style)[Symbol.iterator](), _step47; !(_iteratorNormalCompletion47 = (_step47 = _iterator47.next()).done); _iteratorNormalCompletion47 = true) {
+      var key = _step47.value;
+
+      result[key] = style[key];
+    }
+  } catch (err) {
+    _didIteratorError47 = true;
+    _iteratorError47 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion47 && _iterator47.return) {
+        _iterator47.return();
+      }
+    } finally {
+      if (_didIteratorError47) {
+        throw _iteratorError47;
+      }
+    }
+  }
+
+  return result;
+};
+
 /* End miscellaneous functions 0}}} */

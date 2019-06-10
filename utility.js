@@ -2039,5 +2039,42 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
   return true;
 };
 
+/* Return the (first level) differences between two objects */
+Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
+  let all_keys = Object.keys(o1).concat(Object.keys(o2));
+  let results = {};
+  for (let key of all_keys) {
+    let o1_has = Util.ObjectHas(o1, key);
+    let o2_has = Util.ObjectHas(o2, key);
+    if (o1_has && o2_has) {
+      if (typeof(o1[key]) !== typeof(o2[key])) {
+        results[key] = ["!type", o1[key], o2[key]];
+      } else if (typeof(o1[key]) === "object") {
+        let o1_val = JSON.stringify(Object.entries(o1[key]).sort());
+        let o2_val = JSON.stringify(Object.entries(o2[key]).sort());
+        if (o1_val !== o2_val) {
+          results[key] = ["1", o1[key], o2[key]];
+        }
+      } else if (o1[key] !== o2[key]) {
+        results[key] = ["!", o1[key], o2[key]];
+      }
+    } else if (o1_has && !o2_has) {
+      results[key] = ["<", o1[key], null];
+    } else if (!o1_has && o2_has) {
+      results[key] = [">", null, o2[key]];
+    }
+  }
+  return results;
+};
+
+/* Convert the object returned by getComputedStyle to an object */
+Util.StyleToObject = function _Util_StyleToObject(style) {
+  let result = {};
+  for (let key of Object.values(style)) {
+    result[key] = style[key];
+  }
+  return result;
+};
+
 /* End miscellaneous functions 0}}} */
 
