@@ -479,50 +479,50 @@ function _TwitchClient__ensureChannel(channel) {
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureRoom =
 function _TwitchClient__ensureRoom(channel) {
-  channel = this._ensureChannel(channel);
-  let cname = channel.channel;
+  let cobj = this._ensureChannel(channel);
+  let cname = cobj.channel;
   if (!(cname in this._rooms)) {
     this._rooms[cname] = {
-      users: [],        /* Joined users */
-      userInfo: {},     /* Joined users' info */
-      operators: [],    /* Operators */
-      channel: channel, /* Channel object */
-      rooms: {},        /* Known rooms */
-      id: null,         /* Channel ID */
-      online: false,    /* Currently streaming */
-      stream: {},       /* Stream status */
-      streams: []       /* Stream statuses */
+      users: [],     /* Joined users */
+      userInfo: {},  /* Joined users' info */
+      operators: [], /* Operators */
+      channel: cobj, /* Channel object */
+      rooms: {},     /* Known rooms */
+      id: null,      /* Channel ID */
+      online: false, /* Currently streaming */
+      stream: {},    /* Stream status */
+      streams: []    /* Stream statuses */
     };
   }
 };
 
 /* Private: Called when a user joins a channel */
 TwitchClient.prototype._onJoin =
-function _TwitchClient__onJoin(channel, user) {
-  user = this._ensureUser(user);
-  channel = this._ensureChannel(channel);
+function _TwitchClient__onJoin(channel, userName) {
+  let user = this._ensureUser(userName);
+  let cobj = this._ensureChannel(channel);
   this._ensureRoom(channel);
-  if (!this._rooms[channel.channel].users.includes(user)) {
-    if (channel.room && channel.roomuid) {
+  if (!this._rooms[cobj.channel].users.includes(user)) {
+    if (cobj.room && cobj.roomuid) {
       /* User joined a channel room */
-      this._rooms[channel.channel].users.push(user);
+      this._rooms[cobj.channel].users.push(user);
     } else {
       /* User joined a channel's main room */
-      this._rooms[channel.channel].users.push(user);
+      this._rooms[cobj.channel].users.push(user);
     }
   }
-  if (!this._rooms[channel.channel].userInfo.hasOwnProperty(user)) {
-    this._rooms[channel.channel].userInfo[user] = {};
+  if (!this._rooms[cobj.channel].userInfo.hasOwnProperty(user)) {
+    this._rooms[cobj.channel].userInfo[user] = {};
   }
 };
 
 /* Private: Called when a user parts a channel */
 TwitchClient.prototype._onPart =
-function _TwitchClient__onPart(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  let cname = channel.channel;
+function _TwitchClient__onPart(channel, userName) {
+  let cobj = this._ensureChannel(channel);
+  let user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  let cname = cobj.channel;
   if (this._rooms[cname].users.includes(user)) {
     let idx = this._rooms[cname].users.indexOf(user);
     this._rooms[cname].users.splice(idx, 1);
@@ -531,11 +531,11 @@ function _TwitchClient__onPart(channel, user) {
 
 /* Private: Called when the client receives a MODE +o event */
 TwitchClient.prototype._onOp =
-function _TwitchClient__onOp(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  let cname = channel.channel;
+function _TwitchClient__onOp(channel, userName) {
+  let cobj = this._ensureChannel(channel);
+  let user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  let cname = cobj.channel;
   if (!this._rooms[cname].operators.includes(user)) {
     this._rooms[cname].operators.push(user);
   }
@@ -543,11 +543,11 @@ function _TwitchClient__onOp(channel, user) {
 
 /* Private: Called when the client receives a MODE -o event */
 TwitchClient.prototype._onDeOp =
-function _TwitchClient__onDeOp(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  let cname = channel.channel;
+function _TwitchClient__onDeOp(channel, userName) {
+  let cobj = this._ensureChannel(channel);
+  let user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  let cname = cobj.channel;
   let idx = this._rooms[cname].operators.indexOf(user);
   if (idx > -1) {
     this._rooms[cname].operators = this._rooms[cname].operators.splice(idx, 1);
@@ -732,6 +732,7 @@ function _TwitchClient__buildChatEvent(chobj, message) {
   let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
   let chstr = Twitch.FormatChannel(chobj);
   let userstate = this._self_userstate[chstr] || {};
+  let msg = message;
 
   /* Construct the parsed flags object */
   flag_obj["badge-info"] = userstate["badge-info"];
@@ -807,12 +808,12 @@ function _TwitchClient__buildChatEvent(chobj, message) {
   let raw_line = `@${flag_str} ${useruri} PRIVMSG ${channel} :`;
 
   /* Handle /me */
-  if (message.startsWith('/me ')) {
-    raw_line += '\x01ACTION ' + message + '\x01';
-    message = message.substr('/me '.length);
+  if (msg.startsWith('/me ')) {
+    msg = msg.substr('/me '.length);
+    raw_line += '\x01ACTION ' + msg + '\x01';
     flag_obj.action = true;
   } else {
-    raw_line += message;
+    raw_line += msg;
   }
 
   /* Construct and return the event */
@@ -821,7 +822,7 @@ function _TwitchClient__buildChatEvent(chobj, message) {
     flags: flag_obj,
     user: Twitch.ParseUser(useruri),
     channel: chobj,
-    message: message,
+    message: msg,
     synthetic: true /* mark the event as synthetic */
   }));
 };
@@ -931,11 +932,12 @@ function _TwitchClient_IsCaster(channel) {
 /* Timeout the specific user in the specified channel */
 TwitchClient.prototype.Timeout =
 function _TwitchClient_Timeout(channel, user, duration="600s", reason=null) {
-  channel = this._ensureChannel(channel);
+  let msg = reason;
   if (!reason) {
-    reason = `Timed out by ${this._username} from ${channel.channel} for ${duration}`;
+    let cname = Twitch.FormatChannel(this._ensureChannel(channel));
+    msg = `Timed out by ${this._username} from ${cname} for ${duration}`;
   }
-  this.SendMessage(channel, `/timeout ${user} ${duration} "${reason}"`);
+  this.SendMessage(channel, `/timeout ${user} ${duration} "${msg}"`);
 };
 
 /* Un-timeout the specific user in the specified channel */
@@ -947,11 +949,12 @@ function _TwitchClient_UnTimeout(channel, user) {
 /* Ban the specific user from the specified channel */
 TwitchClient.prototype.Ban =
 function _TwitchClient_Ban(channel, user, reason=null) {
-  channel = this._ensureChannel(channel);
+  let msg = reason;
   if (!reason) {
-    reason = `Banned from ${channel.channel} by ${this._username}`;
+    let cname = Twitch.FormatChannel(this._ensureChannel(channel));
+    msg = `Banned from ${cname} by ${this._username}`;
   }
-  this.SendMessage(channel, `/ban ${user} ${reason}`);
+  this.SendMessage(channel, `/ban ${user} ${msg}`);
 };
 
 /* Unban the specific user from the specified channel */
@@ -1132,21 +1135,21 @@ function _TwitchClient_GetBTTVEmotes(channel) {
 /* Send a message to the channel specified */
 TwitchClient.prototype.SendMessage =
 function _TwitchClient_SendMessage(channel, message, bypassFaux=false) {
-  channel = this._ensureChannel(channel);
-  message = Util.EscapeSlashes(message.trim());
+  let cobj = this._ensureChannel(channel);
+  let cname = Twitch.FormatChannel(cobj);
+  let msg = Util.EscapeSlashes(message.trim());
   if (this._connected && this._authed) {
-    this.send(`PRIVMSG ${channel.channel} :${message}`);
+    this.send(`PRIVMSG ${cobj.channel} :${msg}`);
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
-      if (this._self_userstate[Twitch.FormatChannel(channel)]) {
-        Util.FireEvent(this._buildChatEvent(channel, message));
+      if (this._self_userstate[Twitch.FormatChannel(cobj)]) {
+        Util.FireEvent(this._buildChatEvent(cname, msg));
       } else {
-        Util.Error(`No USERSTATE given for channel ${channel}`);
+        Util.Error(`No USERSTATE given for channel ${cname}`);
       }
     }
   } else {
-    let chname = Twitch.FormatChannel(channel);
-    Util.Warn(`Unable to send "${message}" to ${chname}: not connected or not authed`);
+    Util.Warn(`Unable to send "${msg}" to ${cname}: not connected or not authed`);
   }
 };
 
@@ -1278,11 +1281,12 @@ function _TwitchClient_IsChannelBadge(channel, badge_name, badge_num=null) {
 TwitchClient.prototype.GetGlobalBadge =
 function _TwitchClient_GetGlobalBadge(badge_name, badge_version=null) {
   if (this._global_badges.hasOwnProperty(badge_name)) {
+    let bver = badge_version;
     if (badge_version === null) {
-      badge_version = Object.keys(this._global_badges[badge_name].versions).min();
+      bver = Object.keys(this._global_badges[badge_name].versions).min();
     }
-    if (this._global_badges[badge_name].versions.hasOwnProperty(badge_version)) {
-      return this._global_badges[badge_name].versions[badge_version];
+    if (this._global_badges[badge_name].versions.hasOwnProperty(bver)) {
+      return this._global_badges[badge_name].versions[bver];
     }
   }
   return {};
@@ -1297,9 +1301,9 @@ function _TwitchClient_GetGlobalBadge(badge_name, badge_version=null) {
  */
 TwitchClient.prototype.GetChannelBadge =
 function _TwitchClient_GetChannelBadge(channel, badge_name, badge_num=null) {
-  channel = this._ensureChannel(channel);
-  if (this.IsChannelBadge(channel, badge_name, badge_num)) {
-    let b = this._channel_badges[channel.channel][badge_name];
+  let cobj = this._ensureChannel(channel);
+  if (this.IsChannelBadge(cobj, badge_name, badge_num)) {
+    let b = this._channel_badges[cobj.channel][badge_name];
     let idxs = Object.keys(b).sort();
     if (badge_num !== null) {
       return b[badge_num];
@@ -1319,9 +1323,9 @@ function _TwitchClient_GetGlobalBadges() {
 /* Obtain all of the channel badges for the specified channel */
 TwitchClient.prototype.GetChannelBadges =
 function _TwitchClient_GetChannelBadges(channel) {
-  channel = this._ensureChannel(channel);
-  if (this._channel_badges.hasOwnProperty(channel.channel)) {
-    return Util.JSONClone(this._channel_badges[channel.channel]);
+  let cobj = this._ensureChannel(channel);
+  if (this._channel_badges.hasOwnProperty(cobj.channel)) {
+    return Util.JSONClone(this._channel_badges[cobj.channel]);
   }
   return {};
 };
@@ -1704,8 +1708,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
-  user = user.replace(/^:/, "");
-  return user.split('!')[0];
+  return user.replace(/^:/, "").split('!')[0];
 };
 
 /* Parse channel to {channel, room, roomuid} */
@@ -1742,21 +1745,21 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
 /* Format a channel name, room name, or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   if (typeof(channel) === "string") {
-    channel = channel.toLowerCase();
-    if (channel === "*") {
+    let cname = channel.toLowerCase();
+    if (cname === "*") {
       /* Sent from GLOBAL */
       return "GLOBAL";
     } else {
       if (room) {
-        channel += ':' + room;
+        cname += ':' + room;
       }
       if (roomuid) {
-        channel += ':' + roomuid;
+        cname += ':' + roomuid;
       }
-      if (channel.indexOf('#') !== 0) {
-        channel = '#' + channel;
+      if (cname.indexOf('#') !== 0) {
+        cname = '#' + cname;
       }
-      return channel;
+      return cname;
     }
   } else if (channel && typeof(channel.channel) === "string") {
     return Twitch.FormatChannel(channel.channel, channel.room, channel.roomuid);
@@ -1814,9 +1817,9 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 /* Parse @<flags...> key,value pairs */
 Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
   /* @key=value;key=value;... */
-  dataString = dataString.replace(/^@/, "");
+  let dataStr = dataString.replace(/^@/, "");
   let data = {};
-  for (let item of dataString.split(';')) {
+  for (let item of dataStr.split(';')) {
     let key = item;
     let val = "";
     if (item.indexOf('=') !== -1) {
@@ -2072,9 +2075,10 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
     ['oauth:', /oauth:[\w]+/g],
     ['OAuth ', /OAuth [\w]+/g]
   ];
+  let result = msg;
   for (let [name, pat] of pats) {
-    if (msg.search(pat)) {
-      msg = msg.replace(pat, `${name}<removed>`);
+    if (result.search(pat)) {
+      result = result.replace(pat, `${name}<removed>`);
     }
   }
   return msg;

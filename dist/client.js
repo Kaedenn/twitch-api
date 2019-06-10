@@ -711,14 +711,14 @@ TwitchClient.prototype._ensureChannel = function _TwitchClient__ensureChannel(ch
 
 /* Private: Ensure the channel specified is a channel object */
 TwitchClient.prototype._ensureRoom = function _TwitchClient__ensureRoom(channel) {
-  channel = this._ensureChannel(channel);
-  var cname = channel.channel;
+  var cobj = this._ensureChannel(channel);
+  var cname = cobj.channel;
   if (!(cname in this._rooms)) {
     this._rooms[cname] = {
       users: [], /* Joined users */
       userInfo: {}, /* Joined users' info */
       operators: [], /* Operators */
-      channel: channel, /* Channel object */
+      channel: cobj, /* Channel object */
       rooms: {}, /* Known rooms */
       id: null, /* Channel ID */
       online: false, /* Currently streaming */
@@ -729,30 +729,30 @@ TwitchClient.prototype._ensureRoom = function _TwitchClient__ensureRoom(channel)
 };
 
 /* Private: Called when a user joins a channel */
-TwitchClient.prototype._onJoin = function _TwitchClient__onJoin(channel, user) {
-  user = this._ensureUser(user);
-  channel = this._ensureChannel(channel);
+TwitchClient.prototype._onJoin = function _TwitchClient__onJoin(channel, userName) {
+  var user = this._ensureUser(userName);
+  var cobj = this._ensureChannel(channel);
   this._ensureRoom(channel);
-  if (!this._rooms[channel.channel].users.includes(user)) {
-    if (channel.room && channel.roomuid) {
+  if (!this._rooms[cobj.channel].users.includes(user)) {
+    if (cobj.room && cobj.roomuid) {
       /* User joined a channel room */
-      this._rooms[channel.channel].users.push(user);
+      this._rooms[cobj.channel].users.push(user);
     } else {
       /* User joined a channel's main room */
-      this._rooms[channel.channel].users.push(user);
+      this._rooms[cobj.channel].users.push(user);
     }
   }
-  if (!this._rooms[channel.channel].userInfo.hasOwnProperty(user)) {
-    this._rooms[channel.channel].userInfo[user] = {};
+  if (!this._rooms[cobj.channel].userInfo.hasOwnProperty(user)) {
+    this._rooms[cobj.channel].userInfo[user] = {};
   }
 };
 
 /* Private: Called when a user parts a channel */
-TwitchClient.prototype._onPart = function _TwitchClient__onPart(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  var cname = channel.channel;
+TwitchClient.prototype._onPart = function _TwitchClient__onPart(channel, userName) {
+  var cobj = this._ensureChannel(channel);
+  var user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  var cname = cobj.channel;
   if (this._rooms[cname].users.includes(user)) {
     var idx = this._rooms[cname].users.indexOf(user);
     this._rooms[cname].users.splice(idx, 1);
@@ -760,22 +760,22 @@ TwitchClient.prototype._onPart = function _TwitchClient__onPart(channel, user) {
 };
 
 /* Private: Called when the client receives a MODE +o event */
-TwitchClient.prototype._onOp = function _TwitchClient__onOp(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  var cname = channel.channel;
+TwitchClient.prototype._onOp = function _TwitchClient__onOp(channel, userName) {
+  var cobj = this._ensureChannel(channel);
+  var user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  var cname = cobj.channel;
   if (!this._rooms[cname].operators.includes(user)) {
     this._rooms[cname].operators.push(user);
   }
 };
 
 /* Private: Called when the client receives a MODE -o event */
-TwitchClient.prototype._onDeOp = function _TwitchClient__onDeOp(channel, user) {
-  channel = this._ensureChannel(channel);
-  user = this._ensureUser(user);
-  this._ensureRoom(channel);
-  var cname = channel.channel;
+TwitchClient.prototype._onDeOp = function _TwitchClient__onDeOp(channel, userName) {
+  var cobj = this._ensureChannel(channel);
+  var user = this._ensureUser(userName);
+  this._ensureRoom(cobj);
+  var cname = cobj.channel;
   var idx = this._rooms[cname].operators.indexOf(user);
   if (idx > -1) {
     this._rooms[cname].operators = this._rooms[cname].operators.splice(idx, 1);
@@ -1230,6 +1230,7 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
   var emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
   var chstr = Twitch.FormatChannel(chobj);
   var userstate = this._self_userstate[chstr] || {};
+  var msg = message;
 
   /* Construct the parsed flags object */
   flag_obj["badge-info"] = userstate["badge-info"];
@@ -1336,12 +1337,12 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
   var raw_line = "@" + flag_str + " " + useruri + " PRIVMSG " + channel + " :";
 
   /* Handle /me */
-  if (message.startsWith('/me ')) {
-    raw_line += '\x01ACTION ' + message + '\x01';
-    message = message.substr('/me '.length);
+  if (msg.startsWith('/me ')) {
+    msg = msg.substr('/me '.length);
+    raw_line += '\x01ACTION ' + msg + '\x01';
     flag_obj.action = true;
   } else {
-    raw_line += message;
+    raw_line += msg;
   }
 
   /* Construct and return the event */
@@ -1350,7 +1351,7 @@ TwitchClient.prototype._buildChatEvent = function _TwitchClient__buildChatEvent(
     flags: flag_obj,
     user: Twitch.ParseUser(useruri),
     channel: chobj,
-    message: message,
+    message: msg,
     synthetic: true /* mark the event as synthetic */
   });
 };
@@ -1471,11 +1472,12 @@ TwitchClient.prototype.Timeout = function _TwitchClient_Timeout(channel, user) {
   var duration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "600s";
   var reason = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
 
-  channel = this._ensureChannel(channel);
+  var msg = reason;
   if (!reason) {
-    reason = "Timed out by " + this._username + " from " + channel.channel + " for " + duration;
+    var cname = Twitch.FormatChannel(this._ensureChannel(channel));
+    msg = "Timed out by " + this._username + " from " + cname + " for " + duration;
   }
-  this.SendMessage(channel, "/timeout " + user + " " + duration + " \"" + reason + "\"");
+  this.SendMessage(channel, "/timeout " + user + " " + duration + " \"" + msg + "\"");
 };
 
 /* Un-timeout the specific user in the specified channel */
@@ -1487,11 +1489,12 @@ TwitchClient.prototype.UnTimeout = function _TwitchClient_UnTimeout(channel, use
 TwitchClient.prototype.Ban = function _TwitchClient_Ban(channel, user) {
   var reason = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-  channel = this._ensureChannel(channel);
+  var msg = reason;
   if (!reason) {
-    reason = "Banned from " + channel.channel + " by " + this._username;
+    var cname = Twitch.FormatChannel(this._ensureChannel(channel));
+    msg = "Banned from " + cname + " by " + this._username;
   }
-  this.SendMessage(channel, "/ban " + user + " " + reason);
+  this.SendMessage(channel, "/ban " + user + " " + msg);
 };
 
 /* Unban the specific user from the specified channel */
@@ -1782,21 +1785,21 @@ TwitchClient.prototype.GetBTTVEmotes = function _TwitchClient_GetBTTVEmotes(chan
 TwitchClient.prototype.SendMessage = function _TwitchClient_SendMessage(channel, message) {
   var bypassFaux = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
-  channel = this._ensureChannel(channel);
-  message = Util.EscapeSlashes(message.trim());
+  var cobj = this._ensureChannel(channel);
+  var cname = Twitch.FormatChannel(cobj);
+  var msg = Util.EscapeSlashes(message.trim());
   if (this._connected && this._authed) {
-    this.send("PRIVMSG " + channel.channel + " :" + message);
+    this.send("PRIVMSG " + cobj.channel + " :" + msg);
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
-      if (this._self_userstate[Twitch.FormatChannel(channel)]) {
-        Util.FireEvent(this._buildChatEvent(channel, message));
+      if (this._self_userstate[Twitch.FormatChannel(cobj)]) {
+        Util.FireEvent(this._buildChatEvent(cname, msg));
       } else {
-        Util.Error("No USERSTATE given for channel " + channel);
+        Util.Error("No USERSTATE given for channel " + cname);
       }
     }
   } else {
-    var chname = Twitch.FormatChannel(channel);
-    Util.Warn("Unable to send \"" + message + "\" to " + chname + ": not connected or not authed");
+    Util.Warn("Unable to send \"" + msg + "\" to " + cname + ": not connected or not authed");
   }
 };
 
@@ -1945,11 +1948,12 @@ TwitchClient.prototype.GetGlobalBadge = function _TwitchClient_GetGlobalBadge(ba
   var badge_version = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
   if (this._global_badges.hasOwnProperty(badge_name)) {
+    var bver = badge_version;
     if (badge_version === null) {
-      badge_version = Object.keys(this._global_badges[badge_name].versions).min();
+      bver = Object.keys(this._global_badges[badge_name].versions).min();
     }
-    if (this._global_badges[badge_name].versions.hasOwnProperty(badge_version)) {
-      return this._global_badges[badge_name].versions[badge_version];
+    if (this._global_badges[badge_name].versions.hasOwnProperty(bver)) {
+      return this._global_badges[badge_name].versions[bver];
     }
   }
   return {};
@@ -1965,9 +1969,9 @@ TwitchClient.prototype.GetGlobalBadge = function _TwitchClient_GetGlobalBadge(ba
 TwitchClient.prototype.GetChannelBadge = function _TwitchClient_GetChannelBadge(channel, badge_name) {
   var badge_num = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-  channel = this._ensureChannel(channel);
-  if (this.IsChannelBadge(channel, badge_name, badge_num)) {
-    var b = this._channel_badges[channel.channel][badge_name];
+  var cobj = this._ensureChannel(channel);
+  if (this.IsChannelBadge(cobj, badge_name, badge_num)) {
+    var b = this._channel_badges[cobj.channel][badge_name];
     var idxs = Object.keys(b).sort();
     if (badge_num !== null) {
       return b[badge_num];
@@ -1985,9 +1989,9 @@ TwitchClient.prototype.GetGlobalBadges = function _TwitchClient_GetGlobalBadges(
 
 /* Obtain all of the channel badges for the specified channel */
 TwitchClient.prototype.GetChannelBadges = function _TwitchClient_GetChannelBadges(channel) {
-  channel = this._ensureChannel(channel);
-  if (this._channel_badges.hasOwnProperty(channel.channel)) {
-    return Util.JSONClone(this._channel_badges[channel.channel]);
+  var cobj = this._ensureChannel(channel);
+  if (this._channel_badges.hasOwnProperty(cobj.channel)) {
+    return Util.JSONClone(this._channel_badges[cobj.channel]);
   }
   return {};
 };
@@ -2692,8 +2696,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
-  user = user.replace(/^:/, "");
-  return user.split('!')[0];
+  return user.replace(/^:/, "").split('!')[0];
 };
 
 /* Parse channel to {channel, room, roomuid} */
@@ -2730,21 +2733,21 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
 /* Format a channel name, room name, or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   if (typeof channel === "string") {
-    channel = channel.toLowerCase();
-    if (channel === "*") {
+    var _cname = channel.toLowerCase();
+    if (_cname === "*") {
       /* Sent from GLOBAL */
       return "GLOBAL";
     } else {
       if (room) {
-        channel += ':' + room;
+        _cname += ':' + room;
       }
       if (roomuid) {
-        channel += ':' + roomuid;
+        _cname += ':' + roomuid;
       }
-      if (channel.indexOf('#') !== 0) {
-        channel = '#' + channel;
+      if (_cname.indexOf('#') !== 0) {
+        _cname = '#' + _cname;
       }
-      return channel;
+      return _cname;
     }
   } else if (channel && typeof channel.channel === "string") {
     return Twitch.FormatChannel(channel.channel, channel.room, channel.roomuid);
@@ -2873,14 +2876,14 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
 /* Parse @<flags...> key,value pairs */
 Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
   /* @key=value;key=value;... */
-  dataString = dataString.replace(/^@/, "");
+  var dataStr = dataString.replace(/^@/, "");
   var data = {};
   var _iteratorNormalCompletion39 = true;
   var _didIteratorError39 = false;
   var _iteratorError39 = undefined;
 
   try {
-    for (var _iterator39 = dataString.split(';')[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
+    for (var _iterator39 = dataStr.split(';')[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
       var item = _step39.value;
 
       var key = item;
@@ -3273,6 +3276,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   var pats = [['oauth:', /oauth:[\w]+/g], ['OAuth ', /OAuth [\w]+/g]];
+  var result = msg;
   var _iteratorNormalCompletion45 = true;
   var _didIteratorError45 = false;
   var _iteratorError45 = undefined;
@@ -3286,8 +3290,8 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
       var name = _ref30[0];
       var pat = _ref30[1];
 
-      if (msg.search(pat)) {
-        msg = msg.replace(pat, name + "<removed>");
+      if (result.search(pat)) {
+        result = result.replace(pat, name + "<removed>");
       }
     }
   } catch (err) {

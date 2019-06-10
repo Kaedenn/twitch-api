@@ -29,11 +29,11 @@ module.exports = {
         }],
         "no-implied-eval": "warn",
         "no-self-compare": "warn",
-        "no-throw-literal": "warn",
+        "no-throw-literal": "error",
         "no-unused-expressions": "warn",
-        "semi": "warn",
+        "semi": "error",
         "no-self-compare": "warn",
-        /*"no-param-reassign": "warn",*/
+        "no-param-reassign": "warn",
         "no-lonely-if": "warn",
         "no-tabs": "error"
     },
