@@ -1143,7 +1143,7 @@ function _TwitchClient_SendMessage(channel, message, bypassFaux=false) {
     /* Dispatch a faux "Message Received" event */
     if (!bypassFaux) {
       if (this._self_userstate[Twitch.FormatChannel(cobj)]) {
-        Util.FireEvent(this._buildChatEvent(cname, msg));
+        Util.FireEvent(this._buildChatEvent(cobj, msg));
       } else {
         Util.Error(`No USERSTATE given for channel ${cname}`);
       }
