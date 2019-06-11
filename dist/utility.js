@@ -6,6 +6,16 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
+ *
+ * Create (monster) configuration class
+ *  Tie to query string
+ *   Optional argument: rename map (e.g. rename "norec" to "NoAutoReconnect")
+ *  Tie to local storage
+ *  Tie to specific DOM elements
+ *   Changing specific elements -> automatic update of config
+ *  Set precedence of certain items over others (qs overrides localStorage, etc)
+ *  Set certain items as "no persist"; don't store in localStorage
+ *  Live changes (after initial parse) take precedence over query string
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -36,11 +46,11 @@
 
 /* General Utilities {{{0 */
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
@@ -52,7 +62,7 @@ Util.__wscfg = "kae-twapi-local-key";
 Util.ASCII = "\0\x01\x02\x03\x04\x05\x06\x07\b\t\n" + "\x0B\f\r\x0E\x0F\x10\x11\x12\x13\x14" + "\x15\x16\x17\x18\x19\x1A\x1B\x1C\x1D" + "\x1E\x1F !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" + "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\x7F";
 
 /* WebSocket status codes */
-Util.WSStatus = {
+Util.WSStatusCode = {
   1000: "NORMAL", /* Shutdown successful / regular socket shutdown */
   1001: "GOING_AWAY", /* Browser tab closing */
   1002: "PROTOCOL_ERROR", /* Endpoint received malformed frame */
@@ -70,35 +80,76 @@ Util.WSStatus = {
   1015: "TLS_HANDSHAKE_FAIL" /* TLS handshake failure */
 };
 
+/* WebSocket status messages */
+Util.WSStatus = {
+  1000: "Shutdown successful / regular socket shutdown",
+  1001: "Browser tab closing",
+  1002: "Endpoint received malformed frame",
+  1003: "Endpoint received an unsupported frame",
+  1005: "Didn't receive a close status",
+  1006: "Abnormal closing; no close frame received",
+  1007: "Inconsistent message (e.g. invalid UTF-8)",
+  1008: "Generic non-1003 non-1009 message",
+  1009: "Frame was too large",
+  1010: "Server refused a required extension",
+  1011: "Internal server error",
+  1012: "Server is restarting",
+  1013: "Server temporarily blocking connections",
+  1014: "Gateway server received an invalid response",
+  1015: "TLS handshake failure"
+};
+
+/* String escape characters */
+Util.StringEscapeChars = {
+  "\b": "b",
+  "\f": "f",
+  "\n": "n",
+  "\r": "r",
+  "\t": "t",
+  "\v": "v"
+};
+
+/* Characters requiring HTML escaping (used by String.escape) */
+Util.EscapeChars = {
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+  "&": "&amp;"
+};
+
 /* End of general utilities 0}}} */
 
 /* Special browser identification {{{0 */
 
-Util.Browser = function () {
-  function _Util_Browser() {
-    _classCallCheck(this, _Util_Browser);
+Util.Browser = {
+  IsTesla: function IsTesla() {
+    return navigator.userAgent.search(/\bTesla\b/) > -1;
+  },
+  IsOBS: function IsOBS() {
+    return window.obssource || Util.Defined("obssource");
   }
-
-  _createClass(_Util_Browser, null, [{
-    key: "IsTesla",
-    get: function get() {
-      return navigator.userAgent.search(/\bTesla\b/) > -1;
-    }
-  }, {
-    key: "IsOBS",
-    get: function get() {
-      return Boolean(window.obssource);
-    }
-  }]);
-
-  return _Util_Browser;
-}();
+};
 
 /* End of special browser identification 0}}} */
 
 /* Portability considerations {{{0 */
 
+/* Return whether or not the variable given exists */
 Util.Defined = function _Util_Defined(identifier) {
+  /* See if Reflect can find it */
+  try {
+    if (Reflect.ownKeys(window).indexOf(identifier) > -1) {
+      return true;
+    }
+  } catch (e) {} /* Nothing to do */
+  /* See if it's a window property */
+  try {
+    if (_typeof(window[identifier]) !== _typeof(void 0)) {
+      return true;
+    }
+  } catch (e) {} /* Nothing to do */
+  /* See if it gives an error (only for \w+ literals) */
   if (identifier.match(/^[$\w]+$/)) {
     try {
       new Function("return " + identifier)();
@@ -1103,41 +1154,23 @@ Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
 Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = Util.LEVEL_OFF;
-Util._stack_trim_begin_level = [0];
-Util._stack_trim_end_level = [0];
+Util._stack_trim_level = [0];
 
 /* Save the current top-stack trim level and push a new value to use */
 Util.PushStackTrimBegin = function _Util_PushStackTrimBegin(level) {
-  Util._stack_trim_begin_level.push(level);
+  Util._stack_trim_level.push(level);
 };
 
 /* Restore the saved top-stack trim level */
 Util.PopStackTrimBegin = function _Util_PopStackTrimBegin() {
-  if (Util._stack_trim_begin_level.length > 1) {
-    Util._stack_trim_begin_level.pop();
-  }
-};
-
-/* Save the current bottom-stack trim level and push a new value to use */
-Util.PushStackTrimEnd = function _Util_PushStackTrimEnd(level) {
-  Util._stack_trim_end_level.push(level);
-};
-
-/* Restore the saved bottom-stack trim level */
-Util.PopStackTrimEnd = function _Util_PopStackTrimEnd() {
-  if (Util._stack_trim_end_level.length > 1) {
-    Util._stack_trim_end_level.pop();
+  if (Util._stack_trim_level.length > 1) {
+    Util._stack_trim_level.pop();
   }
 };
 
 /* Get the current top-stack trim level */
 Util.GetStackTrimBegin = function _Util_GetStackTrimBegin() {
-  return Util._stack_trim_begin_level[Util._stack_trim_begin_level.length - 1];
-};
-
-/* Get the current bottom-stack trim level */
-Util.GetStackTrimEnd = function _Util_GetStackTrimEnd() {
-  return Util._stack_trim_end_level[Util._stack_trim_end_level.length - 1];
+  return Util._stack_trim_level[Util._stack_trim_level.length - 1];
 };
 
 /* Obtain a stacktrace, applying the current stack trim levels */
@@ -1151,9 +1184,6 @@ Util.GetStack = function _Util_GetStack() {
   lines.shift(); /* Discard _Util_GetStack */
   for (var i = 0; i < Util.GetStackTrimBegin(); ++i) {
     lines.shift();
-  }
-  for (var _i2 = 0; _i2 < Util.GetStackTrimEnd(); ++_i2) {
-    lines.pop();
   }
   return lines;
 };
@@ -2752,15 +2782,6 @@ Util.ParseNumber = function _Util_ParseNumber(str) {
   }
 };
 
-/* Characters requiring HTML escaping (used by String.escape) */
-Util.EscapeChars = {
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&apos;",
-  "&": "&amp;"
-};
-
 /* Escape the string and return a map of character movements */
 Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
   var result = "";
@@ -2891,15 +2912,13 @@ Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   }).join("");
 };
 
-/* Build a character escape sequence for the code given */
-Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
+/* Build a character escape sequence for the character given */
+Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
   // Handle certain special escape sequences
-  var special_chrs = "bfnrtv";
-  var special = Util.StringToCodes("\b\f\n\r\t\v");
-  if (special.indexOf(code) > -1) {
-    return "\\" + special_chrs.charAt(special.indexOf(code));
+  if (Util.StringEscapeChars.hasOwnProperty(char)) {
+    return "\\" + Util.StringEscapeChars[char];
   } else {
-    return "\\x" + code.toString(16).padStart(2, '0');
+    return "\\x" + char.toString(16).padStart(2, '0');
   }
 };
 
@@ -2942,51 +2961,6 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
     }
   }
 
-  return result;
-};
-
-/* Split a string by the tokens given; all tokens must be present.
- *   func: function to apply to the matched segments */
-Util.SplitByMatches = function _Util_SplitByMatches(str, matches) {
-  var func = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
-
-  var result = [];
-  var pos = 0;
-  var _iteratorNormalCompletion33 = true;
-  var _didIteratorError33 = false;
-  var _iteratorError33 = undefined;
-
-  try {
-    for (var _iterator33 = matches[Symbol.iterator](), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
-      var match = _step33.value;
-
-      var mpos = str.indexOf(match, pos);
-      result.push(str.substr(pos, mpos - pos));
-      if (func) {
-        result.push(func(match));
-      } else {
-        result.push(match);
-      }
-      pos = mpos + match.length;
-    }
-  } catch (err) {
-    _didIteratorError33 = true;
-    _iteratorError33 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion33 && _iterator33.return) {
-        _iterator33.return();
-      }
-    } finally {
-      if (_didIteratorError33) {
-        throw _iteratorError33;
-      }
-    }
-  }
-
-  if (pos < str.length) {
-    result.push(str.substr(pos));
-  }
   return result;
 };
 
@@ -3109,13 +3083,13 @@ Util.StorageParse = function _Util_StorageParse(s) {
   var str = s;
   var use_json = true;
   if (Util.IsArray(opts)) {
-    var _iteratorNormalCompletion34 = true;
-    var _didIteratorError34 = false;
-    var _iteratorError34 = undefined;
+    var _iteratorNormalCompletion33 = true;
+    var _didIteratorError33 = false;
+    var _iteratorError33 = undefined;
 
     try {
-      for (var _iterator34 = opts[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
-        var o = _step34.value;
+      for (var _iterator33 = opts[Symbol.iterator](), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
+        var o = _step33.value;
 
         if (o === "b64") str = window.atob(str);
         if (o === "xor") str = str.xor(127);
@@ -3127,16 +3101,16 @@ Util.StorageParse = function _Util_StorageParse(s) {
         if (o === "nojson") use_json = false;
       }
     } catch (err) {
-      _didIteratorError34 = true;
-      _iteratorError34 = err;
+      _didIteratorError33 = true;
+      _iteratorError33 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion34 && _iterator34.return) {
-          _iterator34.return();
+        if (!_iteratorNormalCompletion33 && _iterator33.return) {
+          _iterator33.return();
         }
       } finally {
-        if (_didIteratorError34) {
-          throw _iteratorError34;
+        if (_didIteratorError33) {
+          throw _iteratorError33;
         }
       }
     }
@@ -3150,13 +3124,13 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
 
   var s = JSON.stringify(obj);
   if (Util.IsArray(opts)) {
-    var _iteratorNormalCompletion35 = true;
-    var _didIteratorError35 = false;
-    var _iteratorError35 = undefined;
+    var _iteratorNormalCompletion34 = true;
+    var _didIteratorError34 = false;
+    var _iteratorError34 = undefined;
 
     try {
-      for (var _iterator35 = opts[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
-        var o = _step35.value;
+      for (var _iterator34 = opts[Symbol.iterator](), _step34; !(_iteratorNormalCompletion34 = (_step34 = _iterator34.next()).done); _iteratorNormalCompletion34 = true) {
+        var o = _step34.value;
 
         if (o === "b64") s = window.btoa(s);
         if (o === "xor") s = s.xor(127);
@@ -3167,16 +3141,16 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
         if (typeof o === "function") s = o(s);
       }
     } catch (err) {
-      _didIteratorError35 = true;
-      _iteratorError35 = err;
+      _didIteratorError34 = true;
+      _iteratorError34 = err;
     } finally {
       try {
-        if (!_iteratorNormalCompletion35 && _iterator35.return) {
-          _iterator35.return();
+        if (!_iteratorNormalCompletion34 && _iterator34.return) {
+          _iterator34.return();
         }
       } finally {
-        if (_didIteratorError35) {
-          throw _iteratorError35;
+        if (_didIteratorError34) {
+          throw _iteratorError34;
         }
       }
     }
@@ -3227,13 +3201,13 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
     }
   };
   var query = (queryString || window.location.search).replace(/^\?/, "");
-  var _iteratorNormalCompletion36 = true;
-  var _didIteratorError36 = false;
-  var _iteratorError36 = undefined;
+  var _iteratorNormalCompletion35 = true;
+  var _didIteratorError35 = false;
+  var _iteratorError35 = undefined;
 
   try {
-    for (var _iterator36 = query.split('&')[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-      var part = _step36.value;
+    for (var _iterator35 = query.split('&')[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
+      var part = _step35.value;
 
       var _split = split(part),
           _split2 = _slicedToArray(_split, 2),
@@ -3242,13 +3216,13 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
 
       if (k === "base64") {
         var val = split(part)[1];
-        var _iteratorNormalCompletion37 = true;
-        var _didIteratorError37 = false;
-        var _iteratorError37 = undefined;
+        var _iteratorNormalCompletion36 = true;
+        var _didIteratorError36 = false;
+        var _iteratorError36 = undefined;
 
         try {
-          for (var _iterator37 = Object.entries(Util.ParseQueryString(atob(val)))[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
-            var _ref17 = _step37.value;
+          for (var _iterator36 = Object.entries(Util.ParseQueryString(atob(val)))[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+            var _ref17 = _step36.value;
 
             var _ref18 = _slicedToArray(_ref17, 2);
 
@@ -3258,16 +3232,16 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
             obj[k2] = v2;
           }
         } catch (err) {
-          _didIteratorError37 = true;
-          _iteratorError37 = err;
+          _didIteratorError36 = true;
+          _iteratorError36 = err;
         } finally {
           try {
-            if (!_iteratorNormalCompletion37 && _iterator37.return) {
-              _iterator37.return();
+            if (!_iteratorNormalCompletion36 && _iterator36.return) {
+              _iterator36.return();
             }
           } finally {
-            if (_didIteratorError37) {
-              throw _iteratorError37;
+            if (_didIteratorError36) {
+              throw _iteratorError36;
             }
           }
         }
@@ -3284,16 +3258,16 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
       }
     }
   } catch (err) {
-    _didIteratorError36 = true;
-    _iteratorError36 = err;
+    _didIteratorError35 = true;
+    _iteratorError35 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion36 && _iterator36.return) {
-        _iterator36.return();
+      if (!_iteratorNormalCompletion35 && _iterator35.return) {
+        _iterator35.return();
       }
     } finally {
-      if (_didIteratorError36) {
-        throw _iteratorError36;
+      if (_didIteratorError35) {
+        throw _iteratorError35;
       }
     }
   }
@@ -3304,13 +3278,13 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
 /* Format a query string (including leading "?") */
 Util.FormatQueryString = function _Util_FormatQueryString(query) {
   var parts = [];
-  var _iteratorNormalCompletion38 = true;
-  var _didIteratorError38 = false;
-  var _iteratorError38 = undefined;
+  var _iteratorNormalCompletion37 = true;
+  var _didIteratorError37 = false;
+  var _iteratorError37 = undefined;
 
   try {
-    for (var _iterator38 = Object.entries(query)[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
-      var _ref19 = _step38.value;
+    for (var _iterator37 = Object.entries(query)[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
+      var _ref19 = _step37.value;
 
       var _ref20 = _slicedToArray(_ref19, 2);
 
@@ -3322,16 +3296,16 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
       parts.push(key + "=" + val);
     }
   } catch (err) {
-    _didIteratorError38 = true;
-    _iteratorError38 = err;
+    _didIteratorError37 = true;
+    _iteratorError37 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion38 && _iterator38.return) {
-        _iterator38.return();
+      if (!_iteratorNormalCompletion37 && _iterator37.return) {
+        _iterator37.return();
       }
     } finally {
-      if (_didIteratorError38) {
-        throw _iteratorError38;
+      if (_didIteratorError37) {
+        throw _iteratorError37;
       }
     }
   }
@@ -3356,15 +3330,43 @@ Util.RectContains = function _Util_RectContains(x, y, rect) {
 /* Return whether or not the position is over the HTML element */
 Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
   if (elem && elem.jquery) {
+    var _iteratorNormalCompletion38 = true;
+    var _didIteratorError38 = false;
+    var _iteratorError38 = undefined;
+
+    try {
+      for (var _iterator38 = elem[Symbol.iterator](), _step38; !(_iteratorNormalCompletion38 = (_step38 = _iterator38.next()).done); _iteratorNormalCompletion38 = true) {
+        var e = _step38.value;
+
+        if (Util.PointIsOn(x, y, e)) {
+          return true;
+        }
+      }
+    } catch (err) {
+      _didIteratorError38 = true;
+      _iteratorError38 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion38 && _iterator38.return) {
+          _iterator38.return();
+        }
+      } finally {
+        if (_didIteratorError38) {
+          throw _iteratorError38;
+        }
+      }
+    }
+  } else {
+    var rects = elem.getClientRects();
     var _iteratorNormalCompletion39 = true;
     var _didIteratorError39 = false;
     var _iteratorError39 = undefined;
 
     try {
-      for (var _iterator39 = elem[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
-        var e = _step39.value;
+      for (var _iterator39 = rects[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
+        var rect = _step39.value;
 
-        if (Util.PointIsOn(x, y, e)) {
+        if (Util.RectContains(x, y, rect)) {
           return true;
         }
       }
@@ -3382,34 +3384,6 @@ Util.PointIsOn = function _Util_PointIsOn(x, y, elem) {
         }
       }
     }
-  } else {
-    var rects = elem.getClientRects();
-    var _iteratorNormalCompletion40 = true;
-    var _didIteratorError40 = false;
-    var _iteratorError40 = undefined;
-
-    try {
-      for (var _iterator40 = rects[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
-        var rect = _step40.value;
-
-        if (Util.RectContains(x, y, rect)) {
-          return true;
-        }
-      }
-    } catch (err) {
-      _didIteratorError40 = true;
-      _iteratorError40 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion40 && _iterator40.return) {
-          _iterator40.return();
-        }
-      } finally {
-        if (_didIteratorError40) {
-          throw _iteratorError40;
-        }
-      }
-    }
   }
   return false;
 };
@@ -3422,16 +3396,48 @@ Util.CSS = {};
 
 /* Get a stylesheet by filename or partial pathname */
 Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
+  var _iteratorNormalCompletion40 = true;
+  var _didIteratorError40 = false;
+  var _iteratorError40 = undefined;
+
+  try {
+    for (var _iterator40 = document.styleSheets[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
+      var ss = _step40.value;
+
+      if (ss.href.endsWith("/" + filename.replace(/^\//, ""))) {
+        return ss;
+      }
+    }
+  } catch (err) {
+    _didIteratorError40 = true;
+    _iteratorError40 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion40 && _iterator40.return) {
+        _iterator40.return();
+      }
+    } finally {
+      if (_didIteratorError40) {
+        throw _iteratorError40;
+      }
+    }
+  }
+
+  return null;
+};
+
+/* Given a stylesheet, obtain a rule definition by name */
+Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
   var _iteratorNormalCompletion41 = true;
   var _didIteratorError41 = false;
   var _iteratorError41 = undefined;
 
   try {
-    for (var _iterator41 = document.styleSheets[Symbol.iterator](), _step41; !(_iteratorNormalCompletion41 = (_step41 = _iterator41.next()).done); _iteratorNormalCompletion41 = true) {
-      var ss = _step41.value;
+    for (var _iterator41 = css.cssRules[Symbol.iterator](), _step41; !(_iteratorNormalCompletion41 = (_step41 = _iterator41.next()).done); _iteratorNormalCompletion41 = true) {
+      var rule = _step41.value;
 
-      if (ss.href.endsWith("/" + filename.replace(/^\//, ""))) {
-        return ss;
+      if (rule.selectorText === rule_name) {
+        return rule;
       }
     }
   } catch (err) {
@@ -3445,38 +3451,6 @@ Util.CSS.GetSheet = function _Util_CSS_GetSheet(filename) {
     } finally {
       if (_didIteratorError41) {
         throw _iteratorError41;
-      }
-    }
-  }
-
-  return null;
-};
-
-/* Given a stylesheet, obtain a rule definition by name */
-Util.CSS.GetRule = function _Util_CSS_GetRule(css, rule_name) {
-  var _iteratorNormalCompletion42 = true;
-  var _didIteratorError42 = false;
-  var _iteratorError42 = undefined;
-
-  try {
-    for (var _iterator42 = css.cssRules[Symbol.iterator](), _step42; !(_iteratorNormalCompletion42 = (_step42 = _iterator42.next()).done); _iteratorNormalCompletion42 = true) {
-      var rule = _step42.value;
-
-      if (rule.selectorText === rule_name) {
-        return rule;
-      }
-    }
-  } catch (err) {
-    _didIteratorError42 = true;
-    _iteratorError42 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion42 && _iterator42.return) {
-        _iterator42.return();
-      }
-    } finally {
-      if (_didIteratorError42) {
-        throw _iteratorError42;
       }
     }
   }
@@ -3532,15 +3506,42 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
   var results = [];
   /* Accept jQuery elements and element sets */
   if (root && root.jquery) {
+    var _iteratorNormalCompletion42 = true;
+    var _didIteratorError42 = false;
+    var _iteratorError42 = undefined;
+
+    try {
+      for (var _iterator42 = root[Symbol.iterator](), _step42; !(_iteratorNormalCompletion42 = (_step42 = _iterator42.next()).done); _iteratorNormalCompletion42 = true) {
+        var e = _step42.value;
+
+        results = results.concat(Util.SearchTree(e, pred));
+      }
+    } catch (err) {
+      _didIteratorError42 = true;
+      _iteratorError42 = err;
+    } finally {
+      try {
+        if (!_iteratorNormalCompletion42 && _iterator42.return) {
+          _iterator42.return();
+        }
+      } finally {
+        if (_didIteratorError42) {
+          throw _iteratorError42;
+        }
+      }
+    }
+  } else if (pred(root)) {
+    results.push(root);
+  } else if (root.childNodes && root.childNodes.length > 0) {
     var _iteratorNormalCompletion43 = true;
     var _didIteratorError43 = false;
     var _iteratorError43 = undefined;
 
     try {
-      for (var _iterator43 = root[Symbol.iterator](), _step43; !(_iteratorNormalCompletion43 = (_step43 = _iterator43.next()).done); _iteratorNormalCompletion43 = true) {
-        var e = _step43.value;
+      for (var _iterator43 = root.childNodes[Symbol.iterator](), _step43; !(_iteratorNormalCompletion43 = (_step43 = _iterator43.next()).done); _iteratorNormalCompletion43 = true) {
+        var _e2 = _step43.value;
 
-        results = results.concat(Util.SearchTree(e, pred));
+        results = results.concat(Util.SearchTree(_e2, pred));
       }
     } catch (err) {
       _didIteratorError43 = true;
@@ -3553,33 +3554,6 @@ Util.SearchTree = function _Util_SearchTree(root, pred) {
       } finally {
         if (_didIteratorError43) {
           throw _iteratorError43;
-        }
-      }
-    }
-  } else if (pred(root)) {
-    results.push(root);
-  } else if (root.childNodes && root.childNodes.length > 0) {
-    var _iteratorNormalCompletion44 = true;
-    var _didIteratorError44 = false;
-    var _iteratorError44 = undefined;
-
-    try {
-      for (var _iterator44 = root.childNodes[Symbol.iterator](), _step44; !(_iteratorNormalCompletion44 = (_step44 = _iterator44.next()).done); _iteratorNormalCompletion44 = true) {
-        var _e2 = _step44.value;
-
-        results = results.concat(Util.SearchTree(_e2, pred));
-      }
-    } catch (err) {
-      _didIteratorError44 = true;
-      _iteratorError44 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion44 && _iterator44.return) {
-          _iterator44.return();
-        }
-      } finally {
-        if (_didIteratorError44) {
-          throw _iteratorError44;
         }
       }
     }
@@ -3605,19 +3579,6 @@ Util.CreateNode = function _Util_CreateNode(obj) {
   }
 };
 
-/* Obtain a node's HTML */
-Util.GetHTML = function _Util_GetHTML(node) {
-  if (node.outerHTML) {
-    return node.outerHTML;
-  } else if (typeof node.nodeValue === "string") {
-    return ("" + node.nodeValue).escape();
-  } else if (node.nodeValue) {
-    return ("" + node.nodeValue).escape();
-  } else {
-    return "" + node;
-  }
-};
-
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
@@ -3631,13 +3592,13 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
 /* Wrap window.open */
 Util.Open = function _Util_Open(url, id, attrs) {
   var a = [];
-  var _iteratorNormalCompletion45 = true;
-  var _didIteratorError45 = false;
-  var _iteratorError45 = undefined;
+  var _iteratorNormalCompletion44 = true;
+  var _didIteratorError44 = false;
+  var _iteratorError44 = undefined;
 
   try {
-    for (var _iterator45 = Object.entries(attrs)[Symbol.iterator](), _step45; !(_iteratorNormalCompletion45 = (_step45 = _iterator45.next()).done); _iteratorNormalCompletion45 = true) {
-      var _ref21 = _step45.value;
+    for (var _iterator44 = Object.entries(attrs)[Symbol.iterator](), _step44; !(_iteratorNormalCompletion44 = (_step44 = _iterator44.next()).done); _iteratorNormalCompletion44 = true) {
+      var _ref21 = _step44.value;
 
       var _ref22 = _slicedToArray(_ref21, 2);
 
@@ -3647,16 +3608,16 @@ Util.Open = function _Util_Open(url, id, attrs) {
       a.push(k + "=" + v);
     }
   } catch (err) {
-    _didIteratorError45 = true;
-    _iteratorError45 = err;
+    _didIteratorError44 = true;
+    _iteratorError44 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion45 && _iterator45.return) {
-        _iterator45.return();
+      if (!_iteratorNormalCompletion44 && _iterator44.return) {
+        _iterator44.return();
       }
     } finally {
-      if (_didIteratorError45) {
-        throw _iteratorError45;
+      if (_didIteratorError44) {
+        throw _iteratorError44;
       }
     }
   }
@@ -3708,37 +3669,73 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
   return true;
 };
 
-/* Return the (first level) differences between two objects */
+/* Return the (first level) differences between two objects
+ *  [<status>, <o1 value>, <o2 value>]
+ *  "type": o1 value and o2 value differ in type
+ *  "value": o1 value and o2 value differ
+ *  "<": o1 key exists but o2 key does not: o2 value is null
+ *  ">": o1 key does not exist but o2 key does: o1 value is null */
 Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
   var all_keys = Object.keys(o1).concat(Object.keys(o2));
   var results = {};
-  var _iteratorNormalCompletion46 = true;
-  var _didIteratorError46 = false;
-  var _iteratorError46 = undefined;
+  var _iteratorNormalCompletion45 = true;
+  var _didIteratorError45 = false;
+  var _iteratorError45 = undefined;
 
   try {
-    for (var _iterator46 = all_keys[Symbol.iterator](), _step46; !(_iteratorNormalCompletion46 = (_step46 = _iterator46.next()).done); _iteratorNormalCompletion46 = true) {
-      var key = _step46.value;
+    for (var _iterator45 = all_keys[Symbol.iterator](), _step45; !(_iteratorNormalCompletion45 = (_step45 = _iterator45.next()).done); _iteratorNormalCompletion45 = true) {
+      var key = _step45.value;
 
       var o1_has = Util.ObjectHas(o1, key);
       var o2_has = Util.ObjectHas(o2, key);
       if (o1_has && o2_has) {
-        if (_typeof(o1[key]) !== _typeof(o2[key])) {
-          results[key] = ["!type", o1[key], o2[key]];
+        if (o1[key] !== o2[key]) {
+          results[key] = ["value", o1[key], o2[key]];
+        } else if (_typeof(o1[key]) !== _typeof(o2[key])) {
+          results[key] = ["type", o1[key], o2[key]];
         } else if (_typeof(o1[key]) === "object") {
           var o1_val = JSON.stringify(Object.entries(o1[key]).sort());
           var o2_val = JSON.stringify(Object.entries(o2[key]).sort());
           if (o1_val !== o2_val) {
-            results[key] = ["1", o1[key], o2[key]];
+            results[key] = ["value", o1[key], o2[key]];
           }
-        } else if (o1[key] !== o2[key]) {
-          results[key] = ["!", o1[key], o2[key]];
         }
       } else if (o1_has && !o2_has) {
         results[key] = ["<", o1[key], null];
       } else if (!o1_has && o2_has) {
         results[key] = [">", null, o2[key]];
       }
+    }
+  } catch (err) {
+    _didIteratorError45 = true;
+    _iteratorError45 = err;
+  } finally {
+    try {
+      if (!_iteratorNormalCompletion45 && _iterator45.return) {
+        _iterator45.return();
+      }
+    } finally {
+      if (_didIteratorError45) {
+        throw _iteratorError45;
+      }
+    }
+  }
+
+  return results;
+};
+
+/* Convert a CSS2Properties value (getComputedStyle) to an object */
+Util.StyleToObject = function _Util_StyleToObject(style) {
+  var result = {};
+  var _iteratorNormalCompletion46 = true;
+  var _didIteratorError46 = false;
+  var _iteratorError46 = undefined;
+
+  try {
+    for (var _iterator46 = Object.values(style)[Symbol.iterator](), _step46; !(_iteratorNormalCompletion46 = (_step46 = _iterator46.next()).done); _iteratorNormalCompletion46 = true) {
+      var key = _step46.value;
+
+      result[key] = style[key];
     }
   } catch (err) {
     _didIteratorError46 = true;
@@ -3751,37 +3748,6 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
     } finally {
       if (_didIteratorError46) {
         throw _iteratorError46;
-      }
-    }
-  }
-
-  return results;
-};
-
-/* Convert the object returned by getComputedStyle to an object */
-Util.StyleToObject = function _Util_StyleToObject(style) {
-  var result = {};
-  var _iteratorNormalCompletion47 = true;
-  var _didIteratorError47 = false;
-  var _iteratorError47 = undefined;
-
-  try {
-    for (var _iterator47 = Object.values(style)[Symbol.iterator](), _step47; !(_iteratorNormalCompletion47 = (_step47 = _iterator47.next()).done); _iteratorNormalCompletion47 = true) {
-      var key = _step47.value;
-
-      result[key] = style[key];
-    }
-  } catch (err) {
-    _didIteratorError47 = true;
-    _iteratorError47 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion47 && _iterator47.return) {
-        _iterator47.return();
-      }
-    } finally {
-      if (_didIteratorError47) {
-        throw _iteratorError47;
       }
     }
   }

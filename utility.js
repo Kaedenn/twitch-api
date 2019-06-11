@@ -6,6 +6,16 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
+ *
+ * Create (monster) configuration class
+ *  Tie to query string
+ *   Optional argument: rename map (e.g. rename "norec" to "NoAutoReconnect")
+ *  Tie to local storage
+ *  Tie to specific DOM elements
+ *   Changing specific elements -> automatic update of config
+ *  Set precedence of certain items over others (qs overrides localStorage, etc)
+ *  Set certain items as "no persist"; don't store in localStorage
+ *  Live changes (after initial parse) take precedence over query string
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -47,7 +57,7 @@ Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
 
 /* WebSocket status codes */
-Util.WSStatus = {
+Util.WSStatusCode = {
   1000: "NORMAL", /* Shutdown successful / regular socket shutdown */
   1001: "GOING_AWAY", /* Browser tab closing */
   1002: "PROTOCOL_ERROR", /* Endpoint received malformed frame */
@@ -65,24 +75,74 @@ Util.WSStatus = {
   1015: "TLS_HANDSHAKE_FAIL" /* TLS handshake failure */
 };
 
+/* WebSocket status messages */
+Util.WSStatus = {
+  1000: "Shutdown successful / regular socket shutdown",
+  1001: "Browser tab closing",
+  1002: "Endpoint received malformed frame",
+  1003: "Endpoint received an unsupported frame",
+  1005: "Didn't receive a close status",
+  1006: "Abnormal closing; no close frame received",
+  1007: "Inconsistent message (e.g. invalid UTF-8)",
+  1008: "Generic non-1003 non-1009 message",
+  1009: "Frame was too large",
+  1010: "Server refused a required extension",
+  1011: "Internal server error",
+  1012: "Server is restarting",
+  1013: "Server temporarily blocking connections",
+  1014: "Gateway server received an invalid response",
+  1015: "TLS handshake failure"
+};
+
+/* String escape characters */
+Util.StringEscapeChars = {
+  "\b": "b",
+  "\f": "f",
+  "\n": "n",
+  "\r": "r",
+  "\t": "t",
+  "\v": "v"
+};
+
+/* Characters requiring HTML escaping (used by String.escape) */
+Util.EscapeChars = {
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&apos;",
+  "&": "&amp;"
+};
+
 /* End of general utilities 0}}} */
 
 /* Special browser identification {{{0 */
 
-Util.Browser = class _Util_Browser {
-  static get IsTesla() {
-    return navigator.userAgent.search(/\bTesla\b/) > -1;
-  }
-  static get IsOBS() {
-    return Boolean(window.obssource);
-  }
+Util.Browser = {
+  IsTesla: (() => navigator.userAgent.search(/\bTesla\b/) > -1),
+  IsOBS: (() => window.obssource || Util.Defined("obssource"))
 };
 
 /* End of special browser identification 0}}} */
 
 /* Portability considerations {{{0 */
 
+/* Return whether or not the variable given exists */
 Util.Defined = function _Util_Defined(identifier) {
+  /* See if Reflect can find it */
+  try {
+    if (Reflect.ownKeys(window).indexOf(identifier) > -1) {
+      return true;
+    }
+  }
+  catch (e) { /* Nothing to do */ }
+  /* See if it's a window property */
+  try {
+    if (typeof(window[identifier]) !== typeof(void 0)) {
+      return true;
+    }
+  }
+  catch (e) { /* Nothing to do */ }
+  /* See if it gives an error (only for \w+ literals) */
   if (identifier.match(/^[$\w]+$/)) {
     try {
       (new Function(`return ${identifier}`))();
@@ -557,41 +617,23 @@ Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
 Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = Util.LEVEL_OFF;
-Util._stack_trim_begin_level = [0];
-Util._stack_trim_end_level = [0];
+Util._stack_trim_level = [0];
 
 /* Save the current top-stack trim level and push a new value to use */
 Util.PushStackTrimBegin = function _Util_PushStackTrimBegin(level) {
-  Util._stack_trim_begin_level.push(level);
+  Util._stack_trim_level.push(level);
 };
 
 /* Restore the saved top-stack trim level */
 Util.PopStackTrimBegin = function _Util_PopStackTrimBegin() {
-  if (Util._stack_trim_begin_level.length > 1) {
-    Util._stack_trim_begin_level.pop();
-  }
-};
-
-/* Save the current bottom-stack trim level and push a new value to use */
-Util.PushStackTrimEnd = function _Util_PushStackTrimEnd(level) {
-  Util._stack_trim_end_level.push(level);
-};
-
-/* Restore the saved bottom-stack trim level */
-Util.PopStackTrimEnd = function _Util_PopStackTrimEnd() {
-  if (Util._stack_trim_end_level.length > 1) {
-    Util._stack_trim_end_level.pop();
+  if (Util._stack_trim_level.length > 1) {
+    Util._stack_trim_level.pop();
   }
 };
 
 /* Get the current top-stack trim level */
 Util.GetStackTrimBegin = function _Util_GetStackTrimBegin() {
-  return Util._stack_trim_begin_level[Util._stack_trim_begin_level.length-1];
-};
-
-/* Get the current bottom-stack trim level */
-Util.GetStackTrimEnd = function _Util_GetStackTrimEnd() {
-  return Util._stack_trim_end_level[Util._stack_trim_end_level.length-1];
+  return Util._stack_trim_level[Util._stack_trim_level.length-1];
 };
 
 /* Obtain a stacktrace, applying the current stack trim levels */
@@ -601,9 +643,6 @@ Util.GetStack = function _Util_GetStack() {
   lines.shift(); /* Discard _Util_GetStack */
   for (let i = 0; i < Util.GetStackTrimBegin(); ++i) {
     lines.shift();
-  }
-  for (let i = 0; i < Util.GetStackTrimEnd(); ++i) {
-    lines.pop();
   }
   return lines;
 };
@@ -1458,15 +1497,6 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
   }
 };
 
-/* Characters requiring HTML escaping (used by String.escape) */
-Util.EscapeChars = {
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-  "'": "&apos;",
-  "&": "&amp;"
-};
-
 /* Escape the string and return a map of character movements */
 Util.EscapeWithMap = function _Util_EscapeWithMap(s) {
   let result = "";
@@ -1560,15 +1590,13 @@ Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   return bits.map((b) => (b ? "1" : "0")).join("");
 };
 
-/* Build a character escape sequence for the code given */
-Util.EscapeCharCode = function _Util_EscapeCharCode(code) {
+/* Build a character escape sequence for the character given */
+Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
   // Handle certain special escape sequences
-  let special_chrs = "bfnrtv";
-  let special = Util.StringToCodes("\b\f\n\r\t\v");
-  if (special.indexOf(code) > -1) {
-    return `\\${special_chrs.charAt(special.indexOf(code))}`;
+  if (Util.StringEscapeChars.hasOwnProperty(char)) {
+    return `\\${Util.StringEscapeChars[char]}`;
   } else {
-    return `\\x${code.toString(16).padStart(2, '0')}`;
+    return `\\x${char.toString(16).padStart(2, '0')}`;
   }
 };
 
@@ -1583,27 +1611,6 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
     } else {
       result = result.concat(ch);
     }
-  }
-  return result;
-};
-
-/* Split a string by the tokens given; all tokens must be present.
- *   func: function to apply to the matched segments */
-Util.SplitByMatches = function _Util_SplitByMatches(str, matches, func=null) {
-  let result = [];
-  let pos = 0;
-  for (let match of matches) {
-    let mpos = str.indexOf(match, pos);
-    result.push(str.substr(pos, mpos - pos));
-    if (func) {
-      result.push(func(match));
-    } else {
-      result.push(match);
-    }
-    pos = mpos + match.length;
-  }
-  if (pos < str.length) {
-    result.push(str.substr(pos));
   }
   return result;
 };
@@ -1967,19 +1974,6 @@ Util.CreateNode = function _Util_CreateNode(obj) {
   }
 };
 
-/* Obtain a node's HTML */
-Util.GetHTML = function _Util_GetHTML(node) {
-  if (node.outerHTML) {
-    return node.outerHTML;
-  } else if (typeof(node.nodeValue) === "string") {
-    return `${node.nodeValue}`.escape();
-  } else if (node.nodeValue) {
-    return `${node.nodeValue}`.escape();
-  } else {
-    return `${node}`;
-  }
-};
-
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
@@ -2043,7 +2037,12 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
   return true;
 };
 
-/* Return the (first level) differences between two objects */
+/* Return the (first level) differences between two objects
+ *  [<status>, <o1 value>, <o2 value>]
+ *  "type": o1 value and o2 value differ in type
+ *  "value": o1 value and o2 value differ
+ *  "<": o1 key exists but o2 key does not: o2 value is null
+ *  ">": o1 key does not exist but o2 key does: o1 value is null */
 Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
   let all_keys = Object.keys(o1).concat(Object.keys(o2));
   let results = {};
@@ -2051,16 +2050,16 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
     let o1_has = Util.ObjectHas(o1, key);
     let o2_has = Util.ObjectHas(o2, key);
     if (o1_has && o2_has) {
-      if (typeof(o1[key]) !== typeof(o2[key])) {
-        results[key] = ["!type", o1[key], o2[key]];
+      if (o1[key] !== o2[key]) {
+        results[key] = ["value", o1[key], o2[key]];
+      } else if (typeof(o1[key]) !== typeof(o2[key])) {
+        results[key] = ["type", o1[key], o2[key]];
       } else if (typeof(o1[key]) === "object") {
         let o1_val = JSON.stringify(Object.entries(o1[key]).sort());
         let o2_val = JSON.stringify(Object.entries(o2[key]).sort());
         if (o1_val !== o2_val) {
-          results[key] = ["1", o1[key], o2[key]];
+          results[key] = ["value", o1[key], o2[key]];
         }
-      } else if (o1[key] !== o2[key]) {
-        results[key] = ["!", o1[key], o2[key]];
       }
     } else if (o1_has && !o2_has) {
       results[key] = ["<", o1[key], null];
@@ -2071,7 +2070,7 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
   return results;
 };
 
-/* Convert the object returned by getComputedStyle to an object */
+/* Convert a CSS2Properties value (getComputedStyle) to an object */
 Util.StyleToObject = function _Util_StyleToObject(style) {
   let result = {};
   for (let key of Object.values(style)) {
