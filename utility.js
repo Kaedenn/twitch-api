@@ -461,6 +461,7 @@ Util.URL = function _Util_URL(url) {
   return url;
 };
 
+/* Get a web resource with configurable header sets */
 class _Util_API {
   constructor(headers=null, args=null) {
     this._headers = headers || {};

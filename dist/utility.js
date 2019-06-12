@@ -808,6 +808,8 @@ Util.URL = function _Util_URL(url) {
   return url;
 };
 
+/* Get a web resource with configurable header sets */
+
 var _Util_API = function () {
   function _Util_API() {
     var headers = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;

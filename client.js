@@ -7,14 +7,15 @@
  */
 
 /* FIXME:
+ * Make _selfUserState calls look at badges
  * Remove either Twitch.API or Util.API
  * Change Twitch.API or Util.API to use fetch()
- * Remove Twitch.URL.Badges entirely
  * JoinChannel doesn't look at room or roomuid
+ *   #chatrooms:caster_id:room_id
+ *   Uses userstate from caster_id
  * Inconsistent code:
- *   _ensureChannel().channel vs {Parse,Format}Channel()
- *   Remove _ensureChannel() altogether?
- *   Use FormatChannel() value instead of ParseChannel().channel?
+ *   Add client.{ParseFormat}Channel() to parse rooms
+ *   Remove client._ensureChannel() altogether
  */
 
 /* Event classes {{{0 */
@@ -347,7 +348,12 @@ function TwitchClient(opts) {
       this._ws.close();
     }
 
-    this._pending_channels = this._pending_channels.concat(this._channels);
+    /* Store the presently-connected channels as pending */
+    for (let c of this._channels) {
+      if (this._pending_channels.indexOf(c) === -1) {
+        this._pending_channels.push(c);
+      }
+    }
     this._channels = [];
     this._rooms = {};
     this._capabilities = [];
@@ -355,6 +361,7 @@ function TwitchClient(opts) {
     this._is_open = false;
     this._connected = false;
 
+    /* Construct the websocket and bind to its events */
     this._endpoint = "wss://irc-ws.chat.twitch.tv";
     this._ws = new WebSocket(this._endpoint);
     this._ws.client = this;
@@ -970,31 +977,31 @@ function _TwitchClient_UnBan(channel, user) {
 /* Request the client to join the channel specified */
 TwitchClient.prototype.JoinChannel =
 function _TwitchClient_JoinChannel(channel) {
-  let ch = this._ensureChannel(channel).channel;
+  let cname = Twitch.FormatChannel(this._ensureChannel(channel));
   if (this._is_open) {
-    if (this._channels.indexOf(ch) === -1) {
-      this.send(`JOIN ${ch}`);
-      this._channels.push(ch);
+    if (this._channels.indexOf(cname) === -1) {
+      this.send(`JOIN ${cname}`);
+      this._channels.push(cname);
     } else {
-      Util.Warn(`JoinChannel: Already in ${ch}`);
+      Util.Warn(`JoinChannel: Already in ${cname}`);
     }
-  } else if (this._pending_channels.indexOf(ch) === -1) {
-    this._pending_channels.push(ch);
+  } else if (this._pending_channels.indexOf(cname) === -1) {
+    this._pending_channels.push(cname);
   }
 };
 
 /* Request the client to leave the channel specified */
 TwitchClient.prototype.LeaveChannel =
 function _TwitchClient_LeaveChannel(channel) {
-  let ch = this._ensureChannel(channel).channel;
+  let cname = Twitch.FormatChannel(this._ensureChannel(channel));
   if (this._is_open) {
-    let idx = this._channels.indexOf(ch);
+    let idx = this._channels.indexOf(cname);
     if (idx > -1) {
-      this.send(`PART ${ch}`);
+      this.send(`PART ${cname}`);
       this._channels.splice(idx, 1);
-      delete this._rooms[ch]; /* harmless if fails */
+      delete this._rooms[cname]; /* harmless if fails */
     } else {
-      Util.Warn(`LeaveChannel: Not in channel ${ch}`);
+      Util.Warn(`LeaveChannel: Not in channel ${cname}`);
     }
   }
 };
@@ -1002,8 +1009,8 @@ function _TwitchClient_LeaveChannel(channel) {
 /* Return whether or not the client is in the channel specified */
 TwitchClient.prototype.IsInChannel =
 function _TwitchClient_IsInChannel(channel) {
-  let ch = this._ensureChannel(channel).channel;
-  return this._is_open && this._channels.indexOf(ch) > -1;
+  let cname = Twitch.FormatChannel(this._ensureChannel(channel));
+  return this._is_open && this._channels.indexOf(cname) > -1;
 };
 
 /* Get the list of currently-joined channels */
@@ -1015,7 +1022,7 @@ function _TwitchClient_GetJoinedChannels() {
 /* Get information regarding the channel specified */
 TwitchClient.prototype.GetChannelInfo =
 function _TwitchClient_GetChannelInfo(channel) {
-  let cname = this._ensureChannel(channel).channel;
+  let cname = Twitch.FormatChannel(this._ensureChannel(channel));
   return this._rooms[cname] || {};
 };
 
@@ -1625,7 +1632,6 @@ Twitch.URL.Clip = (slug) => `${Twitch.Helix}/clips?id=${slug}`;
 Twitch.URL.Game = (id) => `${Twitch.Helix}/games?id=${id}`;
 
 Twitch.URL.ChannelBadges = (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`;
-Twitch.URL.Badges = (cid) => `${Twitch.Kraken}/chat/${cid}/badges`;
 Twitch.URL.AllBadges = () => `https://badges.twitch.tv/v1/badges/global/display`;
 Twitch.URL.Cheer = (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`;
 Twitch.URL.Cheers = (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`;
@@ -1645,7 +1651,7 @@ Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
 
 /* End API URL definitions 1}}} */
 
-/* Abstract XMLHttpRequest to `url -> callback` and `url -> Promise` systems */
+/* Abstract XMLHttpRequest */
 Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {
   this._onerror = onerror;
 
