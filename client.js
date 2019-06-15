@@ -44,47 +44,51 @@ class TwitchEvent {
     }
   }
 
+  /* All "twitch-<cmd>" commands; (s) = synthetic */
   static get COMMAND_LIST() {
     return [
-      "CHAT",
-      "PING",
-      "ACK",
-      "TOPIC",
-      "NAMES",
-      "JOIN",
-      "PART",
-      "RECONNECT",
-      "MODE",
-      "PRIVMSG",
-      "WHISPER",
-      "USERSTATE",
-      "ROOMSTATE",
-      "STREAMINFO",
-      "USERNOTICE",
-      "GLOBALUSERSTATE",
-      "CLEARCHAT",
-      "HOSTTARGET",
-      "NOTICE",
-      "SUB",
-      "RESUB",
-      "GIFTSUB",
-      "ANONGIFTSUB",
-      "NEWUSER",
-      "REWARDGIFT",
-      "MYSTERYGIFT",
-      "GIFTUPGRADE",
-      "PRIMEUPGRADE",
-      "ANONGIFTUPGRADE",
-      "OTHERUSERNOTICE",
-      "RAID",
-      "OPEN",
-      "CLOSE",
-      "MESSAGE",
-      "ERROR",
-      "OTHER"
+      "CHAT", /* (s) Received a message from another user */
+      "PING", /* Twitch is checking to see if we're still here */
+      "ACK", /* Twitch acknowledged our capability request */
+      "TOPIC", /* (s) Received a TOPIC message from Twitch */
+      "NAMES", /* Received a list of connected users */
+      "JOIN", /* User joined a channel */
+      "PART", /* User left a channel */
+      "JOINED", /* (s) Client joined a channel */
+      "PARTED", /* (s) Client left a channel */
+      "RECONNECT", /* Twitch requested a reconnect */
+      "MODE", /* Twitch set the mode for a user */
+      "PRIVMSG", /* Received a message */
+      "WHISPER", /* Received a private message */
+      "USERSTATE", /* Received user information */
+      "ROOMSTATE", /* Received room information */
+      "STREAMINFO", /* (s) Received stream information */
+      "USERNOTICE", /* Received user-centric notice */
+      "GLOBALUSERSTATE", /* Received global client user information */
+      "CLEARCHAT", /* Moderator cleared the chat */
+      "HOSTTARGET", /* Streamer is hosting another streamer */
+      "NOTICE", /* Received a notice (error, warning, etc) from Twitch */
+      "SUB", /* (s) Someone subscribed */
+      "RESUB", /* (s) Someone resubscribed */
+      "GIFTSUB", /* (s) Someone gifted a subscription */
+      "ANONGIFTSUB", /* (s) Someone gifted a subscription anonymously */
+      "NEWUSER", /* (s) A brand new user just said hi */
+      "REWARDGIFT", /* (s) Gift rewards have been shared in chat */
+      "MYSTERYGIFT", /* (s) Random gift rewards have been shared in chat */
+      "GIFTUPGRADE", /* (s) Upgraded a giftsub to a real subscription */
+      "PRIMEUPGRADE", /* (s) Upgraded a prime sub to a tiered subscription */
+      "ANONGIFTUPGRADE", /* (s) Upgraded an anonymous giftsub */
+      "OTHERUSERNOTICE", /* (s) Received an unknown USERNOTICE */
+      "RAID", /* (s) Streamer is raiding or was raided by another streamer */
+      "OPEN", /* (s) WebSocket opened */
+      "CLOSE", /* (s) WebSocket closed */
+      "MESSAGE", /* (s) WebSocket received a message */
+      "ERROR", /* (s) WebSocket received an error */
+      "OTHER" /* Received some unknown event */
     ];
   }
 
+  /* Object for the commands above */
   static get COMMANDS() {
     let result = {};
     for (let cmd of TwitchEvent.COMMAND_LIST) {
@@ -1372,9 +1376,15 @@ class TwitchClient { /* exported TwitchClient */
           }
           break;
         case "JOIN":
+          if (result.user.equalsLowerCase(this._username)) {
+            Util.FireEvent(new TwitchEvent("JOINED", line, result));
+          }
           this._onJoin(result.channel, result.user);
           break;
         case "PART":
+          if (result.user.equalsLowerCase(this._username)) {
+            Util.FireEvent(new TwitchEvent("PARTED", line, result));
+          }
           this._onPart(result.channel, result.user);
           break;
         case "RECONNECT":
