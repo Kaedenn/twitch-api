@@ -34,14 +34,23 @@ var Twitch = {};
 /* Base Event object for Twitch events */
 
 var TwitchEvent = function () {
-  function TwitchEvent(type, raw_line, parsed) {
+  function TwitchEvent(type, raw, parsed) {
     _classCallCheck(this, TwitchEvent);
 
     this._cmd = type;
-    this._raw = raw_line || "";
-    this._parsed = parsed || {};
-    if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
-      Util.Error("Command " + this._cmd + " not enumerated in this.COMMANDS");
+    this._raw = raw || "";
+    if (!parsed) {
+      this._parsed = {};
+    } else if (parsed instanceof Event) {
+      this._parsed = {
+        event: parsed,
+        name: Object.getPrototypeOf(parsed).constructor.name
+      };
+    } else {
+      this._parsed = parsed;
+    }
+    if (TwitchEvent.COMMAND_LIST.indexOf(this._cmd) === -1) {
+      Util.Error("Command \"" + this._cmd + "\" not enumerated in this.COMMANDS");
     }
     /* Ensure certain flags have expected types */
     if (!this._parsed.message) {
@@ -134,9 +143,14 @@ var TwitchEvent = function () {
       return this._raw;
     }
   }, {
-    key: "values",
+    key: "object",
     get: function get() {
       return this._parsed;
+    }
+  }, {
+    key: "values",
+    get: function get() {
+      return this.object;
     }
   }, {
     key: "channel",
@@ -166,7 +180,7 @@ var TwitchEvent = function () {
   }, {
     key: "notice_msgid",
     get: function get() {
-      if (this._cmd === "NOTICE") {
+      if (this._cmd === "NOTICE" && this.flags) {
         if (typeof this.flags["msg-id"] === "string") {
           return this.flags["msg-id"];
         }
@@ -2346,7 +2360,7 @@ var TwitchClient = function () {
 
       this._pending_channels = [];
       this._getGlobalBadges();
-      Util.FireEvent(new TwitchEvent("OPEN", null, { "has-clientid": this._has_clientid }));
+      Util.FireEvent(new TwitchEvent("OPEN", "", { "has-clientid": this._has_clientid }));
     }
 
     /* Callback: called when the websocket receives a message */
@@ -2750,7 +2764,7 @@ var TwitchClient = function () {
     key: "_onWebsocketError",
     value: function _onWebsocketError(event) {
       Util.Error(event);
-      Util.FireEvent(new TwitchEvent("ERROR", event));
+      Util.FireEvent(new TwitchEvent("ERROR", "", event));
     }
 
     /* Callback: called when the websocket is closed */
@@ -2787,7 +2801,7 @@ var TwitchClient = function () {
 
       this._channels = [];
       Util.Log("WebSocket Closed", event);
-      Util.FireEvent(new TwitchEvent("CLOSE", event));
+      Util.FireEvent(new TwitchEvent("CLOSE", "", event));
     }
 
     /* End websocket callbacks 0}}} */

@@ -22,12 +22,21 @@ let Twitch = {};
 
 /* Base Event object for Twitch events */
 class TwitchEvent {
-  constructor(type, raw_line, parsed) {
+  constructor(type, raw, parsed) {
     this._cmd = type;
-    this._raw = raw_line || "";
-    this._parsed = parsed || {};
-    if (!TwitchEvent.COMMANDS.hasOwnProperty(this._cmd)) {
-      Util.Error(`Command ${this._cmd} not enumerated in this.COMMANDS`);
+    this._raw = raw || "";
+    if (!parsed) {
+      this._parsed = {};
+    } else if (parsed instanceof Event) {
+      this._parsed = {
+        event: parsed,
+        name: Object.getPrototypeOf(parsed).constructor.name
+      };
+    } else {
+      this._parsed = parsed;
+    }
+    if (TwitchEvent.COMMAND_LIST.indexOf(this._cmd) === -1) {
+      Util.Error(`Command "${this._cmd}" not enumerated in this.COMMANDS`);
     }
     /* Ensure certain flags have expected types */
     if (!this._parsed.message) {
@@ -100,7 +109,8 @@ class TwitchEvent {
   get type() { return "twitch-" + this._cmd.toLowerCase(); }
   get command() { return this._cmd; }
   get raw_line() { return this._raw; }
-  get values() { return this._parsed; }
+  get object() { return this._parsed; }
+  get values() { return this.object; }
   has_value(key) { return this._parsed.hasOwnProperty(key); }
 
   get channel() { return this.values.channel; }
@@ -121,7 +131,7 @@ class TwitchEvent {
   }
 
   get notice_msgid() {
-    if (this._cmd === "NOTICE") {
+    if (this._cmd === "NOTICE" && this.flags) {
       if (typeof(this.flags["msg-id"]) === "string") {
         return this.flags["msg-id"];
       }
@@ -1308,7 +1318,7 @@ class TwitchClient { /* exported TwitchClient */
     }
     this._pending_channels = [];
     this._getGlobalBadges();
-    Util.FireEvent(new TwitchEvent("OPEN", null, {"has-clientid": this._has_clientid}));
+    Util.FireEvent(new TwitchEvent("OPEN", "", {"has-clientid": this._has_clientid}));
   }
 
   /* Callback: called when the websocket receives a message */
@@ -1533,7 +1543,7 @@ class TwitchClient { /* exported TwitchClient */
   /* Callback: called when the websocket receives an error */
   _onWebsocketError(event) {
     Util.Error(event);
-    Util.FireEvent(new TwitchEvent("ERROR", event));
+    Util.FireEvent(new TwitchEvent("ERROR", "", event));
   }
 
   /* Callback: called when the websocket is closed */
@@ -1545,11 +1555,10 @@ class TwitchClient { /* exported TwitchClient */
     }
     this._channels = [];
     Util.Log("WebSocket Closed", event);
-    Util.FireEvent(new TwitchEvent("CLOSE", event));
+    Util.FireEvent(new TwitchEvent("CLOSE", "", event));
   }
 
   /* End websocket callbacks 0}}} */
-
 }
 
 /* Escape sequences {{{0 */
