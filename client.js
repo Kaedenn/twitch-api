@@ -18,6 +18,9 @@
  *   Remove client._ensureChannel() altogether
  */
 
+/* Container for Twitch utilities */
+let Twitch = {};
+
 /* Event classes {{{0 */
 
 /* Base Event object for Twitch events */
@@ -270,12 +273,13 @@ function TwitchClient(opts) {
   this._connected = false;
   this._username = null;
 
-  /* Channels/rooms presently connected to */
+  /* List of channels/rooms presently joined */
   this._channels = [];
-  /* Channels/rooms about to be connected to */
+  /* List of channels/rooms about to join once connected to Twitch */
   this._pending_channels = opts.Channels || [];
-  /* Room information {"#ch": {...}} */
+  /* Channel and room information */
   this._rooms = {};
+  this._rooms_byid = {};
   /* History of sent chat messages (recent = first) */
   this._history = [];
   /* Maximum history size */
@@ -494,6 +498,7 @@ function _TwitchClient__ensureRoom(channel) {
       userInfo: {},  /* Joined users' info */
       operators: [], /* Operators */
       channel: cobj, /* Channel object */
+      cname: cname,  /* Channel name */
       rooms: {},     /* Known rooms */
       id: null,      /* Channel ID */
       online: false, /* Currently streaming */
@@ -1026,6 +1031,17 @@ function _TwitchClient_GetChannelInfo(channel) {
   return this._rooms[cname] || {};
 };
 
+/* Get a channel information by streamer ID */
+TwitchClient.prototype.GetChannelById =
+function _TwitchClient_GetChannelById(cid) {
+  for (let cinfo of Object.values(this._rooms)) {
+    if (cinfo.id === cid) {
+      return cinfo;
+    }
+  }
+  return null;
+};
+
 /* End channel functions 0}}} */
 
 /* Functions related to cheers and emotes {{{0 */
@@ -1409,6 +1425,7 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
       room = this._rooms[cname];
       if (result.flags && result.flags["room-id"]) {
         roomid = result.flags["room-id"];
+        this._rooms_byid[roomid] = room;
       }
     }
 
@@ -1495,18 +1512,20 @@ function _TwitchClient__onWebsocketMessage(ws_event) {
             this._getBTTVEmotes(cname, roomid);
           }
         }
-        this._api.GetCB(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
-          if (resp.streams && resp.streams.length > 0) {
-            room.stream = resp.streams[0];
-            room.streams = resp.streams;
-            room.online = true;
-          } else {
-            room.stream = {};
-            room.streams = [];
-            room.online = false;
-          }
-          Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
-        });
+        if (!Twitch.IsRoom(result.channel)) {
+          this._api.GetCB(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
+            if (resp.streams && resp.streams.length > 0) {
+              room.stream = resp.streams[0];
+              room.streams = resp.streams;
+              room.online = true;
+            } else {
+              room.stream = {};
+              room.streams = [];
+              room.online = false;
+            }
+            Util.FireEvent(new TwitchEvent("STREAMINFO", line, result));
+          });
+        }
         break;
       case "USERNOTICE":
         if (result.sub_kind === "SUB") {
@@ -1597,11 +1616,7 @@ function _TwitchClient__onWebsocketClose(event) {
 
 /* End websocket callbacks 0}}} */
 
-/* Twitch utilities {{{0 */
-
-let Twitch = {};
-
-/* Escape sequences {{{1 */
+/* Escape sequences {{{0 */
 
 Twitch.FLAG_ESCAPE_RULES = [
   /* escaped character, escaped regex, raw character, raw regex */
@@ -1612,9 +1627,9 @@ Twitch.FLAG_ESCAPE_RULES = [
   ["\\\\", /\\\\/g, "\\", /\\/g]
 ];
 
-/* End escape sequences 1}}} */
+/* End escape sequences 0}}} */
 
-/* API URL definitions {{{1 */
+/* API URL definitions {{{0 */
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
@@ -1649,7 +1664,7 @@ Twitch.URL.BTTVAllEmotes = () => `${Twitch.BTTV}/emotes`;
 Twitch.URL.BTTVEmotes = (cname) => `${Twitch.BTTV}/channels/${cname}`;
 Twitch.URL.BTTVEmote = (eid) => `${Twitch.BTTV}/emote/${eid}/1x`;
 
-/* End API URL definitions 1}}} */
+/* End API URL definitions 0}}} */
 
 /* Abstract XMLHttpRequest */
 Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null) {
@@ -1727,8 +1742,14 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
     };
     let parts = channel.split(':');
     if (parts.length === 1) {
+      /* #channel */
       chobj.channel = parts[0];
+    } else if (parts.length === 2) {
+      /* #channel:room-name */
+      chobj.channel = parts[0];
+      chobj.room = parts[1];
     } else if (parts.length === 3) {
+      /* #chatrooms:channel-id:room-uuid */
       chobj.channel = parts[0];
       chobj.room = parts[1];
       chobj.roomuid = parts[2];
@@ -1773,6 +1794,16 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
     Util.Warn("FormatChannel: don't know how to format", channel, room, roomuid);
     return `${channel}`;
   }
+};
+
+/* Return whether or not the channel object given is a #chatrooms room */
+Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
+  return cobj.channel === "#chatrooms" && cobj.room && cobj.roomuid;
+};
+
+/* Format a room with the channel and room IDs given */
+Twitch.FormatRoom = function _Twitch_FormatRoom(cid, rid) {
+  return `#chatrooms:${cid}:${rid}`;
 };
 
 /* Parse Twitch flag escape sequences */
@@ -2089,6 +2120,4 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   }
   return msg;
 };
-
-/* End Twitch utilities 0}}} */
 
