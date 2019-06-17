@@ -1138,15 +1138,25 @@ class TwitchClient { /* exported TwitchClient */
     }
   }
 
+  /* Alias for client.SendMessage */
+  Send(channel, message, bypassFaux=false) {
+    this.SendMessage(channel, message, bypassFaux);
+  }
+
   /* Send a message to every connected channel */
-  SendMessageToAll(message) {
+  SendMessageToAll(message, bypassFaux=false) {
     if (this._connected) {
       for (let ch of this._channels) {
-        this.SendMessage(ch, message);
+        this.SendMessage(ch, message, bypassFaux);
       }
     } else {
       Util.Warn(`Unable to send "${message}" to all channels: not connected`);
     }
+  }
+
+  /* Alias for client.SendMessageToAll */
+  SendToAll(message, bypassFaux=false) {
+    this.SendMessageToAll(message, bypassFaux);
   }
 
   /* Send text to the Twitch servers, bypassing any special logic */

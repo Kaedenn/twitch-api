@@ -2079,11 +2079,23 @@ var TwitchClient = function () {
       }
     }
 
+    /* Alias for client.SendMessage */
+
+  }, {
+    key: "Send",
+    value: function Send(channel, message) {
+      var bypassFaux = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+
+      this.SendMessage(channel, message, bypassFaux);
+    }
+
     /* Send a message to every connected channel */
 
   }, {
     key: "SendMessageToAll",
     value: function SendMessageToAll(message) {
+      var bypassFaux = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
       if (this._connected) {
         var _iteratorNormalCompletion25 = true;
         var _didIteratorError25 = false;
@@ -2093,7 +2105,7 @@ var TwitchClient = function () {
           for (var _iterator25 = this._channels[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
             var ch = _step25.value;
 
-            this.SendMessage(ch, message);
+            this.SendMessage(ch, message, bypassFaux);
           }
         } catch (err) {
           _didIteratorError25 = true;
@@ -2112,6 +2124,16 @@ var TwitchClient = function () {
       } else {
         Util.Warn("Unable to send \"" + message + "\" to all channels: not connected");
       }
+    }
+
+    /* Alias for client.SendMessageToAll */
+
+  }, {
+    key: "SendToAll",
+    value: function SendToAll(message) {
+      var bypassFaux = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+      this.SendMessageToAll(message, bypassFaux);
     }
 
     /* Send text to the Twitch servers, bypassing any special logic */
