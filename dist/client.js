@@ -575,6 +575,7 @@ var TwitchClient = function () {
     this._is_open = false;
     this._connected = false;
     this._username = null;
+    this._connecting = false;
 
     /* List of channels/rooms presently joined */
     this._channels = [];
@@ -658,9 +659,14 @@ var TwitchClient = function () {
 
     /* TwitchClient.Connect() */
     this.Connect = function _TwitchClient_Connect() {
-      if (this._ws !== null) {
-        this._ws.close();
+      /* Prevent recursion */
+      if (this._connecting) {
+        Util.Error("Client is already attempting to connect");
+        return;
       }
+      this._connecting = true;
+      /* Ensure the socket is indeed closed */
+      this.close();
 
       /* Store the presently-connected channels as pending */
       var _iteratorNormalCompletion4 = true;
@@ -704,6 +710,7 @@ var TwitchClient = function () {
       this._ws.onopen = function _ws_onopen(event) {
         try {
           Util.LogOnly("ws open>", this.url);
+          this.client._connecting = false;
           this.client._connected = false;
           this.client._is_open = true;
           this.client._onWebsocketOpen(cfg_name, oauth);
@@ -759,13 +766,21 @@ var TwitchClient = function () {
     Util.LogOnly("Client constructed and ready for action");
   }
 
-  /* Event handling {{{0 */
-
-  /* Bind a function to the event specified */
-
-
   _createClass(TwitchClient, [{
+    key: "close",
+    value: function close() {
+      if (this._ws) {
+        this._ws.close();
+        this._ws = null;
+      }
+    }
+  }, {
     key: "bind",
+
+
+    /* Event handling {{{0 */
+
+    /* Bind a function to the event specified */
     value: function bind(event, callback) {
       Util.Bind(event, callback);
     }
@@ -2850,6 +2865,11 @@ var TwitchClient = function () {
 
     /* End websocket callbacks 0}}} */
 
+  }, {
+    key: "connecting",
+    get: function get() {
+      return this._connecting;
+    }
   }]);
 
   return TwitchClient;

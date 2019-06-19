@@ -286,6 +286,7 @@ class TwitchClient { /* exported TwitchClient */
     this._is_open = false;
     this._connected = false;
     this._username = null;
+    this._connecting = false;
 
     /* List of channels/rooms presently joined */
     this._channels = [];
@@ -362,9 +363,14 @@ class TwitchClient { /* exported TwitchClient */
 
     /* TwitchClient.Connect() */
     this.Connect = (function _TwitchClient_Connect() {
-      if (this._ws !== null) {
-        this._ws.close();
+      /* Prevent recursion */
+      if (this._connecting) {
+        Util.Error("Client is already attempting to connect");
+        return;
       }
+      this._connecting = true;
+      /* Ensure the socket is indeed closed */
+      this.close();
 
       /* Store the presently-connected channels as pending */
       for (let c of this._channels) {
@@ -386,6 +392,7 @@ class TwitchClient { /* exported TwitchClient */
       this._ws.onopen = (function _ws_onopen(event) {
         try {
           Util.LogOnly("ws open>", this.url);
+          this.client._connecting = false;
           this.client._connected = false;
           this.client._is_open = true;
           this.client._onWebsocketOpen(cfg_name, oauth);
@@ -439,6 +446,17 @@ class TwitchClient { /* exported TwitchClient */
     }).bind(this);
 
     Util.LogOnly("Client constructed and ready for action");
+  }
+
+  close() {
+    if (this._ws) {
+      this._ws.close();
+      this._ws = null;
+    }
+  }
+
+  get connecting() {
+    return this._connecting;
   }
 
   /* Event handling {{{0 */
