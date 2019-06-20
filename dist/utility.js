@@ -674,6 +674,13 @@ String.prototype.xor = function _String_xor(byte) {
   });
 };
 
+/* Title-case a string (akin to Python's str.title function) */
+String.prototype.toTitleCase = function _String_toTitleCase() {
+  return this.replace(/\b[a-z]/g, function (c) {
+    return c.toUpperCase();
+  });
+};
+
 /* Parse a number (calling Util.ParseNumber) */
 Number.parse = function _Number_parse(str) {
   var base = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 10;

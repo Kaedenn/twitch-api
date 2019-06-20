@@ -191,7 +191,7 @@ class TwitchChatEvent extends TwitchEvent {
   }
   get sub_months() {
     if (this.flags["badge-info"]) {
-      for (let [bname, brev] in this.flags["badge-info"]) {
+      for (let [bname, brev] of this.flags["badge-info"]) {
         if (bname === "subscriber") {
           return brev;
         }
@@ -1363,11 +1363,11 @@ class TwitchClient { /* exported TwitchClient */
     let lines = ws_event.data.trim().split("\r\n");
     /* Log the lines to the debug console */
     if (lines.length === 1) {
-      Util.LogOnly(`ws recv> "${lines[0]}"`);
+      Util.DebugOnly(`ws recv> "${lines[0]}"`);
     } else {
       for (let [i, l] of Object.entries(lines)) {
         let n = Number.parseInt(i) + 1;
-        if (l.trim().length > 0) Util.LogOnly(`ws recv/${n}> "${l}"`);
+        if (l.trim().length > 0) Util.DebugOnly(`ws recv/${n}> "${l}"`);
       }
     }
     for (let line of lines) {
@@ -1448,6 +1448,9 @@ class TwitchClient { /* exported TwitchClient */
           let event = new TwitchChatEvent(line, result);
           if (!room.userInfo.hasOwnProperty(result.user)) {
             room.userInfo[result.user] = {};
+          }
+          if (!room.users.includes(result.user)) {
+            room.users.push(result.user);
           }
           if (!event.flags.badges) event.flags.badges = [];
           if (this._enable_ffz) {

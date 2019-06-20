@@ -380,6 +380,11 @@ String.prototype.xor = function _String_xor(byte) {
   return this.transform((i) => i^byte);
 };
 
+/* Title-case a string (akin to Python's str.title function) */
+String.prototype.toTitleCase = function _String_toTitleCase() {
+  return this.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+};
+
 /* Parse a number (calling Util.ParseNumber) */
 Number.parse = function _Number_parse(str, base=10) {
   return Util.ParseNumber(str,base);
