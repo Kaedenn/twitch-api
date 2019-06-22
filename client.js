@@ -6,10 +6,6 @@
  *  https://www.frankerfacez.com/developers
  */
 
-/* FIXME:
- * Make _selfUserState calls look at badges
- */
-
 /* Container for Twitch utilities */
 let Twitch = {};
 
@@ -106,9 +102,9 @@ class TwitchEvent {
   get raw() { return this._raw; }
   get object() { return this._parsed; }
   get values() { return this.object; }
-  has_value(key) { return this._parsed.hasOwnProperty(key); }
 
   get channel() { return this.values.channel; }
+  get channelString() { return Twitch.FormatChannel(this.channel); }
   get message() { return this.values.message; }
   get user() { return this.values.user || this.flags["display-name"]; }
   get name() { return this.flags["display-name"] || this.values.user; }
@@ -442,17 +438,6 @@ class TwitchClient { /* exported TwitchClient */
     }).bind(this);
 
     Util.LogOnly("Client constructed and ready for action");
-  }
-
-  close() {
-    if (this._ws) {
-      this._ws.close();
-      this._ws = null;
-    }
-  }
-
-  get connecting() {
-    return this._connecting;
   }
 
   /* Event handling {{{0 */
@@ -855,6 +840,14 @@ class TwitchClient { /* exported TwitchClient */
 
   /* General status functions {{{0 */
 
+  /* Forcibly close the socket */
+  close() {
+    if (this._ws) {
+      this._ws.close();
+      this._ws = null;
+    }
+  }
+
   /* Obtain connection status information */
   ConnectionStatus() {
     return {
@@ -866,21 +859,31 @@ class TwitchClient { /* exported TwitchClient */
       authed: this.IsAuthed()
     };
   }
+  get status() { return this.ConnectionStatus(); }
+
+  /* Return whether or not the client is currently trying to connect */
+  IsConnecting() {
+    return this._connecting;
+  }
+  get connecting() { return this.IsConnecting(); }
 
   /* Return whether or not we're connected to Twitch */
   Connected() {
     return this._connected;
   }
+  get connected() { return this.Connected(); }
 
   /* Return whether or not FFZ support is enabled */
   FFZEnabled() {
     return this._enable_ffz;
   }
+  get ffzEnabled() { return this.FFZEnabled(); }
 
   /* Return whether or not BTTV support is enabled */
   BTTVEnabled() {
     return this._enable_bttv;
   }
+  get bttvEnabled() { return this.BTTVEnabled; }
 
   /* Return a copy of the client's userstate */
   SelfUserState() {
@@ -888,6 +891,7 @@ class TwitchClient { /* exported TwitchClient */
     obj.userid = this._self_userid;
     return obj;
   }
+  get userState() { return this.SelfUserState(); }
 
   /* Return true if the client has been granted the capability specified. Values
    * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
@@ -905,6 +909,7 @@ class TwitchClient { /* exported TwitchClient */
   GetName() {
     return this._username;
   }
+  get name() { return this.GetName(); }
 
   /* Return whether or not the numeric user ID refers to the client itself */
   IsUIDSelf(userid) {
@@ -919,25 +924,34 @@ class TwitchClient { /* exported TwitchClient */
   IsAuthed() {
     return this._authed;
   }
+  get authed() { return this._authed; }
 
   /* Return true if the client is a subscriber in the channel given */
   IsSub(channel) {
-    return this._selfUserState(channel, "sub") || this._hasBadge(channel, "subscriber");
+    if (this._selfUserState(channel, "sub")) return true;
+    if (this._hasBadge(channel, "subscriber")) return true;
+    return false;
   }
 
   /* Return true if the client is a VIP in the channel given */
   IsVIP(channel) {
-    return this._selfUserState(channel, "vip");
+    if (this._selfUserState(channel, "vip")) return true;
+    if (this._hasBadge(channel, "vip")) return true;
+    return false;
   }
 
   /* Return true if the client is a moderator in the channel given */
   IsMod(channel) {
-    return this._selfUserState(channel, "mod");
+    if (this._selfUserState(channel, "mod")) return true;
+    if (this._hasBadge(channel, "moderator")) return true;
+    return false;
   }
 
   /* Return true if the client is the broadcaster for the channel given */
   IsCaster(channel) {
-    return this._selfUserState(channel, "broadcaster");
+    if (this._selfUserState(channel, "broadcaster")) return true;
+    if (this._hasBadge(channel, "broadcaster")) return true;
+    return false;
   }
 
   /* Timeout the specific user in the specified channel */
@@ -1217,9 +1231,9 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Obtain the history of sent messages */
   GetHistory() {
-    /* Make a copy to prevent unexpected modification */
-    return this._history.map((x) => x);
+    return Util.JSONClone(this._history);
   }
+  get history() { return this.GetHistory(); }
 
   /* Obtain the nth most recently sent message */
   GetHistoryItem(n) {
@@ -1233,11 +1247,13 @@ class TwitchClient { /* exported TwitchClient */
   GetHistoryMax() {
     return this._hist_max;
   }
+  get historyMaxSize() { return this.GetHistoryMax(); }
 
   /* Obtain the current number of history items */
   GetHistoryLength() {
     return this._history.length;
   }
+  get historyLength() { return this.GetHistoryLength(); }
 
   /* End of history functions 0}}} */
 

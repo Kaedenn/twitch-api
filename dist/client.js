@@ -6,10 +6,6 @@
  *  https://www.frankerfacez.com/developers
  */
 
-/* FIXME:
- * Make _selfUserState calls look at badges
- */
-
 /* Container for Twitch utilities */
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
@@ -66,11 +62,6 @@ var TwitchEvent = function () {
 
 
   _createClass(TwitchEvent, [{
-    key: "has_value",
-    value: function has_value(key) {
-      return this._parsed.hasOwnProperty(key);
-    }
-  }, {
     key: "flag",
     value: function flag(_flag) {
       return this.flags ? this.flags[_flag] : null;
@@ -151,6 +142,11 @@ var TwitchEvent = function () {
     key: "channel",
     get: function get() {
       return this.values.channel;
+    }
+  }, {
+    key: "channelString",
+    get: function get() {
+      return Twitch.FormatChannel(this.channel);
     }
   }, {
     key: "message",
@@ -783,21 +779,13 @@ var TwitchClient = function () {
     Util.LogOnly("Client constructed and ready for action");
   }
 
+  /* Event handling {{{0 */
+
+  /* Bind a function to the event specified */
+
+
   _createClass(TwitchClient, [{
-    key: "close",
-    value: function close() {
-      if (this._ws) {
-        this._ws.close();
-        this._ws = null;
-      }
-    }
-  }, {
     key: "bind",
-
-
-    /* Event handling {{{0 */
-
-    /* Bind a function to the event specified */
     value: function bind(event, callback) {
       Util.Bind(event, callback);
     }
@@ -1575,6 +1563,17 @@ var TwitchClient = function () {
 
     /* General status functions {{{0 */
 
+    /* Forcibly close the socket */
+
+  }, {
+    key: "close",
+    value: function close() {
+      if (this._ws) {
+        this._ws.close();
+        this._ws = null;
+      }
+    }
+
     /* Obtain connection status information */
 
   }, {
@@ -1589,47 +1588,55 @@ var TwitchClient = function () {
         authed: this.IsAuthed()
       };
     }
+  }, {
+    key: "IsConnecting",
 
-    /* Return whether or not we're connected to Twitch */
 
+    /* Return whether or not the client is currently trying to connect */
+    value: function IsConnecting() {
+      return this._connecting;
+    }
   }, {
     key: "Connected",
+
+
+    /* Return whether or not we're connected to Twitch */
     value: function Connected() {
       return this._connected;
     }
-
-    /* Return whether or not FFZ support is enabled */
-
   }, {
     key: "FFZEnabled",
+
+
+    /* Return whether or not FFZ support is enabled */
     value: function FFZEnabled() {
       return this._enable_ffz;
     }
-
-    /* Return whether or not BTTV support is enabled */
-
   }, {
     key: "BTTVEnabled",
+
+
+    /* Return whether or not BTTV support is enabled */
     value: function BTTVEnabled() {
       return this._enable_bttv;
     }
-
-    /* Return a copy of the client's userstate */
-
   }, {
     key: "SelfUserState",
+
+
+    /* Return a copy of the client's userstate */
     value: function SelfUserState() {
       var obj = Util.JSONClone(this._self_userstate);
       obj.userid = this._self_userid;
       return obj;
     }
+  }, {
+    key: "HasCapability",
+
 
     /* Return true if the client has been granted the capability specified. Values
      * may omit the "twitch.tv/" scope if desired. Capabilities can be one of the
      * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership */
-
-  }, {
-    key: "HasCapability",
     value: function HasCapability(test_cap) {
       var _iteratorNormalCompletion20 = true;
       var _didIteratorError20 = false;
@@ -1668,11 +1675,11 @@ var TwitchClient = function () {
     value: function GetName() {
       return this._username;
     }
-
-    /* Return whether or not the numeric user ID refers to the client itself */
-
   }, {
     key: "IsUIDSelf",
+
+
+    /* Return whether or not the numeric user ID refers to the client itself */
     value: function IsUIDSelf(userid) {
       return userid === this._self_userid;
     }
@@ -1688,13 +1695,15 @@ var TwitchClient = function () {
     value: function IsAuthed() {
       return this._authed;
     }
-
-    /* Return true if the client is a subscriber in the channel given */
-
   }, {
     key: "IsSub",
+
+
+    /* Return true if the client is a subscriber in the channel given */
     value: function IsSub(channel) {
-      return this._selfUserState(channel, "sub") || this._hasBadge(channel, "subscriber");
+      if (this._selfUserState(channel, "sub")) return true;
+      if (this._hasBadge(channel, "subscriber")) return true;
+      return false;
     }
 
     /* Return true if the client is a VIP in the channel given */
@@ -1702,7 +1711,9 @@ var TwitchClient = function () {
   }, {
     key: "IsVIP",
     value: function IsVIP(channel) {
-      return this._selfUserState(channel, "vip");
+      if (this._selfUserState(channel, "vip")) return true;
+      if (this._hasBadge(channel, "vip")) return true;
+      return false;
     }
 
     /* Return true if the client is a moderator in the channel given */
@@ -1710,7 +1721,9 @@ var TwitchClient = function () {
   }, {
     key: "IsMod",
     value: function IsMod(channel) {
-      return this._selfUserState(channel, "mod");
+      if (this._selfUserState(channel, "mod")) return true;
+      if (this._hasBadge(channel, "moderator")) return true;
+      return false;
     }
 
     /* Return true if the client is the broadcaster for the channel given */
@@ -1718,7 +1731,9 @@ var TwitchClient = function () {
   }, {
     key: "IsCaster",
     value: function IsCaster(channel) {
-      return this._selfUserState(channel, "broadcaster");
+      if (this._selfUserState(channel, "broadcaster")) return true;
+      if (this._hasBadge(channel, "broadcaster")) return true;
+      return false;
     }
 
     /* Timeout the specific user in the specified channel */
@@ -2258,16 +2273,13 @@ var TwitchClient = function () {
   }, {
     key: "GetHistory",
     value: function GetHistory() {
-      /* Make a copy to prevent unexpected modification */
-      return this._history.map(function (x) {
-        return x;
-      });
+      return Util.JSONClone(this._history);
     }
-
-    /* Obtain the nth most recently sent message */
-
   }, {
     key: "GetHistoryItem",
+
+
+    /* Obtain the nth most recently sent message */
     value: function GetHistoryItem(n) {
       if (n >= 0 && n < this._history.length) {
         return this._history[n];
@@ -2282,23 +2294,23 @@ var TwitchClient = function () {
     value: function GetHistoryMax() {
       return this._hist_max;
     }
-
-    /* Obtain the current number of history items */
-
   }, {
     key: "GetHistoryLength",
+
+
+    /* Obtain the current number of history items */
     value: function GetHistoryLength() {
       return this._history.length;
     }
+  }, {
+    key: "GetClip",
+
 
     /* End of history functions 0}}} */
 
     /* Asset and API functions {{{0 */
 
     /* Return the data for the given clip slug */
-
-  }, {
-    key: "GetClip",
     value: function GetClip(slug) {
       return new Promise(function _getclip_promise(resolve, reject) {
         this._api.GetCB(Twitch.URL.Clip(slug), function _getclip_resp(resp) {
@@ -2923,9 +2935,59 @@ var TwitchClient = function () {
     /* End websocket callbacks 0}}} */
 
   }, {
+    key: "status",
+    get: function get() {
+      return this.ConnectionStatus();
+    }
+  }, {
     key: "connecting",
     get: function get() {
-      return this._connecting;
+      return this.IsConnecting();
+    }
+  }, {
+    key: "connected",
+    get: function get() {
+      return this.Connected();
+    }
+  }, {
+    key: "ffzEnabled",
+    get: function get() {
+      return this.FFZEnabled();
+    }
+  }, {
+    key: "bttvEnabled",
+    get: function get() {
+      return this.BTTVEnabled;
+    }
+  }, {
+    key: "userState",
+    get: function get() {
+      return this.SelfUserState();
+    }
+  }, {
+    key: "name",
+    get: function get() {
+      return this.GetName();
+    }
+  }, {
+    key: "authed",
+    get: function get() {
+      return this._authed;
+    }
+  }, {
+    key: "history",
+    get: function get() {
+      return this.GetHistory();
+    }
+  }, {
+    key: "historyMaxSize",
+    get: function get() {
+      return this.GetHistoryMax();
+    }
+  }, {
+    key: "historyLength",
+    get: function get() {
+      return this.GetHistoryLength();
     }
   }]);
 
