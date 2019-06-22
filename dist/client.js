@@ -722,47 +722,47 @@ var TwitchClient = function () {
       this._ws.client = this;
       this._ws.onopen = function _ws_onopen(event) {
         try {
-          Util.LogOnly("ws open>", this.url);
-          this.client._connecting = false;
-          this.client._connected = false;
-          this.client._is_open = true;
-          this.client._onWebsocketOpen(cfg_name, oauth);
+          Util.LogOnly("ws open>", this.url, event);
+          this._connecting = false;
+          this._connected = false;
+          this._is_open = true;
+          this._onWebsocketOpen(cfg_name, oauth);
         } catch (e) {
           alert("ws.onopen error: " + e.toString());
           throw e;
         }
-      }.bind(this._ws);
+      }.bind(this);
       this._ws.onmessage = function _ws_onmessage(event) {
         try {
           var data = Twitch.StripCredentials(JSON.stringify(event.data));
           Util.TraceOnly('ws recv>', data);
-          this.client._onWebsocketMessage(event);
+          this._onWebsocketMessage(event);
         } catch (e) {
           alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
           throw e;
         }
-      }.bind(this._ws);
+      }.bind(this);
       this._ws.onerror = function _ws_onerror(event) {
         try {
           Util.LogOnly('ws error>', event);
-          this.client._connected = false;
-          this.client._onWebsocketError(event);
+          this._connected = false;
+          this._onWebsocketError(event);
         } catch (e) {
           alert("ws.onerror error: " + e.toString());
           throw e;
         }
-      }.bind(this._ws);
+      }.bind(this);
       this._ws.onclose = function _ws_onclose(event) {
         try {
           Util.LogOnly('ws close>', event);
-          this.client._connected = false;
-          this.client._is_open = false;
-          this.client._onWebsocketClose(event);
+          this._connected = false;
+          this._is_open = false;
+          this._onWebsocketClose(event);
         } catch (e) {
           alert("ws.onclose error: " + e.toString());
           throw e;
         }
-      }.bind(this._ws);
+      }.bind(this);
       this.send = function _TwitchClient_send(m) {
         try {
           this._ws.send(m);
@@ -968,7 +968,7 @@ var TwitchClient = function () {
     key: "_getRooms",
     value: function _getRooms(cname, cid) {
       if (this._no_assets) return;
-      this._api.GetCB(Twitch.URL.Rooms(cid), function _rooms_cb(json) {
+      this._api.Get(Twitch.URL.Rooms(cid), function _rooms_cb(json) {
         var _iteratorNormalCompletion7 = true;
         var _didIteratorError7 = false;
         var _iteratorError7 = undefined;
@@ -1009,7 +1009,7 @@ var TwitchClient = function () {
       var channel = this.ParseChannel(cname);
       var c = channel.channel;
       this._channel_badges[c] = {};
-      this._api.GetCB(Twitch.URL.ChannelBadges(cid), function _badges_cb(json) {
+      this._api.Get(Twitch.URL.ChannelBadges(cid), function _badges_cb(json) {
         /* badge_sets
          *  subscriber
          *   versions
@@ -1093,7 +1093,7 @@ var TwitchClient = function () {
         Util.Warn("Unable to get channel cheers; no clientid");
         return;
       }
-      this._api.GetCB(Twitch.URL.Cheers(cid), function _cheers_cb(json) {
+      this._api.Get(Twitch.URL.Cheers(cid), function _cheers_cb(json) {
         var _iteratorNormalCompletion10 = true;
         var _didIteratorError10 = false;
         var _iteratorError10 = undefined;
@@ -1102,10 +1102,8 @@ var TwitchClient = function () {
           for (var _iterator10 = json.actions[Symbol.iterator](), _step10; !(_iteratorNormalCompletion10 = (_step10 = _iterator10.next()).done); _iteratorNormalCompletion10 = true) {
             var cdef = _step10.value;
 
-            var p = RegExp.escape(cdef.prefix);
             /* Simplify things later by adding the regexps here */
-            cdef.word_pattern = new RegExp("^(" + p + ")([1-9][0-9]*)$", 'i');
-            cdef.line_pattern = new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", 'ig');
+            cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
             this._channel_cheers[cname][cdef.prefix] = cdef;
           }
         } catch (err) {
@@ -1131,7 +1129,7 @@ var TwitchClient = function () {
     key: "_getFFZEmotes",
     value: function _getFFZEmotes(cname, cid) {
       this._ffz_channel_emotes[cname] = {};
-      this._api.GetSimpleCB(Twitch.URL.FFZEmotes(cid), function _ffz_emotes_cb(json) {
+      this._api.GetSimple(Twitch.URL.FFZEmotes(cid), function _ffz_emotes_cb(json) {
         var ffz = this._ffz_channel_emotes[cname];
         ffz.id = json.room.uid;
         ffz.set_id = json.room.set;
@@ -1252,7 +1250,7 @@ var TwitchClient = function () {
     key: "_getBTTVEmotes",
     value: function _getBTTVEmotes(cname, cid) {
       this._bttv_channel_emotes[cname] = {};
-      this._api.GetSimpleCB(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")), function _bttv_global_emotes_cb(json) {
+      this._api.GetSimple(Twitch.URL.BTTVEmotes(cname.replace(/^#/, "")), function _bttv_global_emotes_cb(json) {
         var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
         var bttv = this._bttv_channel_emotes[cname];
         var _iteratorNormalCompletion14 = true;
@@ -1292,7 +1290,7 @@ var TwitchClient = function () {
       });
 
       this._bttv_global_emotes = {};
-      this._api.GetSimpleCB(Twitch.URL.BTTVAllEmotes(), function _bttv_all_emotes_cb(json) {
+      this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), function _bttv_all_emotes_cb(json) {
         var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
         var _iteratorNormalCompletion15 = true;
         var _didIteratorError15 = false;
@@ -1338,7 +1336,7 @@ var TwitchClient = function () {
     value: function _getGlobalBadges() {
       this._global_badges = {};
       if (this._no_assets) return;
-      this._api.GetCB(Twitch.URL.AllBadges(), function _badges_cb(json) {
+      this._api.Get(Twitch.URL.AllBadges(), function _badges_cb(json) {
         var _iteratorNormalCompletion16 = true;
         var _didIteratorError16 = false;
         var _iteratorError16 = undefined;
@@ -1365,7 +1363,7 @@ var TwitchClient = function () {
         }
       }.bind(this), {}, false);
       if (this._enable_ffz) {
-        this._api.GetSimpleCB(Twitch.URL.FFZBadgeUsers(), function _ffz_bades_cb(resp) {
+        this._api.GetSimple(Twitch.URL.FFZBadgeUsers(), function _ffz_bades_cb(resp) {
           var _iteratorNormalCompletion17 = true;
           var _didIteratorError17 = false;
           var _iteratorError17 = undefined;
@@ -1927,7 +1925,7 @@ var TwitchClient = function () {
           for (var _iterator22 = Object.keys(this._channel_cheers[cname])[Symbol.iterator](), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
             var name = _step22.value;
 
-            if (word.match(this._channel_cheers[cname][name].word_pattern)) {
+            if (word.match(this._channel_cheers[cname][name].pattern)) {
               return true;
             }
           }
@@ -1972,7 +1970,9 @@ var TwitchClient = function () {
             var name = _ref19[0];
             var cheer = _ref19[1];
 
-            if (message.search(cheer.line_pattern) > -1) {
+            if (message.search(cheer.pattern) > -1) {
+              /* Remove the "g" flag */
+              var wpat = new RegExp(cheer.pattern, "i");
               var _iteratorNormalCompletion24 = true;
               var _didIteratorError24 = false;
               var _iteratorError24 = undefined;
@@ -1981,7 +1981,7 @@ var TwitchClient = function () {
                 for (var _iterator24 = parts[Symbol.iterator](), _step24; !(_iteratorNormalCompletion24 = (_step24 = _iterator24.next()).done); _iteratorNormalCompletion24 = true) {
                   var token = _step24.value;
 
-                  var m = token.match(cheer.word_pattern);
+                  var m = token.match(wpat);
                   if (m) {
                     var num_bits = Number.parseInt(m[2]);
                     matches.push({
@@ -1990,7 +1990,8 @@ var TwitchClient = function () {
                       cheername: name,
                       bits: num_bits,
                       start: offset,
-                      end: offset + token.length
+                      end: offset + token.length,
+                      groups: m
                     });
                   }
                   offset += token.length + 1;
@@ -2313,7 +2314,7 @@ var TwitchClient = function () {
     /* Return the data for the given clip slug */
     value: function GetClip(slug) {
       return new Promise(function _getclip_promise(resolve, reject) {
-        this._api.GetCB(Twitch.URL.Clip(slug), function _getclip_resp(resp) {
+        this._api.Get(Twitch.URL.Clip(slug), function _getclip_resp(resp) {
           resolve(resp["data"][0]);
         }, reject);
       }.bind(this));
@@ -2325,7 +2326,7 @@ var TwitchClient = function () {
     key: "GetGame",
     value: function GetGame(game_id) {
       return new Promise(function _getgame_promise(resolve, reject) {
-        this._api.GetCB(Twitch.URL.Game(game_id), function _getgame_clip(resp) {
+        this._api.Get(Twitch.URL.Game(game_id), function _getgame_clip(resp) {
           resolve(resp["data"][0]);
         }, reject);
       }.bind(this));
@@ -2534,7 +2535,7 @@ var TwitchClient = function () {
 
       var _loop = function _loop(line) {
         /* Ignore empty lines */
-        if (line.trim() === '') {
+        if (line.trim().length === 0) {
           return "continue";
         }
 
@@ -2545,7 +2546,7 @@ var TwitchClient = function () {
 
         /* Don't handle messages with NULL commands */
         if (!result.cmd) {
-          Util.Error('result.cmd is NULL for', result, line);
+          Util.Error("Parser failure: result.cmd is NULL for", result, line);
           return "continue";
         }
 
@@ -2737,7 +2738,7 @@ var TwitchClient = function () {
               }
             }
             if (!Twitch.IsRoom(result.channel)) {
-              _this3._api.GetCB(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
+              _this3._api.Get(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
                 if (resp.streams && resp.streams.length > 0) {
                   room.stream = resp.streams[0];
                   room.streams = resp.streams;
@@ -2806,7 +2807,7 @@ var TwitchClient = function () {
         if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
           if (result.flags && result.flags["emote-sets"]) {
             var eset_url = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
-            _this3._api.GetCB(eset_url, function _emoteset_cb(json) {
+            _this3._api.Get(eset_url, function _emoteset_cb(json) {
               var _iteratorNormalCompletion34 = true;
               var _didIteratorError34 = false;
               var _iteratorError34 = undefined;
@@ -3099,7 +3100,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
     req.open("GET", url);
     req.send();
   }
-  this.GetSimpleCB = getSimpleCB.bind(this);
+  this.GetSimple = getSimpleCB.bind(this);
 
   /* GET url, optionally adding private headers, using callbacks */
   function getCB(url, callback) {
@@ -3203,7 +3204,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
     }
     req.send();
   }
-  this.GetCB = getCB.bind(this);
+  this.Get = getCB.bind(this);
 };
 
 /* Extract username from user specification */
@@ -3548,6 +3549,11 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
 Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
   /* NOTE: Emotes from Twitch are already regexes; dont escape them */
   return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
+};
+
+Twitch.CheerToRegex = function _Twitch_CheerToRegex(prefix) {
+  var p = RegExp.escape(prefix);
+  return new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", 'ig');
 };
 
 /* Generate emote specifications for the given emotes [eid, ename] */
