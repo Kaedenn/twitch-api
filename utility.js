@@ -1550,8 +1550,19 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 };
 
 /* Clone an object using JSON */
-Util.JSONClone = function _Util_JSONClone(obj) {
-  return JSON.parse(JSON.stringify(obj));
+Util.JSONClone = function _Util_JSONClone(obj, opts=null) {
+  let result = {};
+  if (opts) {
+    for (let [k, v] of Object.entries(obj)) {
+      if (Util.IsArray(opts.exclude) && opts.exclude.indexOf(k) > -1) {
+        continue;
+      }
+      result[k] = JSON.parse(JSON.stringify(v));
+    }
+    return result;
+  } else {
+    return JSON.parse(JSON.stringify(obj));
+  }
 };
 
 /* End parsing, formatting, escaping, and string functions 0}}} */
@@ -1911,7 +1922,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
 /* Ensure the absolute offset displays entirely on-screen */
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
-  offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.top);
+  offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.height);
 };
 
 /* End DOM functions 0}}} */
