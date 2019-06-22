@@ -8,10 +8,6 @@
 
 /* FIXME:
  * Make _selfUserState calls look at badges
- * Remove either Twitch.API or Util.API
- * Change Twitch.API or Util.API to use fetch()
- * Inconsistent code:
- *   Add client.{ParseFormat}Channel() to parse rooms
  */
 
 /* Container for Twitch utilities */
@@ -107,7 +103,7 @@ class TwitchEvent {
 
   get type() { return "twitch-" + this._cmd.toLowerCase(); }
   get command() { return this._cmd; }
-  get raw_line() { return this._raw; }
+  get raw() { return this._raw; }
   get object() { return this._parsed; }
   get values() { return this.object; }
   has_value(key) { return this._parsed.hasOwnProperty(key); }
@@ -120,7 +116,7 @@ class TwitchEvent {
   flag(flag) { return this.flags ? this.flags[flag] : null; }
 
   /* Obtain the first non-falsy value of the listed flags */
-  first_flag(...flags) {
+  firstFlag(...flags) {
     for (let flag of flags) {
       if (this.flags[flag]) {
         return this.flags[flag];
@@ -129,7 +125,7 @@ class TwitchEvent {
     return null;
   }
 
-  get notice_msgid() {
+  get noticeMsgId() {
     if (this._cmd === "NOTICE" && this.flags) {
       if (typeof(this.flags["msg-id"]) === "string") {
         return this.flags["msg-id"];
@@ -138,8 +134,8 @@ class TwitchEvent {
     return null;
   }
 
-  get notice_class() {
-    let msgid = this.notice_msgid;
+  get noticeClass() {
+    let msgid = this.noticeMsgId;
     if (typeof(msgid) === "string") {
       return msgid.split('_')[0];
     }
@@ -164,18 +160,18 @@ class TwitchChatEvent extends TwitchEvent {
     return this._id;
   }
   get iscaster() {
-    return this.has_badge("broadcaster");
+    return this.hasBadge("broadcaster");
   }
   get ismod() {
-    return this.flags.mod || this.has_badge("moderator") || this.iscaster;
+    return this.flags.mod || this.hasBadge("moderator") || this.iscaster;
   }
   get issub() {
-    return this.flags.subscriber || this.has_badge("subscriber");
+    return this.flags.subscriber || this.hasBadge("subscriber");
   }
   get isvip() {
-    return this.has_badge("vip");
+    return this.hasBadge("vip");
   }
-  has_badge(badge, rev=null) {
+  hasBadge(badge, rev=null) {
     if (!this.flags.badges)
       return false;
     for (let [badge_name, badge_rev] of this.flags.badges) {
@@ -189,7 +185,7 @@ class TwitchChatEvent extends TwitchEvent {
     }
     return false;
   }
-  get sub_months() {
+  get subMonths() {
     if (this.flags["badge-info"]) {
       for (let [bname, brev] of this.flags["badge-info"]) {
         if (bname === "subscriber") {
@@ -251,7 +247,7 @@ class TwitchSubEvent extends TwitchEvent {
 
   /* Methods below apply to all sub kinds */
   get user() {
-    let name = this.first_flag('msg-param-login', 'display-name');
+    let name = this.firstFlag('msg-param-login', 'display-name');
     return name || this._parsed.user;
   }
 
@@ -480,7 +476,7 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Private functions section {{{0 */
 
-  /* Return the channel's userstate value for the given key */
+  /* Private: Return the channel's userstate value for the given key */
   _selfUserState(channel, value) {
     let ch = Twitch.FormatChannel(channel);
     if (this._self_userstate) {
@@ -489,6 +485,19 @@ class TwitchClient { /* exported TwitchClient */
       }
     }
     return null;
+  }
+
+  /* Private: Return whether or not the client has the specified badge */
+  _hasBadge(channel, badge_name) {
+    let badges = this._selfUserState(channel, "badges");
+    if (badges) {
+      for (let badge_def of badges) {
+        if (badge_def[0] === badge_name) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   /* Private: Ensure the user specified is in reduced form */
@@ -913,7 +922,7 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Return true if the client is a subscriber in the channel given */
   IsSub(channel) {
-    return this._selfUserState(channel, "sub");
+    return this._selfUserState(channel, "sub") || this._hasBadge(channel, "subscriber");
   }
 
   /* Return true if the client is a VIP in the channel given */
@@ -1632,9 +1641,7 @@ Twitch.URL = {
 
   ChannelBadges: (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`,
   AllBadges: () => `https://badges.twitch.tv/v1/badges/global/display`,
-  Cheer: (prefix, tier, scheme="dark", size=1) => `https://d3aqoihi2n8ty8.cloudfront.net/actions/${prefix}/${scheme}/animated/${tier}/${size}.gif`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
-  AllCheers: () => `${Twitch.Kraken}/bits/actions`,
   Emote: (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
   EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
 
