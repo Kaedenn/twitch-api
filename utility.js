@@ -774,7 +774,7 @@ class LoggerUtility {
     for (let arg of args) {
       if (arg === null) result.push("null");
       else if (typeof(arg) === "undefined") result.push("(undefined)");
-      else if (typeof(arg) === "string") result.push(JSON.stringify(arg));
+      else if (typeof(arg) === "string") result.push(arg);
       else if (typeof(arg) === "number") result.push(`${arg}`);
       else if (typeof(arg) === "boolean") result.push(`${arg}`);
       else if (typeof(arg) === "symbol") result.push(arg.toString());
