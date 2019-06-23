@@ -120,19 +120,6 @@ Util.EscapeChars = {
 
 /* End of general utilities 0}}} */
 
-/* Special browser identification {{{0 */
-
-Util.Browser = {
-  IsTesla: function IsTesla() {
-    return navigator.userAgent.search(/\bTesla\b/) > -1;
-  },
-  IsOBS: function IsOBS() {
-    return window.obssource || Util.Defined("obssource");
-  }
-};
-
-/* End of special browser identification 0}}} */
-
 /* Portability considerations {{{0 */
 
 /* Return whether or not the variable given exists */
@@ -3362,66 +3349,6 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
 
 /* DOM functions {{{0 */
 
-/* Walk a DOM tree searching for nodes matching the predicate given */
-Util.SearchTree = function _Util_SearchTree(root, pred) {
-  var results = [];
-  /* Accept jQuery elements and element sets */
-  if (root && root.jquery) {
-    var _iteratorNormalCompletion40 = true;
-    var _didIteratorError40 = false;
-    var _iteratorError40 = undefined;
-
-    try {
-      for (var _iterator40 = root[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
-        var e = _step40.value;
-
-        results = results.concat(Util.SearchTree(e, pred));
-      }
-    } catch (err) {
-      _didIteratorError40 = true;
-      _iteratorError40 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion40 && _iterator40.return) {
-          _iterator40.return();
-        }
-      } finally {
-        if (_didIteratorError40) {
-          throw _iteratorError40;
-        }
-      }
-    }
-  } else if (pred(root)) {
-    results.push(root);
-  } else if (root.childNodes && root.childNodes.length > 0) {
-    var _iteratorNormalCompletion41 = true;
-    var _didIteratorError41 = false;
-    var _iteratorError41 = undefined;
-
-    try {
-      for (var _iterator41 = root.childNodes[Symbol.iterator](), _step41; !(_iteratorNormalCompletion41 = (_step41 = _iterator41.next()).done); _iteratorNormalCompletion41 = true) {
-        var _e = _step41.value;
-
-        results = results.concat(Util.SearchTree(_e, pred));
-      }
-    } catch (err) {
-      _didIteratorError41 = true;
-      _iteratorError41 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion41 && _iterator41.return) {
-          _iterator41.return();
-        }
-      } finally {
-        if (_didIteratorError41) {
-          throw _iteratorError41;
-        }
-      }
-    }
-  }
-  return results;
-};
-
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
   if (obj instanceof Element) {
@@ -3444,6 +3371,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
   offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.height);
+  return { top: offset.top, left: offset.left };
 };
 
 /* End DOM functions 0}}} */
@@ -3453,13 +3381,13 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
 /* Wrap window.open */
 Util.Open = function _Util_Open(url, id, attrs) {
   var a = [];
-  var _iteratorNormalCompletion42 = true;
-  var _didIteratorError42 = false;
-  var _iteratorError42 = undefined;
+  var _iteratorNormalCompletion40 = true;
+  var _didIteratorError40 = false;
+  var _iteratorError40 = undefined;
 
   try {
-    for (var _iterator42 = Object.entries(attrs)[Symbol.iterator](), _step42; !(_iteratorNormalCompletion42 = (_step42 = _iterator42.next()).done); _iteratorNormalCompletion42 = true) {
-      var _ref17 = _step42.value;
+    for (var _iterator40 = Object.entries(attrs)[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
+      var _ref17 = _step40.value;
 
       var _ref18 = _slicedToArray(_ref17, 2);
 
@@ -3469,16 +3397,16 @@ Util.Open = function _Util_Open(url, id, attrs) {
       a.push(k + "=" + v);
     }
   } catch (err) {
-    _didIteratorError42 = true;
-    _iteratorError42 = err;
+    _didIteratorError40 = true;
+    _iteratorError40 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion42 && _iterator42.return) {
-        _iterator42.return();
+      if (!_iteratorNormalCompletion40 && _iterator40.return) {
+        _iterator40.return();
       }
     } finally {
-      if (_didIteratorError42) {
-        throw _iteratorError42;
+      if (_didIteratorError40) {
+        throw _iteratorError40;
       }
     }
   }
@@ -3539,13 +3467,13 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
 Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
   var all_keys = Object.keys(o1).concat(Object.keys(o2));
   var results = {};
-  var _iteratorNormalCompletion43 = true;
-  var _didIteratorError43 = false;
-  var _iteratorError43 = undefined;
+  var _iteratorNormalCompletion41 = true;
+  var _didIteratorError41 = false;
+  var _iteratorError41 = undefined;
 
   try {
-    for (var _iterator43 = all_keys[Symbol.iterator](), _step43; !(_iteratorNormalCompletion43 = (_step43 = _iterator43.next()).done); _iteratorNormalCompletion43 = true) {
-      var key = _step43.value;
+    for (var _iterator41 = all_keys[Symbol.iterator](), _step41; !(_iteratorNormalCompletion41 = (_step41 = _iterator41.next()).done); _iteratorNormalCompletion41 = true) {
+      var key = _step41.value;
 
       var o1_has = Util.ObjectHas(o1, key);
       var o2_has = Util.ObjectHas(o2, key);
@@ -3568,16 +3496,16 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
       }
     }
   } catch (err) {
-    _didIteratorError43 = true;
-    _iteratorError43 = err;
+    _didIteratorError41 = true;
+    _iteratorError41 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion43 && _iterator43.return) {
-        _iterator43.return();
+      if (!_iteratorNormalCompletion41 && _iterator41.return) {
+        _iterator41.return();
       }
     } finally {
-      if (_didIteratorError43) {
-        throw _iteratorError43;
+      if (_didIteratorError41) {
+        throw _iteratorError41;
       }
     }
   }
@@ -3588,27 +3516,27 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
 /* Convert a CSS2Properties value (getComputedStyle) to an object */
 Util.StyleToObject = function _Util_StyleToObject(style) {
   var result = {};
-  var _iteratorNormalCompletion44 = true;
-  var _didIteratorError44 = false;
-  var _iteratorError44 = undefined;
+  var _iteratorNormalCompletion42 = true;
+  var _didIteratorError42 = false;
+  var _iteratorError42 = undefined;
 
   try {
-    for (var _iterator44 = Object.values(style)[Symbol.iterator](), _step44; !(_iteratorNormalCompletion44 = (_step44 = _iterator44.next()).done); _iteratorNormalCompletion44 = true) {
-      var key = _step44.value;
+    for (var _iterator42 = Object.values(style)[Symbol.iterator](), _step42; !(_iteratorNormalCompletion42 = (_step42 = _iterator42.next()).done); _iteratorNormalCompletion42 = true) {
+      var key = _step42.value;
 
       result[key] = style[key];
     }
   } catch (err) {
-    _didIteratorError44 = true;
-    _iteratorError44 = err;
+    _didIteratorError42 = true;
+    _iteratorError42 = err;
   } finally {
     try {
-      if (!_iteratorNormalCompletion44 && _iterator44.return) {
-        _iterator44.return();
+      if (!_iteratorNormalCompletion42 && _iterator42.return) {
+        _iterator42.return();
       }
     } finally {
-      if (_didIteratorError44) {
-        throw _iteratorError44;
+      if (_didIteratorError42) {
+        throw _iteratorError42;
       }
     }
   }

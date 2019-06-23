@@ -115,15 +115,6 @@ Util.EscapeChars = {
 
 /* End of general utilities 0}}} */
 
-/* Special browser identification {{{0 */
-
-Util.Browser = {
-  IsTesla: (() => navigator.userAgent.search(/\bTesla\b/) > -1),
-  IsOBS: (() => window.obssource || Util.Defined("obssource"))
-};
-
-/* End of special browser identification 0}}} */
-
 /* Portability considerations {{{0 */
 
 /* Return whether or not the variable given exists */
@@ -1883,24 +1874,6 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 
 /* DOM functions {{{0 */
 
-/* Walk a DOM tree searching for nodes matching the predicate given */
-Util.SearchTree = function _Util_SearchTree(root, pred) {
-  let results = [];
-  /* Accept jQuery elements and element sets */
-  if (root && root.jquery) {
-    for (let e of root) {
-      results = results.concat(Util.SearchTree(e, pred));
-    }
-  } else if (pred(root)) {
-    results.push(root);
-  } else if (root.childNodes && root.childNodes.length > 0) {
-    for (let e of root.childNodes) {
-      results = results.concat(Util.SearchTree(e, pred));
-    }
-  }
-  return results;
-};
-
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
   if (obj instanceof Element) {
@@ -1923,6 +1896,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
 Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   offset.left = Math.clamp(offset.left, 0, window.innerWidth - offset.width);
   offset.top = Math.clamp(offset.top, 0, window.innerHeight - offset.height);
+  return {top: offset.top, left: offset.left};
 };
 
 /* End DOM functions 0}}} */
