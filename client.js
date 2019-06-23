@@ -1006,11 +1006,20 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Request the client to join the channel specified */
   JoinChannel(channel) {
-    let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+    let chobj = this.ParseChannel(channel);
+    let cname = Twitch.FormatChannel(chobj);
+    let user = chobj.channel.replace(/^#/, "");
     if (this._is_open) {
       if (this._channels.indexOf(cname) === -1) {
         this.send(`JOIN ${cname}`);
         this._channels.push(cname);
+        /* Determine if the channel to join is a real channel */
+        this._api.Get(Twitch.URL.User(user), (resp) => {
+          if (!resp || resp._total === 0) {
+            Util.Warn(`${cname} doesn't seem to be a real channel; leaving`);
+            this.LeaveChannel(channel);
+          }
+        });
       } else {
         Util.Warn(`JoinChannel: Already in ${cname}`);
       }
@@ -1651,6 +1660,7 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
+  User: (uname) => `${Twitch.Kraken}/users?login=${uname}`,
   Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`,
   Stream: (cid) => `${Twitch.Kraken}/streams?channel=${cid}`,
   Clip: (slug) => `${Twitch.Helix}/clips?id=${slug}`,
@@ -2132,6 +2142,6 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
       result = result.replace(pat, `${name}<removed>`);
     }
   }
-  return msg;
+  return result;
 };
 
