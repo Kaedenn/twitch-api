@@ -417,6 +417,10 @@ var TwitchSubEvent = function (_TwitchEvent2) {
     var _this2 = _possibleConstructorReturn(this, (TwitchSubEvent.__proto__ || Object.getPrototypeOf(TwitchSubEvent)).call(this, sub_kind, raw_line, parsed));
 
     _this2._sub_kind = sub_kind;
+    if (TwitchSubEvent.KINDS.indexOf(sub_kind) === -1) {
+      Util.Error("Invalid sub kind " + sub_kind + "; defaulting to \"SUB\"");
+      _this2._sub_kind = TwitchSubEvent.SUB;
+    }
     return _this2;
   }
 
@@ -511,6 +515,11 @@ var TwitchSubEvent = function (_TwitchEvent2) {
       } else {
         return "\"" + plan + "\"";
       }
+    }
+  }, {
+    key: "KINDS",
+    get: function get() {
+      return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"];
     }
   }, {
     key: "SUB",

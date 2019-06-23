@@ -205,9 +205,14 @@ class TwitchSubEvent extends TwitchEvent {
   constructor(sub_kind, raw_line, parsed) {
     super(sub_kind, raw_line, parsed);
     this._sub_kind = sub_kind;
+    if (TwitchSubEvent.KINDS.indexOf(sub_kind) === -1) {
+      Util.Error(`Invalid sub kind ${sub_kind}; defaulting to "SUB"`);
+      this._sub_kind = TwitchSubEvent.SUB;
+    }
   }
 
   get kind() { return this._sub_kind; }
+  static get KINDS() { return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"]; }
   static get SUB() { return "SUB"; }
   static get RESUB() { return "RESUB"; }
   static get GIFTSUB() { return "GIFTSUB"; }
