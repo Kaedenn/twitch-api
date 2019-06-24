@@ -856,7 +856,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
       }
     }
   } catch (e) {
-    if (e.message.match(/is not a valid URL/)) {
+    if (e.message.match(/is not a valid URL/) || e.message.match(/Invalid URL/i)) {
       /* Not a valid URL; bail */
       return paths;
     } else {
@@ -1281,14 +1281,15 @@ var LoggerUtility = function () {
         return false;
       }
       var val = this._sev_value(sev);
-      if (Util.DebugLevel === Util.LEVEL_TRACE) return true;
-      if (Util.DebugLevel === Util.LEVEL_DEBUG) {
+      if (Util.DebugLevel === Util.LEVEL_TRACE) {
+        return true;
+      } else if (Util.DebugLevel === Util.LEVEL_DEBUG) {
         return val >= LoggerUtility.SEVERITIES.DEBUG;
-      }
-      if (Util.DebugLevel === Util.LEVEL_OFF) {
+      } else if (Util.DebugLevel === Util.LEVEL_OFF) {
         return val >= LoggerUtility.SEVERITIES.INFO;
+      } else {
+        return val >= LoggerUtility.SEVERITIES.WARN;
       }
-      return val >= LoggerUtility.SEVERITIES.WARN;
     }
 
     /* Log `argobj` with severity `sev`, optionally including a stacktrace */
