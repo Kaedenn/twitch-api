@@ -191,6 +191,9 @@ class TwitchChatEvent extends TwitchEvent {
     }
     return 0;
   }
+  get bits() {
+    return typeof(this.flags.bits) === "number" ? this.flags.bits : 0;
+  }
   repr() {
     /* Return a value similar to Object.toSource() */
     let cls = Object.getPrototypeOf(this).constructor.name;

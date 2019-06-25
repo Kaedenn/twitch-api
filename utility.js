@@ -1928,7 +1928,7 @@ Util.ObjectGet = function _Util_ObjectGet(obj, path) {
   return cobj;
 };
 
-/* Set an object's value by path: "key1.key2" -> o[key1][key2] */
+/* Set an object's value by path; see Util.ObjectGet */
 Util.ObjectSet = function _Util_ObjectSet(obj, path, value) {
   let items = path.split(".");
   let cobj = obj;
@@ -1941,6 +1941,24 @@ Util.ObjectSet = function _Util_ObjectSet(obj, path, value) {
     }
   }
   cobj[items[0]] = value;
+};
+
+/* Remove a value from an object by path; see Util.ObjectGet */
+Util.ObjectRemove = function _Util_ObjectRemove(obj, path) {
+  if (Util.ObjectHas(obj, path)) {
+    let items = path.split(".");
+    let cobj = obj;
+    while (items.length > 1) {
+      if (cobj.hasOwnProperty(items[0])) {
+        cobj = cobj[items.shift()];
+      } else {
+        return false;
+      }
+    }
+    return delete cobj[items[0]];
+  } else {
+    return false;
+  }
 };
 
 /* Return whether or not an object contains the given path */

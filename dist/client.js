@@ -400,6 +400,11 @@ var TwitchChatEvent = function (_TwitchEvent) {
       }
       return 0;
     }
+  }, {
+    key: "bits",
+    get: function get() {
+      return typeof this.flags.bits === "number" ? this.flags.bits : 0;
+    }
   }]);
 
   return TwitchChatEvent;
