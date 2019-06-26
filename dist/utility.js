@@ -3375,6 +3375,20 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   return { top: offset.top, left: offset.left };
 };
 
+/* Return a promise for the given image */
+Util.PromiseImage = function _Util_PromiseImage(url) {
+  return new Promise(function (resolve, reject) {
+    var e = document.createElement("img");
+    e.onload = function (event) {
+      resolve(event);
+    };
+    e.onerror = function (err) {
+      reject(err);
+    };
+    e.src = url;
+  });
+};
+
 /* End DOM functions 0}}} */
 
 /* Miscellaneous functions {{{0 */

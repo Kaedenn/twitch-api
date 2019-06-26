@@ -1148,6 +1148,16 @@ class TwitchClient { /* exported TwitchClient */
     return emotes;
   }
 
+  /* Return a promise for a channel's cheermote as an <img> element */
+  PromiseCheer(cname, name) {
+    return Util.PromiseImage(this.GetCheer(cname, name));
+  }
+
+  /* Return a promise for the given Twitch emote as an <img> element */
+  PromiseEmote(ename) {
+    return Util.PromiseImage(this.GetEmote(ename));
+  }
+
   /* Return the URL to the image for the emote and size specified (id or name) */
   GetEmote(emote_id, size="1.0") {
     if (typeof(emote_id) === "number" || `${emote_id}`.match(/^[0-9]+$/)) {
