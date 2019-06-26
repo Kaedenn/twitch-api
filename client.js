@@ -1148,11 +1148,6 @@ class TwitchClient { /* exported TwitchClient */
     return emotes;
   }
 
-  /* Return a promise for a channel's cheermote as an <img> element */
-  PromiseCheer(cname, name) {
-    return Util.PromiseImage(this.GetCheer(cname, name));
-  }
-
   /* Return a promise for the given Twitch emote as an <img> element */
   PromiseEmote(ename) {
     return Util.PromiseImage(this.GetEmote(ename));

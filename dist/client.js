@@ -2108,14 +2108,6 @@ var TwitchClient = function () {
       return emotes;
     }
 
-    /* Return a promise for a channel's cheermote as an <img> element */
-
-  }, {
-    key: "PromiseCheer",
-    value: function PromiseCheer(cname, name) {
-      return Util.PromiseImage(this.GetCheer(cname, name));
-    }
-
     /* Return a promise for the given Twitch emote as an <img> element */
 
   }, {
