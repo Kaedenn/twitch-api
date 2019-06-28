@@ -318,7 +318,7 @@ class TwitchClient { /* exported TwitchClient */
     /* Don't load assets (for small testing) */
     this._no_assets = Boolean(opts.NoAssets);
 
-    /* Badge, emote, cheermote definitions */
+    /* Badge and cheer definitions */
     this._channel_badges = {};
     this._global_badges = {};
     this._channel_cheers = {};
@@ -743,75 +743,60 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Private: Build a faux PRIVMSG event from the chat message given */
   _buildChatEvent(chobj, message) {
-    let flag_obj = {};
+    let flags = {};
     let emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
     let chstr = Twitch.FormatChannel(chobj);
     let userstate = this._self_userstate[chstr] || {};
     let msg = message;
 
     /* Construct the parsed flags object */
-    flag_obj["badge-info"] = userstate["badge-info"];
-    flag_obj["badges"] = userstate["badges"];
-    if (!flag_obj["badges"]) {
-      flag_obj["badges"] = [];
-    }
-    flag_obj["color"] = userstate["color"];
-    flag_obj["subscriber"] = userstate["subscriber"];
-    flag_obj["mod"] = userstate["mod"];
-    flag_obj["vip"] = userstate["vip"] || null;
-    flag_obj["broadcaster"] = userstate["broadcaster"] || null;
-    flag_obj["display-name"] = userstate["display-name"];
-    flag_obj["emotes"] = emote_obj;
-    flag_obj["id"] = Util.Random.uuid();
-    flag_obj["user-id"] = this._self_userid;
-    flag_obj["room-id"] = this._rooms[chobj.channel].id;
-    flag_obj["tmi-sent-ts"] = (new Date()).getTime();
-    flag_obj["turbo"] = 0;
-    flag_obj["user-type"] = "";
-    flag_obj["__synthetic"] = 1;
+    flags["badge-info"] = userstate["badge-info"];
+    flags["badges"] = userstate["badges"] || [];
+    flags["color"] = userstate["color"];
+    flags["subscriber"] = userstate["subscriber"];
+    flags["mod"] = userstate["mod"];
+    flags["vip"] = userstate["vip"] || null;
+    flags["broadcaster"] = userstate["broadcaster"] || null;
+    flags["display-name"] = userstate["display-name"];
+    flags["emotes"] = emote_obj;
+    flags["id"] = Util.Random.uuid();
+    flags["user-id"] = this._self_userid;
+    flags["room-id"] = this._rooms[chobj.channel].id;
+    flags["tmi-sent-ts"] = (new Date()).getTime();
+    flags["turbo"] = 0;
+    flags["user-type"] = "";
+    flags["__synthetic"] = 1;
 
     /* Construct the formatted flags string */
     let flag_arr = [];
-    let addFlag = (n, v, t=null) => {
-      /* Undefined and null values are treated as empty strings */
-      let val = v ? v : "";
-      /* If specified, apply the function to the value */
-      if (typeof(t) === "function") {
-        val = t(val);
+    let addFlag = (n, v) => {
+      let val = `${v}`;
+      if (typeof(v) === "undefined" || v === null) {
+        val = "";
       }
-      /* if t(val) returns null or undefined, skip the flag */
-      if (typeof(val) !== "undefined" && val !== null) {
-        flag_arr.push(`${n}=${val}`);
-      }
+      flag_arr.push(`${n}=${val}`);
     };
-    let addObjFlag = (n) => addFlag(n, flag_obj[n]);
-    if (flag_obj["badges"]) {
-      let badges = [];
-      for (let [b, r] of flag_obj["badges"]) {
-        badges.push(`${b}/${r}`);
-      }
-      addFlag("badges", badges.join(","));
-    } else {
-      addFlag("badges", "");
+
+    /* Build and add the rest of the flags */
+    addFlag("badges", flags["badges"].map((b, r) => `${b}/${r}`).join(","));
+    addFlag("color", flags["color"]);
+    addFlag("display-name", flags["display-name"]);
+    addFlag("subscriber", flags["subscriber"]);
+    addFlag("mod", flags["mod"]);
+    if (flags["vip"]) {
+      addFlag("vip", flags["vip"]);
     }
-    addObjFlag("color");
-    addObjFlag("display-name");
-    addObjFlag("subscriber");
-    addObjFlag("mod");
-    if (flag_obj["vip"]) {
-      addObjFlag("vip");
+    if (flags["broadcaster"]) {
+      addFlag("broadcaster", flags["broadcaster"]);
     }
-    if (flag_obj["broadcaster"]) {
-      addObjFlag("broadcaster");
-    }
-    addFlag("emotes", Twitch.FormatEmoteFlag(flag_obj["emotes"]));
-    addObjFlag("id");
-    addObjFlag("user-id");
-    addObjFlag("room-id");
-    addObjFlag("tmi-sent-ts");
-    addObjFlag("turbo");
-    addObjFlag("user-type");
-    addObjFlag("__synthetic");
+    addFlag("emotes", Twitch.FormatEmoteFlag(flags["emotes"]));
+    addFlag("id", flags["id"]);
+    addFlag("user-id", flags["user-id"]);
+    addFlag("room-id", flags["room-id"]);
+    addFlag("tmi-sent-ts", flags["tmi-sent-ts"]);
+    addFlag("turbo", flags["turbo"]);
+    addFlag("user-type", flags["user-type"]);
+    addFlag("__synthetic", flags["__synthetic"]);
     addFlag("__synthetic", "1");
     let flag_str = flag_arr.join(";");
 
@@ -826,20 +811,37 @@ class TwitchClient { /* exported TwitchClient */
     if (msg.startsWith('/me ')) {
       msg = msg.substr('/me '.length);
       raw_line += '\x01ACTION ' + msg + '\x01';
-      flag_obj.action = true;
+      flags.action = true;
     } else {
       raw_line += msg;
     }
 
     /* Construct and return the event */
-    return new TwitchChatEvent(raw_line, ({
+    let event = new TwitchChatEvent(raw_line, ({
       cmd: "PRIVMSG",
-      flags: flag_obj,
+      flags: flags,
       user: Twitch.ParseUser(useruri),
       channel: chobj,
       message: msg,
       synthetic: true /* mark the event as synthetic */
     }));
+
+    /* TFC-Specific logic: handle mod antics
+     * This logic only applies when the client is running inside the Twitch
+     * Filtered Chat. Yes, this violates encapsulation in multiple ways. The
+     * intent here is to set event.flags.bits if mod antics are enabled and
+     * the message contains cheer antics. This enables fanfare effects on
+     * messages containing antics */
+    if (this.get("HTMLGen")) {
+      let H = this.get("HTMLGen");
+      if (typeof(H.hasAntics) === "function") {
+        if (H.hasAntics(event)) {
+          /* genMsgInfo modifies the event in-place */
+          H._genMsgInfo(event);
+        }
+      }
+    }
+    return event;
   }
 
   /* End private functions section 0}}} */
@@ -1195,7 +1197,7 @@ class TwitchClient { /* exported TwitchClient */
   SendMessage(channel, message, bypassFaux=false) {
     let cobj = this.ParseChannel(channel);
     let cname = Twitch.FormatChannel(cobj);
-    let msg = Util.EscapeSlashes(message.trim());
+    let msg = message.trim();
     if (this._connected && this._authed) {
       this.send(`PRIVMSG ${cobj.channel} :${msg}`);
       /* Dispatch a faux "Message Received" event */
@@ -1649,8 +1651,7 @@ class TwitchClient { /* exported TwitchClient */
   /* End websocket callbacks 0}}} */
 }
 
-/* Escape sequences {{{0 */
-
+/* Twitch message escape sequences */
 Twitch.FLAG_ESCAPE_RULES = [
   /* escaped character, escaped regex, raw character, raw regex */
   ["\\s", /\\s/g, " ", / /g],
@@ -1659,8 +1660,6 @@ Twitch.FLAG_ESCAPE_RULES = [
   ["\\n", /\\n/g, "\n", /\n/g],
   ["\\\\", /\\\\/g, "\\", /\\/g]
 ];
-
-/* End escape sequences 0}}} */
 
 /* API URL definitions {{{0 */
 
@@ -1789,8 +1788,10 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       Util.Warn(`ParseChannel: ${channel} not in expected format`);
       chobj.channel = parts[0];
     }
-    if (chobj.channel.indexOf('#') !== 0) {
-      chobj.channel = '#' + chobj.channel;
+    if (chobj.channel !== "GLOBAL") {
+      if (chobj.channel.indexOf('#') !== 0) {
+        chobj.channel = '#' + chobj.channel;
+      }
     }
     return chobj;
   } else if (channel && channel.channel) {
@@ -1936,6 +1937,7 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
   return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
 };
 
+/* Generate a regex from a cheer prefix */
 Twitch.CheerToRegex = function _Twitch_CheerToRegex(prefix) {
   let p = RegExp.escape(prefix);
   return new RegExp(`(?:\\b[\\s]|^)(${p})([1-9][0-9]*)(?:\\b|[\\s]|$)`, 'ig');
