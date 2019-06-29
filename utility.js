@@ -632,6 +632,7 @@ Util.FormatStack = function _Util_FormatStack(stack) {
 /* Logger object */
 class LoggerUtility {
   constructor() {
+    this._enabled = true;
     this._hooks = {};
     this._filters = {};
     this._logged_messages = {};
@@ -682,6 +683,16 @@ class LoggerUtility {
     return true;
   }
 
+  /* Completely disable logging */
+  disable() {
+    this._enabled = false;
+  }
+
+  /* Re-enable logging */
+  enable() {
+    this._enabled = true;
+  }
+
   /* Hook function(sev, stacktrace, ...args) for the given severity */
   add_hook(fn, sev="ALL") {
     if (!this._assert_sev(sev)) { return false; }
@@ -728,6 +739,7 @@ class LoggerUtility {
 
   /* Return whether or not the given severity is enabled */
   severity_enabled(sev) {
+    if (!this._enabled) { return false; }
     if (!this._assert_sev(sev)) { return false; }
     let val = this._sev_value(sev);
     if (Util.DebugLevel === Util.LEVEL_TRACE) {

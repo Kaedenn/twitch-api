@@ -1103,6 +1103,7 @@ var LoggerUtility = function () {
   function LoggerUtility() {
     _classCallCheck(this, LoggerUtility);
 
+    this._enabled = true;
     this._hooks = {};
     this._filters = {};
     this._logged_messages = {};
@@ -1155,6 +1156,22 @@ var LoggerUtility = function () {
         return false;
       }
       return true;
+    }
+
+    /* Completely disable logging */
+
+  }, {
+    key: "disable",
+    value: function disable() {
+      this._enabled = false;
+    }
+
+    /* Re-enable logging */
+
+  }, {
+    key: "enable",
+    value: function enable() {
+      this._enabled = true;
     }
 
     /* Hook function(sev, stacktrace, ...args) for the given severity */
@@ -1277,6 +1294,9 @@ var LoggerUtility = function () {
   }, {
     key: "severity_enabled",
     value: function severity_enabled(sev) {
+      if (!this._enabled) {
+        return false;
+      }
       if (!this._assert_sev(sev)) {
         return false;
       }
