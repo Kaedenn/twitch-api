@@ -221,6 +221,7 @@ class TwitchSubEvent extends TwitchEvent {
   static get GIFTSUB() { return "GIFTSUB"; }
   static get ANONGIFTSUB() { return "ANONGIFTSUB"; }
 
+  static get PLANS() { return ["Prime", "1000", "2000", "3000"]; }
   static get PLAN_PRIME() { return "Prime"; }
   static get PLAN_TIER1() { return "1000"; }
   static get PLAN_TIER2() { return "2000"; }
@@ -322,6 +323,7 @@ class TwitchClient { /* exported TwitchClient */
     this._channel_badges = {};
     this._global_badges = {};
     this._channel_cheers = {};
+    this._global_cheers = {};
 
     /* Extension emotes */
     this._ffz_channel_emotes = {};
@@ -629,6 +631,19 @@ class TwitchClient { /* exported TwitchClient */
         /* Simplify things later by adding the regexps here */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._channel_cheers[cname][cdef.prefix] = cdef;
+      }
+    }).bind(this), {}, false);
+  }
+
+  /* Private: Load the global cheermotes */
+  _getGlobalCheermotes() {
+    if (!this._has_clientid) {
+      Util.Warn("Unable to get channel cheers; no clientid");
+      return;
+    }
+    this._api.Get(Twitch.URL.GlobalCheers(), (function _cheers_cb(json) {
+      for (let cdef of json.actions) {
+        this._global_cheers[cdef.prefix] = cdef;
       }
     }).bind(this), {}, false);
   }
@@ -1141,6 +1156,22 @@ class TwitchClient { /* exported TwitchClient */
     return cheer;
   }
 
+  /* Obtain information about a given global cheermote */
+  GetGlobalCheer(name) {
+    return Util.JSONClone(this._global_cheers[name]);
+  }
+
+  /* Obtain all cheermotes */
+  GetCheers() {
+    let cheers = {
+      "GLOBAL": Util.JSONClone(this._global_cheers)
+    };
+    for (let [cname, chcheers] of Object.entries(this._channel_cheers)) {
+      cheers[cname] = Util.JSONClone(chcheers);
+    }
+    return cheers;
+  }
+
   /* Return the emotes the client is allowed to use */
   GetEmotes() {
     let emotes = {};
@@ -1596,6 +1627,7 @@ class TwitchClient { /* exported TwitchClient */
           break;
         case "GLOBALUSERSTATE":
           this._self_userid = result.flags['user-id'];
+          this._getGlobalCheermotes();
           break;
         case "CLEARCHAT":
           break;
@@ -1666,6 +1698,7 @@ Twitch.FLAG_ESCAPE_RULES = [
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.Helix = "https://api.twitch.tv/helix";
+Twitch.V5 = "https://api.twitch.tv/v5";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/2";
 Twitch.Badges = "https://badges.twitch.tv/v1/badges";
@@ -1680,6 +1713,7 @@ Twitch.URL = {
 
   ChannelBadges: (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`,
   AllBadges: () => `https://badges.twitch.tv/v1/badges/global/display`,
+  GlobalCheers: () => `${Twitch.V5}/bits/actions`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
   Emote: (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
   EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
