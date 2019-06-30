@@ -2704,6 +2704,8 @@ var TwitchClient = function () {
                 }
               }.bind(_this4));
             }
+            /* Obtain global cheermotes */
+            _this4._getGlobalCheermotes();
             break;
           case "TOPIC":
             break;
@@ -2912,7 +2914,6 @@ var TwitchClient = function () {
             break;
           case "GLOBALUSERSTATE":
             _this4._self_userid = result.flags['user-id'];
-            _this4._getGlobalCheermotes();
             break;
           case "CLEARCHAT":
             break;
@@ -3165,7 +3166,7 @@ Twitch.URL = {
     return "https://badges.twitch.tv/v1/badges/global/display";
   },
   GlobalCheers: function GlobalCheers() {
-    return Twitch.V5 + "/bits/actions";
+    return Twitch.Kraken + "/bits/actions";
   },
   Cheers: function Cheers(cid) {
     return Twitch.Kraken + "/bits/actions?channel_id=" + cid;

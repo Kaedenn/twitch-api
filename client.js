@@ -1486,6 +1486,8 @@ class TwitchClient { /* exported TwitchClient */
               }
             }).bind(this));
           }
+          /* Obtain global cheermotes */
+          this._getGlobalCheermotes();
           break;
         case "TOPIC":
           break;
@@ -1618,7 +1620,6 @@ class TwitchClient { /* exported TwitchClient */
           break;
         case "GLOBALUSERSTATE":
           this._self_userid = result.flags['user-id'];
-          this._getGlobalCheermotes();
           break;
         case "CLEARCHAT":
           break;
@@ -1704,7 +1705,7 @@ Twitch.URL = {
 
   ChannelBadges: (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`,
   AllBadges: () => `https://badges.twitch.tv/v1/badges/global/display`,
-  GlobalCheers: () => `${Twitch.V5}/bits/actions`,
+  GlobalCheers: () => `${Twitch.Kraken}/bits/actions`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
   Emote: (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
   EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
