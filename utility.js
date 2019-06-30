@@ -1579,10 +1579,9 @@ Util._ws_enabled = true;
 Util.GetWebStorageKey = function _Util_GetWebStorageKey() {
   if (!Util._ws_enabled) {
     Util.WarnOnly("Local Storage disabled");
+  } else if (Util.__wskey !== null) {
+    return Util.__wskey;
   } else {
-    if (Util.__wskey !== null) {
-      return Util.__wskey;
-    }
     let key = JSON.parse(window.localStorage.getItem(Util.__wscfg));
     return key; /* may be null */
   }
