@@ -152,21 +152,11 @@ class TwitchChatEvent extends TwitchEvent {
     super("CHAT", raw_line, parsed);
     this._id = parsed.flags.id;
   }
-  get id() {
-    return this._id;
-  }
-  get iscaster() {
-    return this.hasBadge("broadcaster");
-  }
-  get ismod() {
-    return this.flags.mod || this.hasBadge("moderator") || this.iscaster;
-  }
-  get issub() {
-    return this.flags.subscriber || this.hasBadge("subscriber");
-  }
-  get isvip() {
-    return this.hasBadge("vip");
-  }
+  get id() { return this._id; }
+  get iscaster() { return this.hasBadge("broadcaster"); }
+  get ismod() { return this.flags.mod || this.hasBadge("moderator") || this.iscaster; }
+  get issub() { return this.flags.subscriber || this.hasBadge("subscriber"); }
+  get isvip() { return this.hasBadge("vip"); }
   hasBadge(badge, rev=null) {
     if (!this.flags.badges)
       return false;
@@ -214,20 +204,21 @@ class TwitchSubEvent extends TwitchEvent {
     }
   }
 
-  get kind() { return this._sub_kind; }
+  /* Known kinds of subscriptions */
   static get KINDS() { return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"]; }
   static get SUB() { return "SUB"; }
   static get RESUB() { return "RESUB"; }
   static get GIFTSUB() { return "GIFTSUB"; }
   static get ANONGIFTSUB() { return "ANONGIFTSUB"; }
 
+  /* Known subscription tiers */
   static get PLANS() { return ["Prime", "1000", "2000", "3000"]; }
   static get PLAN_PRIME() { return "Prime"; }
   static get PLAN_TIER1() { return "1000"; }
   static get PLAN_TIER2() { return "2000"; }
   static get PLAN_TIER3() { return "3000"; }
 
-  static FromMsgID(msgid) {
+  static KindFromMsgID(msgid) {
     if (msgid === "sub") return TwitchSubEvent.SUB;
     if (msgid === "resub") return TwitchSubEvent.RESUB;
     if (msgid === "subgift") return TwitchSubEvent.GIFTSUB;
@@ -251,11 +242,8 @@ class TwitchSubEvent extends TwitchEvent {
   }
 
   /* Methods below apply to all sub kinds */
-  get user() {
-    let name = this.firstFlag('msg-param-login', 'display-name');
-    return name || this._parsed.user;
-  }
-
+  get kind() { return this._sub_kind; }
+  get user() { return this.flags["msg-param-login"] || this.name; }
   get plan() { return this.flags['msg-param-sub-plan-name']; }
   get plan_id() { return this.flags['msg-param-sub-plan']; }
   get months() { return this.flags['msg-param-months'] || 0; }
@@ -1361,15 +1349,8 @@ class TwitchClient { /* exported TwitchClient */
     return false;
   }
 
-  /* Returns Object {
-   *   image_url_1x: "https://static-cdn.jtvnw.net/badges/...",
-   *   image_url_2x: "https://static-cdn.jtvnw.net/badges/...",
-   *   image_url_4x: "https://static-cdn.jtvnw.net/badges/...",
-   *   description: "Badge Description",
-   *   title: "Badge Name",
-   *   click_action: "badge_action",
-   *   click_url: ""
-   * } */
+  /* Get a global badge by name and number; returns the first badge if
+   * badge_num is null */
   GetGlobalBadge(badge_name, badge_version=null) {
     if (this._global_badges.hasOwnProperty(badge_name)) {
       let bver = badge_version;
@@ -1495,6 +1476,16 @@ class TwitchClient { /* exported TwitchClient */
         case "ACK":
           this._connected = true;
           this._capabilities = result.flags;
+          /* Obtain global emotes from eset 0 */
+          if (!this._no_assets) {
+            let eset = 0;
+            let eset_url = Twitch.URL.EmoteSet(eset);
+            this._api.Get(eset_url, (function _emoteset_cb(json) {
+              for (let edef of Object.values(json["emoticon_sets"][eset])) {
+                this._self_emotes[edef.id] = edef.code;
+              }
+            }).bind(this));
+          }
           break;
         case "TOPIC":
           break;
@@ -2096,7 +2087,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
       result.message = argFrom(line, ":", parts[2]);
     }
-    result.sub_kind = TwitchSubEvent.FromMsgID(result.flags["msg-id"]);
+    result.sub_kind = TwitchSubEvent.KindFromMsgID(result.flags["msg-id"]);
     result.issub = (result.sub_kind !== null);
     result.israid = (result.flags["msg-id"] === "raid");
     result.isritual = (result.flags["msg-id"] === "ritual");
