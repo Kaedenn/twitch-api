@@ -1146,7 +1146,13 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Obtain information about a given global cheermote */
   GetGlobalCheer(name) {
-    return Util.JSONClone(this._global_cheers[name]);
+    let cheer = this._global_cheers[name];
+    if (cheer) {
+      return Util.JSONClone(cheer);
+    } else {
+      Util.Warn(`Unknown global cheer "${name}"; are cheers done loading?`);
+      return {};
+    }
   }
 
   /* Obtain all cheermotes */
