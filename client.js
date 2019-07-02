@@ -265,6 +265,12 @@ class TwitchClient { /* exported TwitchClient */
   static get DEFAULT_HISTORY_SIZE() { return 300; }
   static get DEFAULT_MAX_MESSAGES() { return 100; }
 
+  /* Emote set number for global emotes */
+  static get ESET_GLOBAL() { return 0; }
+
+  /* Default emote size */
+  static get DEFAULT_EMOTE_SIZE() { return "1.0"; }
+
   constructor(opts) {
     let cfg_name = opts.Name;
     let cfg_clientid = opts.ClientID;
@@ -296,6 +302,8 @@ class TwitchClient { /* exported TwitchClient */
     this._self_userid = null;
     /* Emotes the TwitchClient is allowed to use */
     this._self_emotes = {}; /* {eid: ename} */
+    /* Mapping of emote set to emotes */
+    this._self_emote_sets = {}; /* {sid: [eid, eid, ...]} */
 
     /* Extension support */
     this._enable_ffz = !opts.NoFFZ || opts.NoAssets;
@@ -610,13 +618,9 @@ class TwitchClient { /* exported TwitchClient */
   /* Private: Load in the channel cheermotes for a given channel name and ID */
   _getChannelCheers(cname, cid) {
     this._channel_cheers[cname] = {};
-    if (!this._has_clientid) {
-      Util.Warn("Unable to get channel cheers; no clientid");
-      return;
-    }
     this._api.Get(Twitch.URL.Cheers(cid), (function _cheers_cb(json) {
       for (let cdef of json.actions) {
-        /* Simplify things later by adding the regexps here */
+        /* Simplify things later by adding the regex here */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._channel_cheers[cname][cdef.prefix] = cdef;
       }
@@ -624,16 +628,31 @@ class TwitchClient { /* exported TwitchClient */
   }
 
   /* Private: Load the global cheermotes */
-  _getGlobalCheermotes() {
-    if (!this._has_clientid) {
-      Util.Warn("Unable to get channel cheers; no clientid");
-      return;
-    }
+  _getGlobalCheers() {
     this._api.Get(Twitch.URL.GlobalCheers(), (function _cheers_cb(json) {
       for (let cdef of json.actions) {
+        /* Simplify things later by adding the regex here */
+        cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._global_cheers[cdef.prefix] = cdef;
       }
     }).bind(this), {}, false);
+  }
+
+  /* Private: Load the specified emote set(s); eset can be either a number or a
+   * comma-separated sequence of numbers */
+  _getEmoteSetEmotes(eset) {
+    let eset_url = Twitch.URL.EmoteSet(eset);
+    this._api.Get(eset_url, (function _emoteset_cb(json) {
+      for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
+        if (!this._self_emote_sets[setnr]) {
+          this._self_emote_sets[setnr] = [];
+        }
+        for (let edef of edefs) {
+          this._self_emote_sets[setnr].push(edef.id);
+          this._self_emotes[edef.id] = edef.code;
+        }
+      }
+    }).bind(this));
   }
 
   /* Private: Load in the global and per-channel FFZ emotes */
@@ -1133,10 +1152,37 @@ class TwitchClient { /* exported TwitchClient */
     return matches;
   }
 
-  /* Obtain information about a given cheermote */
-  GetCheer(cname, name) {
+  /* Return whether or not global cheers have been loaded */
+  get cheersLoaded() {
+    if (this._global_cheers["Cheer"]) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  /* Return whether or not global cheers have been loaded */
+  AreCheersLoaded() { return this.cheersLoaded; }
+
+  /* Obtain information about a given cheermote. Overloads:
+   * GetCheer(channel, cheername)
+   * GetCheer(cheername) -> GetCheer("GLOBAL", cheername) */
+  GetCheer(...args) {
+    let [cname, name] = ["GLOBAL", null];
+    if (args.length === 1) {
+      [cname, name] = ["GLOBAL", args[0]];
+    } else if (args.length === 2) {
+      [cname, name] = args;
+    } else {
+      Util.Error("Invalid call to GetCheer([ch], cheer)", args);
+      return null;
+    }
     let cheer = null;
-    if (this._channel_cheers.hasOwnProperty(cname)) {
+    if (cname === "GLOBAL") {
+      if (this._global_cheers.hasOwnProperty(name)) {
+        cheer = this._global_cheers[name];
+      }
+    } else if (this._channel_cheers.hasOwnProperty(cname)) {
       if (this._channel_cheers[cname].hasOwnProperty(name)) {
         cheer = this._channel_cheers[cname][name];
       }
@@ -1144,44 +1190,50 @@ class TwitchClient { /* exported TwitchClient */
     return cheer;
   }
 
-  /* Obtain information about a given global cheermote */
+  /* Obtain information about a given global cheermote. This is identical to
+   * client.GetCheer("GLOBAL", cheerName) */
   GetGlobalCheer(name) {
-    let cheer = this._global_cheers[name];
-    if (cheer) {
-      return Util.JSONClone(cheer);
-    } else {
-      Util.Warn(`Unknown global cheer "${name}"; are cheers done loading?`);
-      return {};
-    }
+    return this.GetCheer("GLOBAL", name);
   }
 
   /* Obtain all cheermotes */
   GetCheers() {
-    let cheers = {
-      "GLOBAL": Util.JSONClone(this._global_cheers)
-    };
-    for (let [cname, chcheers] of Object.entries(this._channel_cheers)) {
-      cheers[cname] = Util.JSONClone(chcheers);
+    let cheers = {"GLOBAL": this._global_cheers};
+    for (let [cname, ccheers] of Object.entries(this._channel_cheers)) {
+      cheers[cname] = ccheers;
     }
     return cheers;
   }
 
   /* Return the emotes the client is allowed to use */
-  GetEmotes() {
+  GetEmotes(size=TwitchClient.DEFAULT_EMOTE_SIZE) {
     let emotes = {};
     for (let [k, v] of Object.entries(this._self_emotes)) {
-      emotes[v] = this.GetEmote(k);
+      emotes[v] = this.GetEmote(k, size);
+    }
+    return emotes;
+  }
+
+  /* Return the URLs to all of the global emotes */
+  GetGlobalEmotes(size=TwitchClient.DEFAULT_EMOTE_SIZE) {
+    let emotes = {};
+    if (this._self_emote_sets[TwitchClient.ESET_GLOBAL]) {
+      for (let eid of this._self_emote_sets[TwitchClient.ESET_GLOBAL]) {
+        emotes[eid] = this.GetEmote(eid, size);
+      }
+    } else {
+      Util.Warn("Unable to get global emotes; are emotes loaded?");
     }
     return emotes;
   }
 
   /* Return a promise for the given Twitch emote as an <img> element */
-  PromiseEmote(ename) {
-    return Util.PromiseImage(this.GetEmote(ename));
+  PromiseEmote(ename, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
+    return Util.PromiseImage(this.GetEmote(ename, size));
   }
 
   /* Return the URL to the image for the emote and size specified (id or name) */
-  GetEmote(emote_id, size="1.0") {
+  GetEmote(emote_id, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
     if (typeof(emote_id) === "number" || `${emote_id}`.match(/^[0-9]+$/)) {
       return Twitch.URL.Emote(emote_id, size);
     } else {
@@ -1483,17 +1535,9 @@ class TwitchClient { /* exported TwitchClient */
           this._connected = true;
           this._capabilities = result.flags;
           /* Obtain global emotes from eset 0 */
-          if (!this._no_assets) {
-            let eset = 0;
-            let eset_url = Twitch.URL.EmoteSet(eset);
-            this._api.Get(eset_url, (function _emoteset_cb(json) {
-              for (let edef of Object.values(json["emoticon_sets"][eset])) {
-                this._self_emotes[edef.id] = edef.code;
-              }
-            }).bind(this));
-          }
+          this._getEmoteSetEmotes(0);
           /* Obtain global cheermotes */
-          this._getGlobalCheermotes();
+          this._getGlobalCheers();
           break;
         case "TOPIC":
           break;
@@ -1647,14 +1691,8 @@ class TwitchClient { /* exported TwitchClient */
       /* Obtain emotes the client is able to use */
       if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
         if (result.flags && result.flags["emote-sets"]) {
-          let eset_url = Twitch.URL.EmoteSet(result.flags["emote-sets"].join(','));
-          this._api.Get(eset_url, (function _emoteset_cb(json) {
-            for (let eset of Object.keys(json["emoticon_sets"])) {
-              for (let edef of json["emoticon_sets"][eset]) {
-                this._self_emotes[edef.id] = edef.code;
-              }
-            }
-          }).bind(this));
+          let esets = result.flags["emote-sets"].map((e) => `${e}`).join(",");
+          this._getEmoteSetEmotes(esets);
         }
       }
     }
