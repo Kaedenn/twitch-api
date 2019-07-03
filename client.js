@@ -1227,6 +1227,22 @@ class TwitchClient { /* exported TwitchClient */
     return emotes;
   }
 
+  /* Return the loaded emote sets */
+  GetEmoteSets() {
+    return Util.JSONClone(this._self_emote_sets);
+  }
+
+  /* Return the emotes in the given emote set */
+  GetEmoteSetEmotes(eset) {
+    let emotes = {};
+    if (this._self_emote_sets[eset]) {
+      emotes = Util.JSONClone(this._self_emote_sets[eset]);
+    } else {
+      Util.Warn(`No such emote set ${eset}`);
+    }
+    return emotes;
+  }
+
   /* Return a promise for the given Twitch emote as an <img> element */
   PromiseEmote(ename, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
     return Util.PromiseImage(this.GetEmote(ename, size));

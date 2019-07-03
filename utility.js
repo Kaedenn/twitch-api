@@ -1921,6 +1921,24 @@ Util.PromiseImage = function _Util_PromiseImage(url) {
   });
 };
 
+/* Split a GIF into frames. Returns a promise for an array of base64-encoded
+ * PNG data. */
+Util.SplitGIF = function _Util_SplitGIF(url) {
+  return new Promise(function(resolve, reject) {
+    fetch(`https://gif.inverted.me?url=${encodeURIComponent(url)}`)
+      .then((response) => response.json())
+      .then((json) => resolve(json.frames))
+      .catch((err) => reject(err));
+  });
+};
+
+/* Convert a base64-encoded PNG to an HTML <img> element instance */
+Util.ImageFromPNGData = function _Util_ImageFromPNGData(data) {
+  let i = document.createElement("img");
+  i.setAttribute("src", `data:image/png;base64,${data}`);
+  return i;
+};
+
 /* End DOM functions 0}}} */
 
 /* Miscellaneous functions {{{0 */

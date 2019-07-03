@@ -2332,6 +2332,28 @@ var TwitchClient = function () {
       return emotes;
     }
 
+    /* Return the loaded emote sets */
+
+  }, {
+    key: "GetEmoteSets",
+    value: function GetEmoteSets() {
+      return Util.JSONClone(this._self_emote_sets);
+    }
+
+    /* Return the emotes in the given emote set */
+
+  }, {
+    key: "GetEmoteSetEmotes",
+    value: function GetEmoteSetEmotes(eset) {
+      var emotes = {};
+      if (this._self_emote_sets[eset]) {
+        emotes = Util.JSONClone(this._self_emote_sets[eset]);
+      } else {
+        Util.Warn("No such emote set " + eset);
+      }
+      return emotes;
+    }
+
     /* Return a promise for the given Twitch emote as an <img> element */
 
   }, {
