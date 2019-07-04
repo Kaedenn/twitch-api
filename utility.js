@@ -1258,6 +1258,7 @@ Util.RandomGenerator = class _Util_Random {
     }
   }
 
+  /* Try to return a crypto instance */
   _getCrypto() {
     if (Util.Defined("crypto")) {
       if ((new Function("return crypto.getRandomValues"))()) {
@@ -1267,7 +1268,7 @@ Util.RandomGenerator = class _Util_Random {
     if (Util.Defined("msCrypto")) {
       return (new Function("return msCrypto"))();
     }
-    Util.Error("Failed to get secure PRNG; falling back to Math.random");
+    Util.Warn("Failed to get secure PRNG; falling back to Math.random");
     return null;
   }
 
@@ -1289,6 +1290,17 @@ Util.RandomGenerator = class _Util_Random {
     return a;
   }
 
+  /* Obtain Uint8Array of random values */
+  _genRand(num_bytes) {
+    let values = null;
+    if (this._crypto !== null) {
+      values = this._genRandCrypto(num_bytes);
+    } else {
+      values = this._genRandMath(num_bytes);
+    }
+    return values;
+  }
+
   /* Convenience function: sprintf %02x */
   numToHex(num, pad=2) {
     return num.toString("16").padStart(pad, "0");
@@ -1304,12 +1316,7 @@ Util.RandomGenerator = class _Util_Random {
   /* Generate a sequence of random bytes. Encoding is either hex or
    * none (default) */
   randBytes(num_bytes, encoding=null) {
-    let values;
-    if (this._crypto !== null) {
-      values = this._genRandCrypto(num_bytes);
-    } else {
-      values = this._genRandMath(num_bytes);
-    }
+    let values = this._genRand(num_bytes);
     if (encoding === "hex") {
       return this.bytesToHex(values);
     } else {
@@ -1318,10 +1325,16 @@ Util.RandomGenerator = class _Util_Random {
   }
 
   /* Return 8, 16, 32, or 64 random bits, as a hex string */
-  hex8() { return this.randBytes(1, 'hex'); }
-  hex16() { return this.randBytes(2, 'hex'); }
-  hex32() { return this.randBytes(4, 'hex'); }
-  hex64() { return this.randBytes(8, 'hex'); }
+  hex8() { return this.randBytes(1, "hex"); }
+  hex16() { return this.randBytes(2, "hex"); }
+  hex32() { return this.randBytes(4, "hex"); }
+  hex64() { return this.randBytes(8, "hex"); }
+
+  /* Return 8, 16, 32, or 64 random bits, as a number */
+  int8() { return Util.FixedArrayToNumber(this.randBytes(1)); }
+  int16() { return Util.FixedArrayToNumber(this.randBytes(2)); }
+  int32() { return Util.FixedArrayToNumber(this.randBytes(4)); }
+  int64() { return Util.FixedArrayToNumber(this.randBytes(8)); }
 
   /* Generate a random UUID */
   uuid() {
@@ -1334,9 +1347,28 @@ Util.RandomGenerator = class _Util_Random {
     parts.forEach(([s, l]) => result.push(h.substr(s, l)));
     return result.join("-");
   }
+
+  /* Generate a uniform random number */
+  uniform(min, max) {
+    let nbytes = Math.ceil(Math.ceil(Math.log2(max - min)) / 8);
+    let num = Util.FixedArrayToNumber(this.randBytes(nbytes)) % (max - min);
+    return num + min;
+  }
+
 };
 
 Util.Random = new Util.RandomGenerator();
+
+/* Convert a fixed-size array (Uint<N>Array) to a single number (big endian) */
+Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
+  let esize = arr.BYTES_PER_ELEMENT || 1;
+  let val = 0;
+  for (let i = 0; i < arr.length; ++i) {
+    val += arr[i];
+    val <<= (8 * esize * (arr.length - i - 1));
+  }
+  return val;
+};
 
 /* End PRNG 0}}} */
 

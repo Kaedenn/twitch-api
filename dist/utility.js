@@ -2335,6 +2335,9 @@ Util.RandomGenerator = function () {
     }
   }
 
+  /* Try to return a crypto instance */
+
+
   _createClass(_Util_Random, [{
     key: "_getCrypto",
     value: function _getCrypto() {
@@ -2346,7 +2349,7 @@ Util.RandomGenerator = function () {
       if (Util.Defined("msCrypto")) {
         return new Function("return msCrypto")();
       }
-      Util.Error("Failed to get secure PRNG; falling back to Math.random");
+      Util.Warn("Failed to get secure PRNG; falling back to Math.random");
       return null;
     }
 
@@ -2372,6 +2375,20 @@ Util.RandomGenerator = function () {
         a[i] = r >>> ((i & 0x03) << 3) & 0xff;
       }
       return a;
+    }
+
+    /* Obtain Uint8Array of random values */
+
+  }, {
+    key: "_genRand",
+    value: function _genRand(num_bytes) {
+      var values = null;
+      if (this._crypto !== null) {
+        values = this._genRandCrypto(num_bytes);
+      } else {
+        values = this._genRandMath(num_bytes);
+      }
+      return values;
     }
 
     /* Convenience function: sprintf %02x */
@@ -2425,12 +2442,7 @@ Util.RandomGenerator = function () {
     value: function randBytes(num_bytes) {
       var encoding = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
-      var values = void 0;
-      if (this._crypto !== null) {
-        values = this._genRandCrypto(num_bytes);
-      } else {
-        values = this._genRandMath(num_bytes);
-      }
+      var values = this._genRand(num_bytes);
       if (encoding === "hex") {
         return this.bytesToHex(values);
       } else {
@@ -2443,22 +2455,45 @@ Util.RandomGenerator = function () {
   }, {
     key: "hex8",
     value: function hex8() {
-      return this.randBytes(1, 'hex');
+      return this.randBytes(1, "hex");
     }
   }, {
     key: "hex16",
     value: function hex16() {
-      return this.randBytes(2, 'hex');
+      return this.randBytes(2, "hex");
     }
   }, {
     key: "hex32",
     value: function hex32() {
-      return this.randBytes(4, 'hex');
+      return this.randBytes(4, "hex");
     }
   }, {
     key: "hex64",
     value: function hex64() {
-      return this.randBytes(8, 'hex');
+      return this.randBytes(8, "hex");
+    }
+
+    /* Return 8, 16, 32, or 64 random bits, as a number */
+
+  }, {
+    key: "int8",
+    value: function int8() {
+      return Util.FixedArrayToNumber(this.randBytes(1));
+    }
+  }, {
+    key: "int16",
+    value: function int16() {
+      return Util.FixedArrayToNumber(this.randBytes(2));
+    }
+  }, {
+    key: "int32",
+    value: function int32() {
+      return Util.FixedArrayToNumber(this.randBytes(4));
+    }
+  }, {
+    key: "int64",
+    value: function int64() {
+      return Util.FixedArrayToNumber(this.randBytes(8));
     }
 
     /* Generate a random UUID */
@@ -2481,12 +2516,33 @@ Util.RandomGenerator = function () {
       });
       return result.join("-");
     }
+
+    /* Generate a uniform random number */
+
+  }, {
+    key: "uniform",
+    value: function uniform(min, max) {
+      var nbytes = Math.ceil(Math.ceil(Math.log2(max - min)) / 8);
+      var num = Util.FixedArrayToNumber(this.randBytes(nbytes)) % (max - min);
+      return num + min;
+    }
   }]);
 
   return _Util_Random;
 }();
 
 Util.Random = new Util.RandomGenerator();
+
+/* Convert a fixed-size array (Uint<N>Array) to a single number (big endian) */
+Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
+  var esize = arr.BYTES_PER_ELEMENT || 1;
+  var val = 0;
+  for (var i = 0; i < arr.length; ++i) {
+    val += arr[i];
+    val <<= 8 * esize * (arr.length - i - 1);
+  }
+  return val;
+};
 
 /* End PRNG 0}}} */
 
