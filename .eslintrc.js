@@ -35,7 +35,8 @@ module.exports = {
         "no-self-compare": "warn",
         "no-param-reassign": "warn",
         "no-lonely-if": "warn",
-        "no-tabs": "error"
+        "no-tabs": "error",
+        "strict": ["error", "global"]
     },
     "overrides": [
         {
