@@ -184,16 +184,12 @@ class TwitchChatEvent extends TwitchEvent {
   get ismod() { return this.flags.mod || this.hasBadge("moderator") || this.iscaster; }
   get issub() { return this.flags.subscriber || this.hasBadge("subscriber"); }
   get isvip() { return this.hasBadge("vip"); }
+  get badges() { return this.flags.badges || []; }
   hasBadge(badge, rev=null) {
-    if (!this.flags.badges)
-      return false;
-    for (let [badge_name, badge_rev] of this.flags.badges) {
+    for (let [badge_name, badge_rev] of this.badges) {
       if (badge_name === badge) {
-        if (rev !== null) {
-          return badge_rev === rev;
-        } else {
-          return true;
-        }
+        /* null rev matches all badges with this name */
+        return rev === null ? true : badge_rev === rev;
       }
     }
     return false;
@@ -1704,7 +1700,7 @@ class TwitchClient { /* exported TwitchClient */
           } else if (result.isritual && result.ritual_kind === "new_chatter") {
             Util.FireEvent(new TwitchEvent("NEWUSER", line, result));
           } else if (result.ismysterygift) {
-            Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
+            Util.FireEvent(new TwitchEvent("MYSTERYGIFT", line, result));
           } else if (result.isrewardgift) {
             Util.FireEvent(new TwitchEvent("REWARDGIFT", line, result));
           } else if (result.isupgrade) {

@@ -315,14 +315,12 @@ var TwitchChatEvent = function (_TwitchEvent) {
     key: "hasBadge",
     value: function hasBadge(badge) {
       var rev = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
-
-      if (!this.flags.badges) return false;
       var _iteratorNormalCompletion3 = true;
       var _didIteratorError3 = false;
       var _iteratorError3 = undefined;
 
       try {
-        for (var _iterator3 = this.flags.badges[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
+        for (var _iterator3 = this.badges[Symbol.iterator](), _step3; !(_iteratorNormalCompletion3 = (_step3 = _iterator3.next()).done); _iteratorNormalCompletion3 = true) {
           var _ref = _step3.value;
 
           var _ref2 = _slicedToArray(_ref, 2);
@@ -331,11 +329,8 @@ var TwitchChatEvent = function (_TwitchEvent) {
           var badge_rev = _ref2[1];
 
           if (badge_name === badge) {
-            if (rev !== null) {
-              return badge_rev === rev;
-            } else {
-              return true;
-            }
+            /* null rev matches all badges with this name */
+            return rev === null ? true : badge_rev === rev;
           }
         }
       } catch (err) {
@@ -388,6 +383,11 @@ var TwitchChatEvent = function (_TwitchEvent) {
     key: "isvip",
     get: function get() {
       return this.hasBadge("vip");
+    }
+  }, {
+    key: "badges",
+    get: function get() {
+      return this.flags.badges || [];
     }
   }, {
     key: "subMonths",
@@ -3084,7 +3084,7 @@ var TwitchClient = function () {
             } else if (result.isritual && result.ritual_kind === "new_chatter") {
               Util.FireEvent(new TwitchEvent("NEWUSER", line, result));
             } else if (result.ismysterygift) {
-              Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
+              Util.FireEvent(new TwitchEvent("MYSTERYGIFT", line, result));
             } else if (result.isrewardgift) {
               Util.FireEvent(new TwitchEvent("REWARDGIFT", line, result));
             } else if (result.isupgrade) {
