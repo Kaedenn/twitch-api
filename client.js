@@ -6,6 +6,33 @@
  *  https://www.frankerfacez.com/developers
  */
 
+/* TODO:
+ * Rewrite GetEmote API
+ *  Abbreviations:
+ *    e_url :== string, emote URL
+ *    e_name :== string, emote's name
+ *    e_id :== number, emote's numeric id
+ *    eset :== number, emote set ID
+ *  GetEmote(e_id or e_name, size=default)
+ *    e_url
+ *  GetGlobalEmote(e_id or e_name, size=default)
+ *    e_url
+ *  GetChannelEmote(channel, e_id or e_name, size=default)
+ *    e_url
+ *  GetGlobalEmotes(size=default)
+ *    {e_name: e_url}
+ *  GetChannelEmotes(channel, size=default)
+ *    {e_name: e_url}
+ *  GetAllChannelEmotes(size=default)
+ *    {channel: {e_name: e_url}}
+ *  GetEmoteSets(size=default)
+ *    {eset: {e_name: e_url}}
+ *  GetEmoteSet(eset, size=default)
+ *    {e_name: e_url}
+ *  GetEmoteInfo(e_id or e_name)
+ *    {e_name: {id: e_id, pattern: emote_pattern, ...}}
+ */
+
 /* Container for Twitch utilities */
 let Twitch = {};
 
@@ -1219,7 +1246,8 @@ class TwitchClient { /* exported TwitchClient */
     let emotes = {};
     if (this._self_emote_sets[TwitchClient.ESET_GLOBAL]) {
       for (let eid of this._self_emote_sets[TwitchClient.ESET_GLOBAL]) {
-        emotes[eid] = this.GetEmote(eid, size);
+        let ename = this._self_emotes[eid] || `${eid}`;
+        emotes[ename] = this.GetEmote(eid, size);
       }
     } else {
       Util.Warn("Unable to get global emotes; are emotes loaded?");
@@ -1246,6 +1274,15 @@ class TwitchClient { /* exported TwitchClient */
   /* Return a promise for the given Twitch emote as an <img> element */
   PromiseEmote(ename, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
     return Util.PromiseImage(this.GetEmote(ename, size));
+  }
+
+  /* Return the name of the given emote ID */
+  GetEmoteName(emote_id) {
+    if (this._self_emotes[emote_id]) {
+      return this._self_emotes[emote_id];
+    } else {
+      return null;
+    }
   }
 
   /* Return the URL to the image for the emote and size specified (id or name) */
@@ -1669,7 +1706,7 @@ class TwitchClient { /* exported TwitchClient */
           } else if (result.ismysterygift) {
             Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
           } else if (result.isrewardgift) {
-            Util.FireEvent(new TwitchSubEvent("REWARDGIFT", line, result));
+            Util.FireEvent(new TwitchEvent("REWARDGIFT", line, result));
           } else if (result.isupgrade) {
             let command = "OTHERUSERNOTICE";
             if (result.isgiftupgrade) {

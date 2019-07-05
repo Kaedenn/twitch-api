@@ -6,6 +6,33 @@
  *  https://www.frankerfacez.com/developers
  */
 
+/* TODO:
+ * Rewrite GetEmote API
+ *  Abbreviations:
+ *    e_url :== string, emote URL
+ *    e_name :== string, emote's name
+ *    e_id :== number, emote's numeric id
+ *    eset :== number, emote set ID
+ *  GetEmote(e_id or e_name, size=default)
+ *    e_url
+ *  GetGlobalEmote(e_id or e_name, size=default)
+ *    e_url
+ *  GetChannelEmote(channel, e_id or e_name, size=default)
+ *    e_url
+ *  GetGlobalEmotes(size=default)
+ *    {e_name: e_url}
+ *  GetChannelEmotes(channel, size=default)
+ *    {e_name: e_url}
+ *  GetAllChannelEmotes(size=default)
+ *    {channel: {e_name: e_url}}
+ *  GetEmoteSets(size=default)
+ *    {eset: {e_name: e_url}}
+ *  GetEmoteSet(eset, size=default)
+ *    {e_name: e_url}
+ *  GetEmoteInfo(e_id or e_name)
+ *    {e_name: {id: e_id, pattern: emote_pattern, ...}}
+ */
+
 /* Container for Twitch utilities */
 
 var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
@@ -2310,7 +2337,8 @@ var TwitchClient = function () {
           for (var _iterator29 = this._self_emote_sets[TwitchClient.ESET_GLOBAL][Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
             var eid = _step29.value;
 
-            emotes[eid] = this.GetEmote(eid, size);
+            var ename = this._self_emotes[eid] || "" + eid;
+            emotes[ename] = this.GetEmote(eid, size);
           }
         } catch (err) {
           _didIteratorError29 = true;
@@ -2362,6 +2390,18 @@ var TwitchClient = function () {
       var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TwitchClient.DEFAULT_EMOTE_SIZE;
 
       return Util.PromiseImage(this.GetEmote(ename, size));
+    }
+
+    /* Return the name of the given emote ID */
+
+  }, {
+    key: "GetEmoteName",
+    value: function GetEmoteName(emote_id) {
+      if (this._self_emotes[emote_id]) {
+        return this._self_emotes[emote_id];
+      } else {
+        return null;
+      }
     }
 
     /* Return the URL to the image for the emote and size specified (id or name) */
@@ -3046,7 +3086,7 @@ var TwitchClient = function () {
             } else if (result.ismysterygift) {
               Util.FireEvent(new TwitchSubEvent("MYSTERYGIFT", line, result));
             } else if (result.isrewardgift) {
-              Util.FireEvent(new TwitchSubEvent("REWARDGIFT", line, result));
+              Util.FireEvent(new TwitchEvent("REWARDGIFT", line, result));
             } else if (result.isupgrade) {
               var command = "OTHERUSERNOTICE";
               if (result.isgiftupgrade) {
