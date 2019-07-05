@@ -160,7 +160,7 @@ class TwitchEvent {
   get noticeClass() {
     let msgid = this.noticeMsgId;
     if (typeof(msgid) === "string") {
-      return msgid.split('_')[0];
+      return msgid.split("_")[0];
     }
     return null;
   }
@@ -223,16 +223,17 @@ class TwitchSubEvent extends TwitchEvent {
     this._sub_kind = sub_kind;
     if (TwitchSubEvent.KINDS.indexOf(sub_kind) === -1) {
       Util.Error(`Invalid sub kind ${sub_kind}; defaulting to "SUB"`);
-      this._sub_kind = TwitchSubEvent.SUB;
+      this._sub_kind = TwitchSubEvent.KIND_SUB;
     }
   }
 
   /* Known kinds of subscriptions */
   static get KINDS() { return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"]; }
-  static get SUB() { return "SUB"; }
-  static get RESUB() { return "RESUB"; }
-  static get GIFTSUB() { return "GIFTSUB"; }
-  static get ANONGIFTSUB() { return "ANONGIFTSUB"; }
+  static get KIND_SUB() { return "SUB"; }
+  static get KIND_RESUB() { return "RESUB"; }
+  static get KIND_GIFTSUB() { return "GIFTSUB"; }
+  static get KIND_ANONGIFTSUB() { return "ANONGIFTSUB"; }
+  static IsKind(k) { return TwitchSubEvent.KINDS.indexOf(k) > -1; }
 
   /* Known subscription tiers */
   static get PLANS() { return ["Prime", "1000", "2000", "3000"]; }
@@ -240,12 +241,13 @@ class TwitchSubEvent extends TwitchEvent {
   static get PLAN_TIER1() { return "1000"; }
   static get PLAN_TIER2() { return "2000"; }
   static get PLAN_TIER3() { return "3000"; }
+  static IsPlan(p) { return TwitchSubEvent.PLANS.indexOf(p) > -1; }
 
   static KindFromMsgID(msgid) {
-    if (msgid === "sub") return TwitchSubEvent.SUB;
-    if (msgid === "resub") return TwitchSubEvent.RESUB;
-    if (msgid === "subgift") return TwitchSubEvent.GIFTSUB;
-    if (msgid === "anonsubgift") return TwitchSubEvent.ANONSUBGIFT;
+    if (msgid === "sub") return TwitchSubEvent.KIND_SUB;
+    if (msgid === "resub") return TwitchSubEvent.KIND_RESUB;
+    if (msgid === "subgift") return TwitchSubEvent.KIND_GIFTSUB;
+    if (msgid === "anonsubgift") return TwitchSubEvent.KIND_ANONGIFTSUB;
     return null;
   }
 
@@ -267,18 +269,18 @@ class TwitchSubEvent extends TwitchEvent {
   /* Methods below apply to all sub kinds */
   get kind() { return this._sub_kind; }
   get user() { return this.flags["msg-param-login"] || this.name; }
-  get plan() { return this.flags['msg-param-sub-plan-name']; }
-  get plan_id() { return this.flags['msg-param-sub-plan']; }
-  get months() { return this.flags['msg-param-months'] || 0; }
-  get total_months() { return this.flags['msg-param-cumulative-months'] || 0; }
-  get share_streak() { return this.flags['msg-param-should-share-streak']; }
-  get streak_months() { return this.flags['msg-param-streak-months'] || 0; }
+  get plan() { return this.flags["msg-param-sub-plan-name"]; }
+  get plan_id() { return this.flags["msg-param-sub-plan"]; }
+  get months() { return this.flags["msg-param-months"] || 0; }
+  get total_months() { return this.flags["msg-param-cumulative-months"] || 0; }
+  get share_streak() { return this.flags["msg-param-should-share-streak"]; }
+  get streak_months() { return this.flags["msg-param-streak-months"] || 0; }
 
   /* Methods below only apply only to gift subs */
-  get anonymous() { return this.kind === TwitchSubEvent.ANONGIFTSUB; }
-  get recipient() { return this.flags['msg-param-recipient-user-name']; }
-  get recipient_id() { return this.flags['msg-param-recipient-id']; }
-  get recipient_name() { return this.flags['msg-param-recipient-display-name']; }
+  get anonymous() { return this.kind === TwitchSubEvent.KIND_ANONGIFTSUB; }
+  get recipient() { return this.flags["msg-param-recipient-user-name"]; }
+  get recipient_id() { return this.flags["msg-param-recipient-id"]; }
+  get recipient_name() { return this.flags["msg-param-recipient-display-name"]; }
 }
 
 /* End of event classes section 0}}} */
@@ -293,6 +295,12 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Default emote size */
   static get DEFAULT_EMOTE_SIZE() { return "1.0"; }
+
+  /* "Rooms" channel */
+  static get CHANNEL_ROOMS() { return "#chatrooms"; }
+
+  /* Requested capabilities */
+  static get CAPABILITIES() { return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"]; }
 
   constructor(opts) {
     let cfg_name = opts.Name;
@@ -367,7 +375,7 @@ class TwitchClient { /* exported TwitchClient */
         oauth_header = `OAuth ${cfg_pass}`;
       } else {
         oauth = cfg_pass;
-        oauth_header = cfg_pass.replace(/^oauth:/, 'OAuth ');
+        oauth_header = cfg_pass.replace(/^oauth:/, "OAuth ");
       }
     }
 
@@ -425,7 +433,7 @@ class TwitchClient { /* exported TwitchClient */
       this._ws.onmessage = (function _ws_onmessage(event) {
         try {
           let data = Twitch.StripCredentials(JSON.stringify(event.data));
-          Util.TraceOnly('ws recv>', data);
+          Util.TraceOnly("ws recv>", data);
           this._onWebsocketMessage(event);
         } catch (e) {
           alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
@@ -434,7 +442,7 @@ class TwitchClient { /* exported TwitchClient */
       }).bind(this);
       this._ws.onerror = (function _ws_onerror(event) {
         try {
-          Util.LogOnly('ws error>', event);
+          Util.LogOnly("ws error>", event);
           this._connected = false;
           this._onWebsocketError(event);
         } catch (e) {
@@ -444,7 +452,7 @@ class TwitchClient { /* exported TwitchClient */
       }).bind(this);
       this._ws.onclose = (function _ws_onclose(event) {
         try {
-          Util.LogOnly('ws close>', event);
+          Util.LogOnly("ws close>", event);
           this._connected = false;
           this._is_open = false;
           this._onWebsocketClose(event);
@@ -456,7 +464,7 @@ class TwitchClient { /* exported TwitchClient */
       this.send = (function _TwitchClient_send(m) {
         try {
           this._ws.send(m);
-          Util.DebugOnly('ws send>', Twitch.StripCredentials(JSON.stringify(m)));
+          Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
         } catch (e) {
           alert("this.send error: " + e.toString());
           throw e;
@@ -516,7 +524,7 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Private: Ensure the user specified is in reduced form */
   _ensureUser(user) {
-    if (user.indexOf('!') > -1) {
+    if (user.indexOf("!") > -1) {
       return Twitch.ParseUser(user);
     } else {
       return user;
@@ -732,11 +740,11 @@ class TwitchClient { /* exported TwitchClient */
       let bttv = this._bttv_channel_emotes[cname];
       for (let emote of json.emotes) {
         bttv[emote.code] = {
-          'id': emote.id,
-          'code': emote.code,
-          'channel': emote.channel,
-          'image-type': emote.imageType,
-          'url': Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
+          "id": emote.id,
+          "code": emote.code,
+          "channel": emote.channel,
+          "image-type": emote.imageType,
+          "url": Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
         };
       }
     }).bind(this), (function _bttve_onerror(resp) {
@@ -751,11 +759,11 @@ class TwitchClient { /* exported TwitchClient */
       let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
       for (let emote of json.emotes) {
         this._bttv_global_emotes[emote.code] = {
-          'id': emote.id,
-          'code': emote.code,
-          'channel': emote.channel,
-          'image-type': emote.imageType,
-          'url': Util.URL(url_base.replace('{{id}}', emote.id))
+          "id": emote.id,
+          "code": emote.code,
+          "channel": emote.channel,
+          "image-type": emote.imageType,
+          "url": Util.URL(url_base.replace("{{id}}", emote.id))
         };
       }
     }).bind(this), (function _bttve_onerror(resp) {
@@ -853,9 +861,9 @@ class TwitchClient { /* exported TwitchClient */
     let raw_line = `@${flag_str} ${useruri} PRIVMSG ${channel} :`;
 
     /* Handle /me */
-    if (msg.startsWith('/me ')) {
-      msg = msg.substr('/me '.length);
-      raw_line += '\x01ACTION ' + msg + '\x01';
+    if (msg.startsWith("/me ")) {
+      msg = msg.substr("/me ".length);
+      raw_line += "\x01ACTION " + msg + "\x01";
       flags.action = true;
     } else {
       raw_line += msg;
@@ -951,7 +959,7 @@ class TwitchClient { /* exported TwitchClient */
    * following: twitch.tv/tags twitch.tv/commands twitch.tv/membership */
   HasCapability(test_cap) {
     for (let cap of this._capabilities) {
-      if (test_cap === cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+      if (test_cap === cap || cap.endsWith("/" + test_cap.replace(/^\//, ""))) {
         return true;
       }
     }
@@ -1044,12 +1052,12 @@ class TwitchClient { /* exported TwitchClient */
   /* Parse a channel into a channel object */
   ParseChannel(channel) {
     let chobj = Twitch.ParseChannel(channel);
-    if (chobj.room && chobj.channel !== "#chatrooms") {
+    if (chobj.room && chobj.channel !== TwitchClient.CHANNEL_ROOMS) {
       /* Parse #streamer:roomname strings */
       let [cname, rname] = [chobj.channel, chobj.room];
       let roomdef = this._rooms[cname];
       if (roomdef && roomdef.rooms && roomdef.rooms[rname]) {
-        chobj.channel = "#chatrooms";
+        chobj.channel = TwitchClient.CHANNEL_ROOMS;
         chobj.room = roomdef.id;
         chobj.roomuid = roomdef.rooms[rname].uid;
       } else {
@@ -1507,7 +1515,7 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Callback: called when the websocket opens */
   _onWebsocketOpen(name, pass) {
-    this.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
+    this.send(`CAP REQ :${TwitchClient.CAPABILITIES.join(" ")}`);
     if (name && pass) {
       this._username = name;
     } else {
@@ -1629,10 +1637,10 @@ class TwitchClient { /* exported TwitchClient */
           if (this._enable_ffz) {
             for (let [badge_nr, users] of Object.entries(this._ffz_badge_users)) {
               if (users.indexOf(result.user) > -1) {
-                let ffz_badges = event.flags['ffz-badges'];
+                let ffz_badges = event.flags["ffz-badges"];
                 if (!ffz_badges) ffz_badges = [];
                 ffz_badges.push(this._ffz_badges[badge_nr]);
-                event.flags['ffz-badges'] = ffz_badges;
+                event.flags["ffz-badges"] = ffz_badges;
               }
             }
           }
@@ -1640,9 +1648,9 @@ class TwitchClient { /* exported TwitchClient */
           ui.ismod = event.ismod;
           ui.issub = event.issub;
           ui.isvip = event.isvip;
-          ui.userid = event.flags['user-id'];
-          ui.uuid = event.flags['id'];
-          ui.badges = event.flags['badges'];
+          ui.userid = event.flags["user-id"];
+          ui.uuid = event.flags["id"];
+          ui.badges = event.flags["badges"];
           Util.FireEvent(event);
         } break;
         case "WHISPER":
@@ -1687,14 +1695,8 @@ class TwitchClient { /* exported TwitchClient */
           }
           break;
         case "USERNOTICE":
-          if (result.sub_kind === "SUB") {
-            Util.FireEvent(new TwitchSubEvent("SUB", line, result));
-          } else if (result.sub_kind === "RESUB") {
-            Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
-          } else if (result.sub_kind === "GIFTSUB") {
-            Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
-          } else if (result.sub_kind === "ANONGIFTSUB") {
-            Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
+          if (TwitchSubEvent.IsKind(result.sub_kind)) {
+            Util.FireEvent(new TwitchSubEvent(result.sub_kind, line, result));
           } else if (result.israid) {
             Util.FireEvent(new TwitchEvent("RAID", line, result));
           } else if (result.isritual && result.ritual_kind === "new_chatter") {
@@ -1718,7 +1720,7 @@ class TwitchClient { /* exported TwitchClient */
           }
           break;
         case "GLOBALUSERSTATE":
-          this._self_userid = result.flags['user-id'];
+          this._self_userid = result.flags["user-id"];
           break;
         case "CLEARCHAT":
           break;
@@ -1800,7 +1802,7 @@ Twitch.URL = {
   AllBadges: () => `https://badges.twitch.tv/v1/badges/global/display`,
   GlobalCheers: () => `${Twitch.Kraken}/bits/actions`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
-  Emote: (eid, size='1.0') => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
+  Emote: (eid, size="1.0") => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
   EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
 
   FFZAllEmotes: () => `${Twitch.FFZ}/emoticons`,
@@ -1879,7 +1881,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
-  return user.replace(/^:/, "").split('!')[0];
+  return user.replace(/^:/, "").split("!")[0];
 };
 
 /* Parse channel to {channel, room, roomuid} */
@@ -1890,7 +1892,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       room: null,
       roomuid: null
     };
-    let parts = channel.split(':');
+    let parts = channel.split(":");
     if (parts.length === 1) {
       /* #channel */
       chobj.channel = parts[0];
@@ -1908,8 +1910,8 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       chobj.channel = parts[0];
     }
     if (chobj.channel !== "GLOBAL") {
-      if (chobj.channel.indexOf('#') !== 0) {
-        chobj.channel = '#' + chobj.channel;
+      if (chobj.channel.indexOf("#") !== 0) {
+        chobj.channel = "#" + chobj.channel;
       }
     }
     return chobj;
@@ -1930,13 +1932,13 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
       return "GLOBAL";
     } else {
       if (room) {
-        cname += ':' + room;
+        cname += ":" + room;
       }
       if (roomuid) {
-        cname += ':' + roomuid;
+        cname += ":" + roomuid;
       }
-      if (cname.indexOf('#') !== 0) {
-        cname = '#' + cname;
+      if (cname.indexOf("#") !== 0) {
+        cname = "#" + cname;
       }
       return cname;
     }
@@ -1950,7 +1952,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
 
 /* Return whether or not the channel object given is a #chatrooms room */
 Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
-  return cobj.channel === "#chatrooms" && cobj.room && cobj.roomuid;
+  return cobj.channel === TwitchClient.CHANNEL_ROOMS && cobj.room && cobj.roomuid;
 };
 
 /* Format a room with the channel and room IDs given */
@@ -1983,14 +1985,14 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
     result = "";
   } else if (key === "badge-info" || key === "badges") {
     result = [];
-    for (let badge of value.split(',')) {
-      let [badge_name, badge_rev] = badge.split('/');
+    for (let badge of value.split(",")) {
+      let [badge_name, badge_rev] = badge.split("/");
       result.push([badge_name, badge_rev]);
     }
   } else if (key === "emotes") {
     result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
-    result = value.split(',').map(e => Number.parse(e));
+    result = value.split(",").map(e => Number.parse(e));
   } else {
     result = Twitch.DecodeFlag(value);
   }
@@ -2008,11 +2010,11 @@ Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
   /* @key=value;key=value;... */
   let dataStr = dataString.replace(/^@/, "");
   let data = {};
-  for (let item of dataStr.split(';')) {
+  for (let item of dataStr.split(";")) {
     let key = item;
     let val = "";
-    if (item.indexOf('=') !== -1) {
-      [key, val] = item.split('=');
+    if (item.indexOf("=") !== -1) {
+      [key, val] = item.split("=");
     }
     val = Twitch.ParseFlag(key, val);
     data[key] = val;
@@ -2023,11 +2025,11 @@ Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
 /* Parse an emote specification flag */
 Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
   let result = [];
-  for (let emote_def of value.split('/')) {
-    let sep_pos = emote_def.indexOf(':');
+  for (let emote_def of value.split("/")) {
+    let sep_pos = emote_def.indexOf(":");
     let emote_id = Number.parseInt(emote_def.substr(0, sep_pos));
-    for (let range of emote_def.substr(sep_pos+1).split(',')) {
-      let [start, end] = range.split('-');
+    for (let range of emote_def.substr(sep_pos+1).split(",")) {
+      let [start, end] = range.split("-");
       result.push({
         id: emote_id,
         name: null,
@@ -2047,7 +2049,7 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
       specs.push(`${emote.id}:${emote.start}-${emote.end}`);
     }
   }
-  return specs.join('/');
+  return specs.join("/");
 };
 
 /* Convert an emote name to a regex */
@@ -2059,7 +2061,7 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
 /* Generate a regex from a cheer prefix */
 Twitch.CheerToRegex = function _Twitch_CheerToRegex(prefix) {
   let p = RegExp.escape(prefix);
-  return new RegExp(`(?:\\b[\\s]|^)(${p})([1-9][0-9]*)(?:\\b|[\\s]|$)`, 'ig');
+  return new RegExp(`(?:\\b[\\s]|^)(${p})([1-9][0-9]*)(?:\\b|[\\s]|$)`, "ig");
 };
 
 /* Generate emote specifications for the given emotes [eid, ename] */
@@ -2083,9 +2085,9 @@ Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes, escape=false) {
 /* Parse a line received through the Twitch websocket */
 Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   let result = { cmd: null };
-  let parts = line.split(' ');
+  let parts = line.split(" ");
   let data = {};
-  if (parts[0].startsWith('@')) {
+  if (parts[0].startsWith("@")) {
     data = Twitch.ParseFlags(parts[0]);
     parts.shift();
   }
@@ -2102,7 +2104,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.cmd = "ACK";
     result.operation = "CAP";
     result.server = parts[0].replace(/^:/, "");
-    result.flags = line.substr(line.indexOf(':', 1)+1).split(" ");
+    result.flags = line.substr(line.indexOf(":", 1)+1).split(" ");
   } else if (parts[1] === "375" || parts[1] === "376" || parts[1] === "366") {
     /* 375: Start TOPIC; 376: End TOPIC; 366: End NAMES */
     /* :<server> <code> <username> :<message> */
@@ -2115,7 +2117,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.code = parts[1];
     result.server = parts[0].replace(/^:/, "");
     result.username = parts[2];
-    result.message = parts.slice(3).join(' ').replace(/^:/, "");
+    result.message = parts.slice(3).join(" ").replace(/^:/, "");
   } else if (parts[1] === "353") {
     /* NAMES listing entry */
     /* :<user> 353 <username> <mode> <channel> :<username> */
@@ -2123,7 +2125,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0].replace(/^:/, ""));
     result.mode = parts[3];
     result.channel = Twitch.ParseChannel(parts[4]);
-    result.usernames = parts.slice(5).join(' ').replace(/^:/, "").split(' ');
+    result.usernames = parts.slice(5).join(" ").replace(/^:/, "").split(" ");
   } else if (parts[1] === "JOIN" || parts[1] === "PART") {
     /* ":<user> JOIN <channel> */
     /* ":<user> PART <channel> */
@@ -2131,7 +2133,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] === "MODE") {
-    /* ":<sender> MODE <channel> <modeflag> <username>" */
+    /* :<sender> MODE <channel> <modeflag> <username> */
     result.cmd = "MODE";
     result.sender = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
@@ -2144,9 +2146,9 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.flags = data;
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    if (msg.startsWith('\x01ACTION ')) {
+    if (msg.startsWith("\x01ACTION ")) {
       result.flags.action = true;
-      result.message = msg.strip('\x01').substr('ACTION '.length);
+      result.message = msg.strip("\x01").substr("ACTION ".length);
     } else {
       result.flags.action = false;
       result.message = msg;
@@ -2178,7 +2180,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
-    if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
+    if (line.indexOf(":", line.indexOf(parts[2])) > -1) {
       result.message = argFrom(line, ":", parts[2]);
     }
     result.sub_kind = TwitchSubEvent.KindFromMsgID(result.flags["msg-id"]);
@@ -2200,42 +2202,42 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
       result.ritual_kind = result.flags["msg-param-ritual-name"];
     }
   } else if (parts[1] === "GLOBALUSERSTATE") {
-    /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
+    /* [@<flags>] :server GLOBALUSERSTATE\r\n */
     result.cmd = "GLOBALUSERSTATE";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
   } else if (parts[1] === "CLEARCHAT") {
-    /* "[@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
+    /* [@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n */
     result.cmd = "CLEARCHAT";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = null;
-    if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
+    if (line.indexOf(":", line.indexOf(parts[2])) > -1) {
       result.user = argFrom(line, ":", parts[2]);
     }
   } else if (parts[1] === "CLEARMSG") {
-    /* "[@<flags>] :<server> CLEARMSG <channel> :<message>\r\n" */
+    /* [@<flags>] :<server> CLEARMSG <channel> :<message>\r\n */
     result.cmd = "CLEARMSG";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = argFrom(line, ":", parts[2]);
   } else if (parts[1] === "HOSTTARGET") {
-    /* ":<server> HOSTTARGET <channel> :<user> -\r\n" */
+    /* :<server> HOSTTARGET <channel> :<user> -\r\n */
     result.cmd = "HOSTTARGET";
     result.server = parts[0];
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = parts[3].replace(/^:/, "");
   } else if (parts[1] === "NOTICE") {
-    /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
+    /* [@<flags>] :<server> NOTICE <channel> :<message>\r\n */
     result.cmd = "NOTICE";
     result.flags = data; /* not always present */
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = argFrom(line, ":", parts[2]);
   } else if (parts[1] === "421") { /* Error */
-    /* ":<server> 421 <user> <command> :<message>\r\n" */
+    /* :<server> 421 <user> <command> :<message>\r\n */
     result.cmd = "ERROR";
     result.server = parts[0].replace(/^:/, "");
     result.user = Twitch.ParseUser(parts[2]);
@@ -2267,8 +2269,8 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   let pats = [
-    ['oauth:', /oauth:[\w]+/g],
-    ['OAuth ', /OAuth [\w]+/g]
+    ["oauth:", /oauth:[\w]+/g],
+    ["OAuth ", /OAuth [\w]+/g]
   ];
   let result = msg;
   for (let [name, pat] of pats) {

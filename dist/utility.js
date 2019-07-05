@@ -339,7 +339,7 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Ensure String.trimStart is present */
   polyfill(String.prototype, "trimStart", function _String_trimStart() {
     var i = 0;
-    while (i < this.length && this[i] === ' ') {
+    while (i < this.length && this[i] === " ") {
       i += 1;
     }
     return i === 0 ? this : this.substr(i);
@@ -348,7 +348,7 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Ensure String.trimEnd is present */
   polyfill(String.prototype, "trimEnd", function _String_trimEnd() {
     var i = this.length - 1;
-    while (i > 0 && this[i] === ' ') {
+    while (i > 0 && this[i] === " ") {
       i -= 1;
     }
     return this.substr(0, i + 1);
@@ -361,7 +361,7 @@ Util.Defined = function _Util_Defined(identifier) {
 
   /* Escape regex characters in a string */
   polyfill(RegExp, "escape", function _RegExp_escape(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   });
 })(window);
 
@@ -554,7 +554,7 @@ String.prototype.strip = function _String_strip(chrs) {
       }
     }
   } else {
-    chars = [' ', '\r', '\n'];
+    chars = [" ", "\r", "\n"];
   }
   var si = 0;
   var ei = this.length - 1;
@@ -570,11 +570,11 @@ String.prototype.strip = function _String_strip(chrs) {
 /* Escape a string for proper HTML printing */
 String.prototype.escape = function _String_escape() {
   var result = this;
-  result = result.replace(/&/g, '&amp;');
-  result = result.replace(/</g, '&lt;');
-  result = result.replace(/>/g, '&gt;');
-  result = result.replace(/"/g, '&quot;');
-  result = result.replace(/'/g, '&apos;');
+  result = result.replace(/&/g, "&amp;");
+  result = result.replace(/</g, "&lt;");
+  result = result.replace(/>/g, "&gt;");
+  result = result.replace(/"/g, "&quot;");
+  result = result.replace(/"/g, "&apos;");
   return result;
 };
 
@@ -786,10 +786,10 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
-  if (url.startsWith('//')) {
-    var p = 'http:';
+  if (url.startsWith("//")) {
+    var p = "http:";
     if (window.location.protocol === "https:") {
-      p = 'https:';
+      p = "https:";
     }
     return p + url;
   } else if (!url.match(/^[\w-]+:/)) {
@@ -804,8 +804,9 @@ Util.URL = function _Util_URL(url) {
 
 /* Split a path into <dirname>/<basename> parts */
 Util.SplitPath = function _Util_SplitPath(path) {
-  if (path.indexOf('/') > -1) {
-    return [path.substr(0, path.lastIndexOf('/')), path.substr(path.lastIndexOf('/') + 1)];
+  if (path.indexOf("/") > -1) {
+    var i = path.lastIndexOf("/");
+    return [path.substr(0, i), path.substr(i + 1)];
   } else {
     return ["", path];
   }
@@ -814,7 +815,7 @@ Util.SplitPath = function _Util_SplitPath(path) {
 /* Join a directory and a filename */
 Util.JoinPath = function _Util_JoinPath(dir, file) {
   if (dir) {
-    return [dir, file].join('/');
+    return [dir, file].join("/");
   } else {
     return file;
   }
@@ -839,7 +840,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
             dir = _Util$SplitPath2[0],
             file = _Util$SplitPath2[1];
 
-        pieces.push([dir.split('/'), file]);
+        pieces.push([dir.split("/"), file]);
       }
     } catch (err) {
       _didIteratorError15 = true;
@@ -935,7 +936,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   }
   /* Join the paths back together */
   return pieces.map(function (v) {
-    return Util.JoinPath(v[0].join('/'), v[1]);
+    return Util.JoinPath(v[0].join("/"), v[1]);
   });
 };
 
@@ -1009,7 +1010,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
 
       var frame = {
         text: line,
-        name: '???',
+        name: "???",
         file: window.location.pathname,
         line: 0,
         column: 0
@@ -1696,7 +1697,7 @@ var ColorParser = function () {
 
     this._cache = {};
     /* Create the color parser div */
-    this._e = document.createElement('div');
+    this._e = document.createElement("div");
     this._e.setAttribute("style", "position: absolute; z-index: -100");
     this._e.setAttribute("id", "color-parser-div");
     this._e.setAttribute("width", "0px");
@@ -2727,7 +2728,7 @@ Util.FormatInterval = function _Util_FormatInterval(seconds) {
   var parts = [];
   var time = Math.round(seconds);
   if (time < 0) {
-    parts.push('-');
+    parts.push("-");
     time *= -1;
   }
   if (time % 60 !== 0) {
@@ -2803,7 +2804,7 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
   if (Util.StringEscapeChars.hasOwnProperty(char)) {
     return "\\" + Util.StringEscapeChars[char];
   } else {
-    return "\\x" + char.toString(16).padStart(2, '0');
+    return "\\x" + char.toString(16).padStart(2, "0");
   }
 };
 
@@ -2825,8 +2826,8 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 
       if (cn < 0x20) {
         result = result.concat(Util.EscapeCharCode(cn));
-      } else if (ch === '\\') {
-        result = result.concat('\\\\');
+      } else if (ch === "\\") {
+        result = result.concat("\\\\");
       } else {
         result = result.concat(ch);
       }
@@ -3118,8 +3119,8 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
 
   var obj = {};
   var split = function split(part) {
-    if (part.indexOf('=') !== -1) {
-      return [part.substr(0, part.indexOf('=')), decodeURIComponent(part.substr(part.indexOf('=') + 1))];
+    if (part.indexOf("=") !== -1) {
+      return [part.substr(0, part.indexOf("=")), decodeURIComponent(part.substr(part.indexOf("=") + 1))];
     } else {
       return [part, "true"];
     }
@@ -3130,7 +3131,7 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
   var _iteratorError33 = undefined;
 
   try {
-    for (var _iterator33 = query.split('&')[Symbol.iterator](), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
+    for (var _iterator33 = query.split("&")[Symbol.iterator](), _step33; !(_iteratorNormalCompletion33 = (_step33 = _iterator33.next()).done); _iteratorNormalCompletion33 = true) {
       var part = _step33.value;
 
       var _split = split(part),
@@ -3432,7 +3433,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
   } else if (["string", "number", "boolean"].indexOf(typeof obj === "undefined" ? "undefined" : _typeof(obj)) > -1) {
     return new Text("" + obj);
   } else if (obj instanceof URL) {
-    var a = document.createElement('a');
+    var a = document.createElement("a");
     a.setAttribute("href", obj.href);
     a.setAttribute("target", "_blank");
     a.textContent = obj.href;

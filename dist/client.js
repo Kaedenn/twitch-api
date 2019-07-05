@@ -210,7 +210,7 @@ var TwitchEvent = function () {
     get: function get() {
       var msgid = this.noticeMsgId;
       if (typeof msgid === "string") {
-        return msgid.split('_')[0];
+        return msgid.split("_")[0];
       }
       return null;
     }
@@ -451,7 +451,7 @@ var TwitchSubEvent = function (_TwitchEvent2) {
     _this2._sub_kind = sub_kind;
     if (TwitchSubEvent.KINDS.indexOf(sub_kind) === -1) {
       Util.Error("Invalid sub kind " + sub_kind + "; defaulting to \"SUB\"");
-      _this2._sub_kind = TwitchSubEvent.SUB;
+      _this2._sub_kind = TwitchSubEvent.KIND_SUB;
     }
     return _this2;
   }
@@ -475,32 +475,32 @@ var TwitchSubEvent = function (_TwitchEvent2) {
   }, {
     key: "plan",
     get: function get() {
-      return this.flags['msg-param-sub-plan-name'];
+      return this.flags["msg-param-sub-plan-name"];
     }
   }, {
     key: "plan_id",
     get: function get() {
-      return this.flags['msg-param-sub-plan'];
+      return this.flags["msg-param-sub-plan"];
     }
   }, {
     key: "months",
     get: function get() {
-      return this.flags['msg-param-months'] || 0;
+      return this.flags["msg-param-months"] || 0;
     }
   }, {
     key: "total_months",
     get: function get() {
-      return this.flags['msg-param-cumulative-months'] || 0;
+      return this.flags["msg-param-cumulative-months"] || 0;
     }
   }, {
     key: "share_streak",
     get: function get() {
-      return this.flags['msg-param-should-share-streak'];
+      return this.flags["msg-param-should-share-streak"];
     }
   }, {
     key: "streak_months",
     get: function get() {
-      return this.flags['msg-param-streak-months'] || 0;
+      return this.flags["msg-param-streak-months"] || 0;
     }
 
     /* Methods below only apply only to gift subs */
@@ -508,30 +508,43 @@ var TwitchSubEvent = function (_TwitchEvent2) {
   }, {
     key: "anonymous",
     get: function get() {
-      return this.kind === TwitchSubEvent.ANONGIFTSUB;
+      return this.kind === TwitchSubEvent.KIND_ANONGIFTSUB;
     }
   }, {
     key: "recipient",
     get: function get() {
-      return this.flags['msg-param-recipient-user-name'];
+      return this.flags["msg-param-recipient-user-name"];
     }
   }, {
     key: "recipient_id",
     get: function get() {
-      return this.flags['msg-param-recipient-id'];
+      return this.flags["msg-param-recipient-id"];
     }
   }, {
     key: "recipient_name",
     get: function get() {
-      return this.flags['msg-param-recipient-display-name'];
+      return this.flags["msg-param-recipient-display-name"];
     }
   }], [{
+    key: "IsKind",
+    value: function IsKind(k) {
+      return TwitchSubEvent.KINDS.indexOf(k) > -1;
+    }
+
+    /* Known subscription tiers */
+
+  }, {
+    key: "IsPlan",
+    value: function IsPlan(p) {
+      return TwitchSubEvent.PLANS.indexOf(p) > -1;
+    }
+  }, {
     key: "KindFromMsgID",
     value: function KindFromMsgID(msgid) {
-      if (msgid === "sub") return TwitchSubEvent.SUB;
-      if (msgid === "resub") return TwitchSubEvent.RESUB;
-      if (msgid === "subgift") return TwitchSubEvent.GIFTSUB;
-      if (msgid === "anonsubgift") return TwitchSubEvent.ANONSUBGIFT;
+      if (msgid === "sub") return TwitchSubEvent.KIND_SUB;
+      if (msgid === "resub") return TwitchSubEvent.KIND_RESUB;
+      if (msgid === "subgift") return TwitchSubEvent.KIND_GIFTSUB;
+      if (msgid === "anonsubgift") return TwitchSubEvent.KIND_ANONGIFTSUB;
       return null;
     }
   }, {
@@ -556,28 +569,25 @@ var TwitchSubEvent = function (_TwitchEvent2) {
       return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"];
     }
   }, {
-    key: "SUB",
+    key: "KIND_SUB",
     get: function get() {
       return "SUB";
     }
   }, {
-    key: "RESUB",
+    key: "KIND_RESUB",
     get: function get() {
       return "RESUB";
     }
   }, {
-    key: "GIFTSUB",
+    key: "KIND_GIFTSUB",
     get: function get() {
       return "GIFTSUB";
     }
   }, {
-    key: "ANONGIFTSUB",
+    key: "KIND_ANONGIFTSUB",
     get: function get() {
       return "ANONGIFTSUB";
     }
-
-    /* Known subscription tiers */
-
   }, {
     key: "PLANS",
     get: function get() {
@@ -640,6 +650,22 @@ var TwitchClient = function () {
     key: "DEFAULT_EMOTE_SIZE",
     get: function get() {
       return "1.0";
+    }
+
+    /* "Rooms" channel */
+
+  }, {
+    key: "CHANNEL_ROOMS",
+    get: function get() {
+      return "#chatrooms";
+    }
+
+    /* Requested capabilities */
+
+  }, {
+    key: "CAPABILITIES",
+    get: function get() {
+      return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"];
     }
   }]);
 
@@ -725,7 +751,7 @@ var TwitchClient = function () {
         oauth_header = "OAuth " + cfg_pass;
       } else {
         oauth = cfg_pass;
-        oauth_header = cfg_pass.replace(/^oauth:/, 'OAuth ');
+        oauth_header = cfg_pass.replace(/^oauth:/, "OAuth ");
       }
     }
 
@@ -805,7 +831,7 @@ var TwitchClient = function () {
       this._ws.onmessage = function _ws_onmessage(event) {
         try {
           var data = Twitch.StripCredentials(JSON.stringify(event.data));
-          Util.TraceOnly('ws recv>', data);
+          Util.TraceOnly("ws recv>", data);
           this._onWebsocketMessage(event);
         } catch (e) {
           alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
@@ -814,7 +840,7 @@ var TwitchClient = function () {
       }.bind(this);
       this._ws.onerror = function _ws_onerror(event) {
         try {
-          Util.LogOnly('ws error>', event);
+          Util.LogOnly("ws error>", event);
           this._connected = false;
           this._onWebsocketError(event);
         } catch (e) {
@@ -824,7 +850,7 @@ var TwitchClient = function () {
       }.bind(this);
       this._ws.onclose = function _ws_onclose(event) {
         try {
-          Util.LogOnly('ws close>', event);
+          Util.LogOnly("ws close>", event);
           this._connected = false;
           this._is_open = false;
           this._onWebsocketClose(event);
@@ -836,7 +862,7 @@ var TwitchClient = function () {
       this.send = function _TwitchClient_send(m) {
         try {
           this._ws.send(m);
-          Util.DebugOnly('ws send>', Twitch.StripCredentials(JSON.stringify(m)));
+          Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
         } catch (e) {
           alert("this.send error: " + e.toString());
           throw e;
@@ -936,7 +962,7 @@ var TwitchClient = function () {
   }, {
     key: "_ensureUser",
     value: function _ensureUser(user) {
-      if (user.indexOf('!') > -1) {
+      if (user.indexOf("!") > -1) {
         return Twitch.ParseUser(user);
       } else {
         return user;
@@ -1430,11 +1456,11 @@ var TwitchClient = function () {
             var emote = _step17.value;
 
             bttv[emote.code] = {
-              'id': emote.id,
-              'code': emote.code,
-              'channel': emote.channel,
-              'image-type': emote.imageType,
-              'url': Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
+              "id": emote.id,
+              "code": emote.code,
+              "channel": emote.channel,
+              "image-type": emote.imageType,
+              "url": Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
             };
           }
         } catch (err) {
@@ -1469,11 +1495,11 @@ var TwitchClient = function () {
             var emote = _step18.value;
 
             this._bttv_global_emotes[emote.code] = {
-              'id': emote.id,
-              'code': emote.code,
-              'channel': emote.channel,
-              'image-type': emote.imageType,
-              'url': Util.URL(url_base.replace('{{id}}', emote.id))
+              "id": emote.id,
+              "code": emote.code,
+              "channel": emote.channel,
+              "image-type": emote.imageType,
+              "url": Util.URL(url_base.replace("{{id}}", emote.id))
             };
           }
         } catch (err) {
@@ -1662,9 +1688,9 @@ var TwitchClient = function () {
       var raw_line = "@" + flag_str + " " + useruri + " PRIVMSG " + channel + " :";
 
       /* Handle /me */
-      if (msg.startsWith('/me ')) {
-        msg = msg.substr('/me '.length);
-        raw_line += '\x01ACTION ' + msg + '\x01';
+      if (msg.startsWith("/me ")) {
+        msg = msg.substr("/me ".length);
+        raw_line += "\x01ACTION " + msg + "\x01";
         flags.action = true;
       } else {
         raw_line += msg;
@@ -1785,7 +1811,7 @@ var TwitchClient = function () {
         for (var _iterator22 = this._capabilities[Symbol.iterator](), _step22; !(_iteratorNormalCompletion22 = (_step22 = _iterator22.next()).done); _iteratorNormalCompletion22 = true) {
           var cap = _step22.value;
 
-          if (test_cap === cap || cap.endsWith('/' + test_cap.replace(/^\//, ""))) {
+          if (test_cap === cap || cap.endsWith("/" + test_cap.replace(/^\//, ""))) {
             return true;
           }
         }
@@ -1932,7 +1958,7 @@ var TwitchClient = function () {
     key: "ParseChannel",
     value: function ParseChannel(channel) {
       var chobj = Twitch.ParseChannel(channel);
-      if (chobj.room && chobj.channel !== "#chatrooms") {
+      if (chobj.room && chobj.channel !== TwitchClient.CHANNEL_ROOMS) {
         /* Parse #streamer:roomname strings */
         var _ref17 = [chobj.channel, chobj.room],
             cname = _ref17[0],
@@ -1940,7 +1966,7 @@ var TwitchClient = function () {
 
         var roomdef = this._rooms[cname];
         if (roomdef && roomdef.rooms && roomdef.rooms[rname]) {
-          chobj.channel = "#chatrooms";
+          chobj.channel = TwitchClient.CHANNEL_ROOMS;
           chobj.room = roomdef.id;
           chobj.roomuid = roomdef.rooms[rname].uid;
         } else {
@@ -2761,7 +2787,7 @@ var TwitchClient = function () {
   }, {
     key: "_onWebsocketOpen",
     value: function _onWebsocketOpen(name, pass) {
-      this.send("CAP REQ :twitch.tv/tags twitch.tv/commands twitch.tv/membership");
+      this.send("CAP REQ :" + TwitchClient.CAPABILITIES.join(" "));
       if (name && pass) {
         this._username = name;
       } else {
@@ -2972,10 +2998,10 @@ var TwitchClient = function () {
                     var users = _ref30[1];
 
                     if (users.indexOf(result.user) > -1) {
-                      var ffz_badges = event.flags['ffz-badges'];
+                      var ffz_badges = event.flags["ffz-badges"];
                       if (!ffz_badges) ffz_badges = [];
                       ffz_badges.push(_this4._ffz_badges[badge_nr]);
-                      event.flags['ffz-badges'] = ffz_badges;
+                      event.flags["ffz-badges"] = ffz_badges;
                     }
                   }
                 } catch (err) {
@@ -2997,9 +3023,9 @@ var TwitchClient = function () {
               ui.ismod = event.ismod;
               ui.issub = event.issub;
               ui.isvip = event.isvip;
-              ui.userid = event.flags['user-id'];
-              ui.uuid = event.flags['id'];
-              ui.badges = event.flags['badges'];
+              ui.userid = event.flags["user-id"];
+              ui.uuid = event.flags["id"];
+              ui.badges = event.flags["badges"];
               Util.FireEvent(event);
             }break;
           case "WHISPER":
@@ -3071,14 +3097,8 @@ var TwitchClient = function () {
             }
             break;
           case "USERNOTICE":
-            if (result.sub_kind === "SUB") {
-              Util.FireEvent(new TwitchSubEvent("SUB", line, result));
-            } else if (result.sub_kind === "RESUB") {
-              Util.FireEvent(new TwitchSubEvent("RESUB", line, result));
-            } else if (result.sub_kind === "GIFTSUB") {
-              Util.FireEvent(new TwitchSubEvent("GIFTSUB", line, result));
-            } else if (result.sub_kind === "ANONGIFTSUB") {
-              Util.FireEvent(new TwitchSubEvent("ANONGIFTSUB", line, result));
+            if (TwitchSubEvent.IsKind(result.sub_kind)) {
+              Util.FireEvent(new TwitchSubEvent(result.sub_kind, line, result));
             } else if (result.israid) {
               Util.FireEvent(new TwitchEvent("RAID", line, result));
             } else if (result.isritual && result.ritual_kind === "new_chatter") {
@@ -3102,7 +3122,7 @@ var TwitchClient = function () {
             }
             break;
           case "GLOBALUSERSTATE":
-            _this4._self_userid = result.flags['user-id'];
+            _this4._self_userid = result.flags["user-id"];
             break;
           case "CLEARCHAT":
             break;
@@ -3325,7 +3345,7 @@ Twitch.URL = {
     return Twitch.Kraken + "/bits/actions?channel_id=" + cid;
   },
   Emote: function Emote(eid) {
-    var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : '1.0';
+    var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
     return Twitch.JTVNW + "/emoticons/v1/" + eid + "/" + size;
   },
   EmoteSet: function EmoteSet(eset) {
@@ -3497,7 +3517,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
 /* Extract username from user specification */
 Twitch.ParseUser = function _Twitch_ParseUser(user) {
-  return user.replace(/^:/, "").split('!')[0];
+  return user.replace(/^:/, "").split("!")[0];
 };
 
 /* Parse channel to {channel, room, roomuid} */
@@ -3508,7 +3528,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       room: null,
       roomuid: null
     };
-    var parts = channel.split(':');
+    var parts = channel.split(":");
     if (parts.length === 1) {
       /* #channel */
       chobj.channel = parts[0];
@@ -3526,8 +3546,8 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       chobj.channel = parts[0];
     }
     if (chobj.channel !== "GLOBAL") {
-      if (chobj.channel.indexOf('#') !== 0) {
-        chobj.channel = '#' + chobj.channel;
+      if (chobj.channel.indexOf("#") !== 0) {
+        chobj.channel = "#" + chobj.channel;
       }
     }
     return chobj;
@@ -3548,13 +3568,13 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
       return "GLOBAL";
     } else {
       if (room) {
-        _cname += ':' + room;
+        _cname += ":" + room;
       }
       if (roomuid) {
-        _cname += ':' + roomuid;
+        _cname += ":" + roomuid;
       }
-      if (_cname.indexOf('#') !== 0) {
-        _cname = '#' + _cname;
+      if (_cname.indexOf("#") !== 0) {
+        _cname = "#" + _cname;
       }
       return _cname;
     }
@@ -3568,7 +3588,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
 
 /* Return whether or not the channel object given is a #chatrooms room */
 Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
-  return cobj.channel === "#chatrooms" && cobj.room && cobj.roomuid;
+  return cobj.channel === TwitchClient.CHANNEL_ROOMS && cobj.room && cobj.roomuid;
 };
 
 /* Format a room with the channel and room IDs given */
@@ -3650,10 +3670,10 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
     var _iteratorError44 = undefined;
 
     try {
-      for (var _iterator44 = value.split(',')[Symbol.iterator](), _step44; !(_iteratorNormalCompletion44 = (_step44 = _iterator44.next()).done); _iteratorNormalCompletion44 = true) {
+      for (var _iterator44 = value.split(",")[Symbol.iterator](), _step44; !(_iteratorNormalCompletion44 = (_step44 = _iterator44.next()).done); _iteratorNormalCompletion44 = true) {
         var badge = _step44.value;
 
-        var _badge$split = badge.split('/'),
+        var _badge$split = badge.split("/"),
             _badge$split2 = _slicedToArray(_badge$split, 2),
             badge_name = _badge$split2[0],
             badge_rev = _badge$split2[1];
@@ -3677,7 +3697,7 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   } else if (key === "emotes") {
     result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
-    result = value.split(',').map(function (e) {
+    result = value.split(",").map(function (e) {
       return Number.parse(e);
     });
   } else {
@@ -3702,13 +3722,13 @@ Twitch.ParseFlags = function _Twitch_ParseFlags(dataString) {
   var _iteratorError45 = undefined;
 
   try {
-    for (var _iterator45 = dataStr.split(';')[Symbol.iterator](), _step45; !(_iteratorNormalCompletion45 = (_step45 = _iterator45.next()).done); _iteratorNormalCompletion45 = true) {
+    for (var _iterator45 = dataStr.split(";")[Symbol.iterator](), _step45; !(_iteratorNormalCompletion45 = (_step45 = _iterator45.next()).done); _iteratorNormalCompletion45 = true) {
       var item = _step45.value;
 
       var key = item;
       var val = "";
-      if (item.indexOf('=') !== -1) {
-        var _item$split = item.split('=');
+      if (item.indexOf("=") !== -1) {
+        var _item$split = item.split("=");
 
         var _item$split2 = _slicedToArray(_item$split, 2);
 
@@ -3744,20 +3764,20 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
   var _iteratorError46 = undefined;
 
   try {
-    for (var _iterator46 = value.split('/')[Symbol.iterator](), _step46; !(_iteratorNormalCompletion46 = (_step46 = _iterator46.next()).done); _iteratorNormalCompletion46 = true) {
+    for (var _iterator46 = value.split("/")[Symbol.iterator](), _step46; !(_iteratorNormalCompletion46 = (_step46 = _iterator46.next()).done); _iteratorNormalCompletion46 = true) {
       var emote_def = _step46.value;
 
-      var sep_pos = emote_def.indexOf(':');
+      var sep_pos = emote_def.indexOf(":");
       var emote_id = Number.parseInt(emote_def.substr(0, sep_pos));
       var _iteratorNormalCompletion47 = true;
       var _didIteratorError47 = false;
       var _iteratorError47 = undefined;
 
       try {
-        for (var _iterator47 = emote_def.substr(sep_pos + 1).split(',')[Symbol.iterator](), _step47; !(_iteratorNormalCompletion47 = (_step47 = _iterator47.next()).done); _iteratorNormalCompletion47 = true) {
+        for (var _iterator47 = emote_def.substr(sep_pos + 1).split(",")[Symbol.iterator](), _step47; !(_iteratorNormalCompletion47 = (_step47 = _iterator47.next()).done); _iteratorNormalCompletion47 = true) {
           var range = _step47.value;
 
-          var _range$split = range.split('-'),
+          var _range$split = range.split("-"),
               _range$split2 = _slicedToArray(_range$split, 2),
               start = _range$split2[0],
               end = _range$split2[1];
@@ -3832,7 +3852,7 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
     }
   }
 
-  return specs.join('/');
+  return specs.join("/");
 };
 
 /* Convert an emote name to a regex */
@@ -3844,7 +3864,7 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
 /* Generate a regex from a cheer prefix */
 Twitch.CheerToRegex = function _Twitch_CheerToRegex(prefix) {
   var p = RegExp.escape(prefix);
-  return new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", 'ig');
+  return new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", "ig");
 };
 
 /* Generate emote specifications for the given emotes [eid, ename] */
@@ -3895,9 +3915,9 @@ Twitch.ScanEmotes = function _Twitch_ScanEmotes(msg, emotes) {
 /* Parse a line received through the Twitch websocket */
 Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
   var result = { cmd: null };
-  var parts = line.split(' ');
+  var parts = line.split(" ");
   var data = {};
-  if (parts[0].startsWith('@')) {
+  if (parts[0].startsWith("@")) {
     data = Twitch.ParseFlags(parts[0]);
     parts.shift();
   }
@@ -3914,7 +3934,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.cmd = "ACK";
     result.operation = "CAP";
     result.server = parts[0].replace(/^:/, "");
-    result.flags = line.substr(line.indexOf(':', 1) + 1).split(" ");
+    result.flags = line.substr(line.indexOf(":", 1) + 1).split(" ");
   } else if (parts[1] === "375" || parts[1] === "376" || parts[1] === "366") {
     /* 375: Start TOPIC; 376: End TOPIC; 366: End NAMES */
     /* :<server> <code> <username> :<message> */
@@ -3927,7 +3947,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.code = parts[1];
     result.server = parts[0].replace(/^:/, "");
     result.username = parts[2];
-    result.message = parts.slice(3).join(' ').replace(/^:/, "");
+    result.message = parts.slice(3).join(" ").replace(/^:/, "");
   } else if (parts[1] === "353") {
     /* NAMES listing entry */
     /* :<user> 353 <username> <mode> <channel> :<username> */
@@ -3935,7 +3955,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0].replace(/^:/, ""));
     result.mode = parts[3];
     result.channel = Twitch.ParseChannel(parts[4]);
-    result.usernames = parts.slice(5).join(' ').replace(/^:/, "").split(' ');
+    result.usernames = parts.slice(5).join(" ").replace(/^:/, "").split(" ");
   } else if (parts[1] === "JOIN" || parts[1] === "PART") {
     /* ":<user> JOIN <channel> */
     /* ":<user> PART <channel> */
@@ -3943,7 +3963,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
   } else if (parts[1] === "MODE") {
-    /* ":<sender> MODE <channel> <modeflag> <username>" */
+    /* :<sender> MODE <channel> <modeflag> <username> */
     result.cmd = "MODE";
     result.sender = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
@@ -3956,9 +3976,9 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.flags = data;
     result.user = Twitch.ParseUser(parts[0]);
     result.channel = Twitch.ParseChannel(parts[2]);
-    if (msg.startsWith('\x01ACTION ')) {
+    if (msg.startsWith("\x01ACTION ")) {
       result.flags.action = true;
-      result.message = msg.strip('\x01').substr('ACTION '.length);
+      result.message = msg.strip("\x01").substr("ACTION ".length);
     } else {
       result.flags.action = false;
       result.message = msg;
@@ -3990,7 +4010,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
-    if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
+    if (line.indexOf(":", line.indexOf(parts[2])) > -1) {
       result.message = argFrom(line, ":", parts[2]);
     }
     result.sub_kind = TwitchSubEvent.KindFromMsgID(result.flags["msg-id"]);
@@ -4012,35 +4032,35 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
       result.ritual_kind = result.flags["msg-param-ritual-name"];
     }
   } else if (parts[1] === "GLOBALUSERSTATE") {
-    /* "[@<flags>] :server GLOBALUSERSTATE\r\n" */
+    /* [@<flags>] :server GLOBALUSERSTATE\r\n */
     result.cmd = "GLOBALUSERSTATE";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
   } else if (parts[1] === "CLEARCHAT") {
-    /* "[@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n" */
+    /* [@<flags>] :<server> CLEARCHAT <channel>[ :<user>]\r\n */
     result.cmd = "CLEARCHAT";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = null;
-    if (line.indexOf(':', line.indexOf(parts[2])) > -1) {
+    if (line.indexOf(":", line.indexOf(parts[2])) > -1) {
       result.user = argFrom(line, ":", parts[2]);
     }
   } else if (parts[1] === "CLEARMSG") {
-    /* "[@<flags>] :<server> CLEARMSG <channel> :<message>\r\n" */
+    /* [@<flags>] :<server> CLEARMSG <channel> :<message>\r\n */
     result.cmd = "CLEARMSG";
     result.flags = data;
     result.server = parts[0].replace(/^:/, "");
     result.channel = Twitch.ParseChannel(parts[2]);
     result.message = argFrom(line, ":", parts[2]);
   } else if (parts[1] === "HOSTTARGET") {
-    /* ":<server> HOSTTARGET <channel> :<user> -\r\n" */
+    /* :<server> HOSTTARGET <channel> :<user> -\r\n */
     result.cmd = "HOSTTARGET";
     result.server = parts[0];
     result.channel = Twitch.ParseChannel(parts[2]);
     result.user = parts[3].replace(/^:/, "");
   } else if (parts[1] === "NOTICE") {
-    /* "[@<flags>] :<server> NOTICE <channel> :<message>\r\n" */
+    /* [@<flags>] :<server> NOTICE <channel> :<message>\r\n */
     result.cmd = "NOTICE";
     result.flags = data; /* not always present */
     result.server = parts[0].replace(/^:/, "");
@@ -4048,7 +4068,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
     result.message = argFrom(line, ":", parts[2]);
   } else if (parts[1] === "421") {
     /* Error */
-    /* ":<server> 421 <user> <command> :<message>\r\n" */
+    /* :<server> 421 <user> <command> :<message>\r\n */
     result.cmd = "ERROR";
     result.server = parts[0].replace(/^:/, "");
     result.user = Twitch.ParseUser(parts[2]);
@@ -4100,7 +4120,7 @@ Twitch.ParseIRCMessage = function _Twitch_ParseIRCMessage(line) {
 
 /* Strip private information from a string for logging */
 Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
-  var pats = [['oauth:', /oauth:[\w]+/g], ['OAuth ', /OAuth [\w]+/g]];
+  var pats = [["oauth:", /oauth:[\w]+/g], ["OAuth ", /OAuth [\w]+/g]];
   var result = msg;
   var _iteratorNormalCompletion51 = true;
   var _didIteratorError51 = false;

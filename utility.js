@@ -219,7 +219,7 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Ensure String.trimStart is present */
   polyfill(String.prototype, "trimStart", function _String_trimStart() {
     let i = 0;
-    while (i < this.length && this[i] === ' ') {
+    while (i < this.length && this[i] === " ") {
       i += 1;
     }
     return i === 0 ? this : this.substr(i);
@@ -228,7 +228,7 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Ensure String.trimEnd is present */
   polyfill(String.prototype, "trimEnd", function _String_trimEnd() {
     let i = this.length-1;
-    while (i > 0 && this[i] === ' ') {
+    while (i > 0 && this[i] === " ") {
       i -= 1;
     }
     return this.substr(0, i+1);
@@ -241,7 +241,7 @@ Util.Defined = function _Util_Defined(identifier) {
 
   /* Escape regex characters in a string */
   polyfill(RegExp, "escape", function _RegExp_escape(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   });
 
 })(window);
@@ -310,7 +310,7 @@ String.prototype.strip = function _String_strip(chrs) {
       chars.push(c);
     }
   } else {
-    chars = [' ', '\r', '\n'];
+    chars = [" ", "\r", "\n"];
   }
   let si = 0;
   let ei = this.length - 1;
@@ -326,11 +326,11 @@ String.prototype.strip = function _String_strip(chrs) {
 /* Escape a string for proper HTML printing */
 String.prototype.escape = function _String_escape() {
   let result = this;
-  result = result.replace(/&/g, '&amp;');
-  result = result.replace(/</g, '&lt;');
-  result = result.replace(/>/g, '&gt;');
-  result = result.replace(/"/g, '&quot;');
-  result = result.replace(/'/g, '&apos;');
+  result = result.replace(/&/g, "&amp;");
+  result = result.replace(/</g, "&lt;");
+  result = result.replace(/>/g, "&gt;");
+  result = result.replace(/"/g, "&quot;");
+  result = result.replace(/"/g, "&apos;");
   return result;
 };
 
@@ -441,10 +441,10 @@ Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
-  if (url.startsWith('//')) {
-    let p = 'http:';
+  if (url.startsWith("//")) {
+    let p = "http:";
     if (window.location.protocol === "https:") {
-      p = 'https:';
+      p = "https:";
     }
     return p + url;
   } else if (!url.match(/^[\w-]+:/)) {
@@ -459,9 +459,9 @@ Util.URL = function _Util_URL(url) {
 
 /* Split a path into <dirname>/<basename> parts */
 Util.SplitPath = function _Util_SplitPath(path) {
-  if (path.indexOf('/') > -1) {
-    return [path.substr(0, path.lastIndexOf('/')),
-            path.substr(path.lastIndexOf('/')+1)];
+  if (path.indexOf("/") > -1) {
+    let i = path.lastIndexOf("/");
+    return [path.substr(0, i), path.substr(i+1)];
   } else {
     return ["", path];
   }
@@ -470,7 +470,7 @@ Util.SplitPath = function _Util_SplitPath(path) {
 /* Join a directory and a filename */
 Util.JoinPath = function _Util_JoinPath(dir, file) {
   if (dir) {
-    return [dir, file].join('/');
+    return [dir, file].join("/");
   } else {
     return file;
   }
@@ -483,7 +483,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
     for (let path of paths) {
       path = (new URL(path)).pathname;
       let [dir, file] = Util.SplitPath(path);
-      pieces.push([dir.split('/'), file]);
+      pieces.push([dir.split("/"), file]);
     }
   }
   catch (e) {
@@ -516,7 +516,7 @@ Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
     }
   }
   /* Join the paths back together */
-  return pieces.map((v) => Util.JoinPath(v[0].join('/'), v[1]));
+  return pieces.map((v) => Util.JoinPath(v[0].join("/"), v[1]));
 };
 
 /* End URL handling 0}}} */
@@ -578,7 +578,7 @@ Util.ParseStack = function _Util_ParseStack(lines) {
   for (let line of lines) {
     let frame = {
       text: line,
-      name: '???',
+      name: "???",
       file: window.location.pathname,
       line: 0,
       column: 0
@@ -876,7 +876,7 @@ class ColorParser {
   constructor() {
     this._cache = {};
     /* Create the color parser div */
-    this._e = document.createElement('div');
+    this._e = document.createElement("div");
     this._e.setAttribute("style", "position: absolute; z-index: -100");
     this._e.setAttribute("id", "color-parser-div");
     this._e.setAttribute("width", "0px");
@@ -1515,7 +1515,7 @@ Util.FormatInterval = function _Util_FormatInterval(seconds) {
   let parts = [];
   let time = Math.round(seconds);
   if (time < 0) {
-    parts.push('-');
+    parts.push("-");
     time *= -1;
   }
   if (time % 60 !== 0) {
@@ -1566,7 +1566,7 @@ Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
   if (Util.StringEscapeChars.hasOwnProperty(char)) {
     return `\\${Util.StringEscapeChars[char]}`;
   } else {
-    return `\\x${char.toString(16).padStart(2, '0')}`;
+    return `\\x${char.toString(16).padStart(2, "0")}`;
   }
 };
 
@@ -1576,8 +1576,8 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
     if (cn < 0x20) {
       result = result.concat(Util.EscapeCharCode(cn));
-    } else if (ch === '\\') {
-      result = result.concat('\\\\');
+    } else if (ch === "\\") {
+      result = result.concat("\\\\");
     } else {
       result = result.concat(ch);
     }
@@ -1773,17 +1773,17 @@ Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
 Util.ParseQueryString = function _Util_ParseQueryString(queryString=null) {
   let obj = {};
   let split = (part) => {
-    if (part.indexOf('=') !== -1) {
+    if (part.indexOf("=") !== -1) {
       return [
-        part.substr(0, part.indexOf('=')),
-        decodeURIComponent(part.substr(part.indexOf('=') + 1))
+        part.substr(0, part.indexOf("=")),
+        decodeURIComponent(part.substr(part.indexOf("=") + 1))
       ];
     } else {
       return [part, "true"];
     }
   };
   let query = (queryString || window.location.search).replace(/^\?/, "");
-  for (let part of query.split('&')) {
+  for (let part of query.split("&")) {
     let [k, v] = split(part);
     if (k === "base64") {
       let val = split(part)[1];
@@ -1925,7 +1925,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
   } else if (["string", "number", "boolean"].indexOf(typeof(obj)) > -1) {
     return new Text(`${obj}`);
   } else if (obj instanceof URL) {
-    let a = document.createElement('a');
+    let a = document.createElement("a");
     a.setAttribute("href", obj.href);
     a.setAttribute("target", "_blank");
     a.textContent = obj.href;
