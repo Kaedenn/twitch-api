@@ -6,16 +6,6 @@
  *  Logger.${Sev}Only -> Logger.${Sev}
  *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
- *
- * Create (monster) configuration class
- *  Tie to query string
- *   Optional argument: rename map (e.g. rename "norec" to "NoAutoReconnect")
- *  Tie to local storage
- *  Tie to specific DOM elements
- *   Changing specific elements -> automatic update of config
- *  Set precedence of certain items over others (qs overrides localStorage, etc)
- *  Set certain items as "no persist"; don't store in localStorage
- *  Live changes (after initial parse) take precedence over query string
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -480,14 +470,16 @@ Util.JoinPath = function _Util_JoinPath(dir, file) {
 Util.StripCommonPrefix = function _Util_StripCommonPrefix(paths) {
   let pieces = [];
   try {
+    /* Generate an array of [[dirnames...], filename] pairs */
     for (let path of paths) {
-      path = (new URL(path)).pathname;
-      let [dir, file] = Util.SplitPath(path);
+      let url = new URL(Util.URL(path));
+      let [dir, file] = Util.SplitPath(url.pathname);
       pieces.push([dir.split("/"), file]);
     }
   }
   catch (e) {
-    if (e.message.match(/is not a valid URL/) || e.message.match(/Invalid URL/i)) {
+    let m = e.message;
+    if (m.match(/is not a valid URL/) || m.match(/invalid URL/i)) {
       /* Not a valid URL; bail */
       return paths;
     } else {
@@ -536,12 +528,15 @@ Util.Throw = function _Util_Throw(type, msg) {
 
 /* Logging {{{0 */
 
+/* Debugging levels; verbosity increases with value */
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
 Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
 Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = Util.LEVEL_OFF;
+
+/* Current top-stack trim level */
 Util._stack_trim_level = [0];
 
 /* Save the current top-stack trim level and push a new value to use */
@@ -576,6 +571,7 @@ Util.GetStack = function _Util_GetStack() {
 Util.ParseStack = function _Util_ParseStack(lines) {
   let frames = [];
   for (let line of lines) {
+    let m = null;
     let frame = {
       text: line,
       name: "???",
@@ -583,23 +579,24 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       line: 0,
       column: 0
     };
-    frame.text = line;
-    let m = null;
-    if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as ([\w]+)\])? \((.*):([0-9]+):([0-9]+)\)$/)) !== null) {
-      // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)"
-      frame = {};
+    if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/)) !== null) {
+      // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)\)"
       frame.name = m[1];
       frame.actual_name = m[2];
       frame.file = m[3];
-      frame.line = parseInt(m[4]);
-      frame.column = parseInt(m[5]);
-    } else if ((m = line.match(/([^@]*)@(.*):([0-9]+):([0-9]+)/)) !== null) {
+      frame.line = Util.ParseNumber(m[4]);
+      frame.column = Util.ParseNumber(m[5]);
+    } else if ((m = line.match(/([^@]*)@(.*):(\d+):(\d+)/)) !== null) {
       // Firefox "(function)@(file):(line):(column)"
-      frame = {};
       frame.name = m[1];
       frame.file = m[2];
-      frame.line = parseInt(m[3]);
-      frame.column = parseInt(m[4]);
+      frame.line = Util.ParseNumber(m[3]);
+      frame.column = Util.ParseNumber(m[4]);
+    } else if ((m = line.match(/^(.*):(\d+):(\d+)$/)) !== null) {
+      /* (name and/or label):(line):(column) */
+      frame.name = m[1];
+      frame.line = Util.ParseNumber(m[2]);
+      frame.column = Util.ParseNumber(m[3]);
     } else {
       /* OBS: /^[ ]*at ([^ ]+) \((.*):([0-9]+):([0-9]+)\)/ */
       /* TODO: OBS, Tesla stacktrace parsing */
@@ -630,13 +627,13 @@ Util.FormatStack = function _Util_FormatStack(stack) {
 };
 
 /* Logger object */
-class LoggerUtility {
+class Logging {
   constructor() {
     this._enabled = true;
     this._hooks = {};
     this._filters = {};
     this._logged_messages = {};
-    for (let v of Object.values(LoggerUtility.SEVERITIES)) {
+    for (let v of Object.values(Logging.SEVERITIES)) {
       this._hooks[v] = [];
       this._filters[v] = [];
     }
@@ -660,23 +657,23 @@ class LoggerUtility {
   /* Map severity number to console function */
   static get FUNCTION_MAP() {
     let map = {};
-    map[LoggerUtility.SEVERITIES.ALL] = console.debug;
-    map[LoggerUtility.SEVERITIES.ERROR] = console.error;
-    map[LoggerUtility.SEVERITIES.WARN] = console.warn;
-    map[LoggerUtility.SEVERITIES.INFO] = console.log;
-    map[LoggerUtility.SEVERITIES.DEBUG] = console.info;
-    map[LoggerUtility.SEVERITIES.TRACE] = console.debug;
+    map[Logging.SEVERITIES.ALL] = console.debug;
+    map[Logging.SEVERITIES.ERROR] = console.error;
+    map[Logging.SEVERITIES.WARN] = console.warn;
+    map[Logging.SEVERITIES.INFO] = console.log;
+    map[Logging.SEVERITIES.DEBUG] = console.info;
+    map[Logging.SEVERITIES.TRACE] = console.debug;
     return map;
   }
 
   /* Get the numeric value for the severity given */
-  _sev_value(sev) {
-    return LoggerUtility.SEVERITIES[sev];
+  _sevValue(sev) {
+    return Logging.SEVERITIES[sev];
   }
 
   /* Validate that the given severity exists */
-  _assert_sev(sev) {
-    if (!this._hooks.hasOwnProperty(this._sev_value(sev))) {
+  _assertSev(sev) {
+    if (!this._hooks.hasOwnProperty(this._sevValue(sev))) {
       console.error(`Logger: invalid severity ${sev}`);
       return false;
     }
@@ -694,24 +691,24 @@ class LoggerUtility {
   }
 
   /* Hook function(sev, stacktrace, ...args) for the given severity */
-  add_hook(fn, sev="ALL") {
-    if (!this._assert_sev(sev)) { return false; }
-    this._hooks[this._sev_value(sev)].push(fn);
+  addHook(fn, sev="ALL") {
+    if (!this._assertSev(sev)) { return false; }
+    this._hooks[this._sevValue(sev)].push(fn);
     return true;
   }
 
   /* Add a filter function for the given severity. Messages returning `false`
    * will be shown; ones returning `true` will be filtered out.
    * Overloads:
-   *   add_filter(function, sev="ALL")
+   *   addFilter(function, sev="ALL")
    *     `function` will be called with one argument: [log_arg1, log_arg2, ...]
-   *   add_filter(regex, sev="ALL")
+   *   addFilter(regex, sev="ALL")
    *     Filter if regex matches log_args.toString()
-   *   add_filter(string, sev="ALL")
+   *   addFilter(string, sev="ALL")
    *     Filter if log_args.toString().indexOf(string) > -1 */
-  add_filter(filter_obj, sev="ALL") {
-    if (!this._assert_sev(sev)) { return false; }
-    let func = function _false() { return false; };
+  addFilter(filter_obj, sev="ALL") {
+    if (!this._assertSev(sev)) { return false; }
+    let func = () => false;
     if (filter_obj instanceof RegExp) {
       func = (args) => `${args}`.match(filter_obj);
     } else if (typeof(filter_obj) === "string") {
@@ -719,12 +716,12 @@ class LoggerUtility {
     } else {
       func = filter_obj;
     }
-    this._filters[this._sev_value(sev)].push(func);
+    this._filters[this._sevValue(sev)].push(func);
   }
 
   /* Test whether the message is filtered */
-  should_filter(message_args, severity) {
-    let sev = this._sev_value(severity);
+  shouldFilter(message_args, severity="ALL") {
+    let sev = this._sevValue(severity);
     for (let [key, filters] of Object.entries(this._filters)) {
       if (key >= sev) {
         for (let filter of filters) {
@@ -738,26 +735,26 @@ class LoggerUtility {
   }
 
   /* Return whether or not the given severity is enabled */
-  severity_enabled(sev) {
+  severityEnabled(sev) {
     if (!this._enabled) { return false; }
-    if (!this._assert_sev(sev)) { return false; }
-    let val = this._sev_value(sev);
+    if (!this._assertSev(sev)) { return false; }
+    let val = this._sevValue(sev);
     if (Util.DebugLevel === Util.LEVEL_TRACE) {
       return true;
     } else if (Util.DebugLevel === Util.LEVEL_DEBUG) {
-      return val >= LoggerUtility.SEVERITIES.DEBUG;
+      return val >= Logging.SEVERITIES.DEBUG;
     } else if (Util.DebugLevel === Util.LEVEL_OFF) {
-      return val >= LoggerUtility.SEVERITIES.INFO;
+      return val >= Logging.SEVERITIES.INFO;
     } else {
-      return val >= LoggerUtility.SEVERITIES.WARN;
+      return val >= Logging.SEVERITIES.WARN;
     }
   }
 
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
-  do_log(sev, argobj, stacktrace=false, log_once=false) {
-    let val = this._sev_value(sev);
-    if (!this.severity_enabled(sev)) { return; }
-    if (this.should_filter(argobj, sev)) { return; }
+  doLog(sev, argobj, stacktrace=false, log_once=false) {
+    let val = this._sevValue(sev);
+    if (!this.severityEnabled(sev)) { return; }
+    if (this.shouldFilter(argobj, sev)) { return; }
     if (log_once) {
       let argstr = JSON.stringify(argobj);
       let msg_key = JSON.stringify([val, argstr]);
@@ -771,10 +768,10 @@ class LoggerUtility {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
       hook.apply(hook, args);
     }
-    let func = LoggerUtility.FUNCTION_MAP[val];
+    let func = Logging.FUNCTION_MAP[val];
     if (stacktrace) {
       Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
-      LoggerUtility._toConsole(func, argobj);
+      Logging._toConsole(func, argobj);
       Util.PopStackTrimBegin();
     } else {
       func.apply(console, argobj);
@@ -801,68 +798,33 @@ class LoggerUtility {
   }
 
   /* Log the arguments given with a stacktrace */
-  Trace(...args) { this.do_log("TRACE", args, true, false); }
-  Debug(...args) { this.do_log("DEBUG", args, true, false); }
-  Info(...args) { this.do_log("INFO", args, true, false); }
-  Warn(...args) { this.do_log("WARN", args, true, false); }
-  Error(...args) { this.do_log("ERROR", args, true, false); }
+  Trace(...args) { this.doLog("TRACE", args, true, false); }
+  Debug(...args) { this.doLog("DEBUG", args, true, false); }
+  Info(...args) { this.doLog("INFO", args, true, false); }
+  Warn(...args) { this.doLog("WARN", args, true, false); }
+  Error(...args) { this.doLog("ERROR", args, true, false); }
 
   /* Log the arguments given without a stacktrace */
-  TraceOnly(...args) { this.do_log("TRACE", args, false, false); }
-  DebugOnly(...args) { this.do_log("DEBUG", args, false, false); }
-  InfoOnly(...args) { this.do_log("INFO", args, false, false); }
-  WarnOnly(...args) { this.do_log("WARN", args, false, false); }
-  ErrorOnly(...args) { this.do_log("ERROR", args, false, false); }
+  TraceOnly(...args) { this.doLog("TRACE", args, false, false); }
+  DebugOnly(...args) { this.doLog("DEBUG", args, false, false); }
+  InfoOnly(...args) { this.doLog("INFO", args, false, false); }
+  WarnOnly(...args) { this.doLog("WARN", args, false, false); }
+  ErrorOnly(...args) { this.doLog("ERROR", args, false, false); }
 
   /* Log the arguments given with a stacktrace, once */
-  TraceOnce(...args) { this.do_log("TRACE", args, true, true); }
-  DebugOnce(...args) { this.do_log("DEBUG", args, true, true); }
-  InfoOnce(...args) { this.do_log("INFO", args, true, true); }
-  WarnOnce(...args) { this.do_log("WARN", args, true, true); }
-  ErrorOnce(...args) { this.do_log("ERROR", args, true, true); }
+  TraceOnce(...args) { this.doLog("TRACE", args, true, true); }
+  DebugOnce(...args) { this.doLog("DEBUG", args, true, true); }
+  InfoOnce(...args) { this.doLog("INFO", args, true, true); }
+  WarnOnce(...args) { this.doLog("WARN", args, true, true); }
+  ErrorOnce(...args) { this.doLog("ERROR", args, true, true); }
 
   /* Log the arguments given without a stacktrace, once */
-  TraceOnlyOnce(...args) { this.do_log("TRACE", args, false, true); }
-  DebugOnlyOnce(...args) { this.do_log("DEBUG", args, false, true); }
-  InfoOnlyOnce(...args) { this.do_log("INFO", args, false, true); }
-  WarnOnlyOnce(...args) { this.do_log("WARN", args, false, true); }
-  ErrorOnlyOnce(...args) { this.do_log("ERROR", args, false, true); }
+  TraceOnlyOnce(...args) { this.doLog("TRACE", args, false, true); }
+  DebugOnlyOnce(...args) { this.doLog("DEBUG", args, false, true); }
+  InfoOnlyOnce(...args) { this.doLog("INFO", args, false, true); }
+  WarnOnlyOnce(...args) { this.doLog("WARN", args, false, true); }
+  ErrorOnlyOnce(...args) { this.doLog("ERROR", args, false, true); }
 }
-
-/* Logger instance  */
-Util.Logger = new LoggerUtility();
-
-/* Log with stacktrace */
-Util.Trace = Util.Logger.Trace.bind(Util.Logger);
-Util.Debug = Util.Logger.Debug.bind(Util.Logger);
-Util.Log = Util.Logger.Info.bind(Util.Logger);
-Util.Info = Util.Logger.Info.bind(Util.Logger);
-Util.Warn = Util.Logger.Warn.bind(Util.Logger);
-Util.Error = Util.Logger.Error.bind(Util.Logger);
-
-/* Log without stacktrace */
-Util.TraceOnly = Util.Logger.TraceOnly.bind(Util.Logger);
-Util.DebugOnly = Util.Logger.DebugOnly.bind(Util.Logger);
-Util.LogOnly = Util.Logger.InfoOnly.bind(Util.Logger);
-Util.InfoOnly = Util.Logger.InfoOnly.bind(Util.Logger);
-Util.WarnOnly = Util.Logger.WarnOnly.bind(Util.Logger);
-Util.ErrorOnly = Util.Logger.ErrorOnly.bind(Util.Logger);
-
-/* Log once with stacktrace */
-Util.TraceOnce = Util.Logger.TraceOnce.bind(Util.Logger);
-Util.DebugOnce = Util.Logger.DebugOnce.bind(Util.Logger);
-Util.LogOnce = Util.Logger.InfoOnce.bind(Util.Logger);
-Util.InfoOnce = Util.Logger.InfoOnce.bind(Util.Logger);
-Util.WarnOnce = Util.Logger.WarnOnce.bind(Util.Logger);
-Util.ErrorOnce = Util.Logger.ErrorOnce.bind(Util.Logger);
-
-/* Log once without stacktrace */
-Util.TraceOnlyOnce = Util.Logger.TraceOnlyOnce.bind(Util.Logger);
-Util.DebugOnlyOnce = Util.Logger.DebugOnlyOnce.bind(Util.Logger);
-Util.LogOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
-Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
-Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
-Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 
 /* End logging 0}}} */
 
@@ -1357,8 +1319,6 @@ Util.RandomGenerator = class _Util_Random {
 
 };
 
-Util.Random = new Util.RandomGenerator();
-
 /* Convert a fixed-size array (Uint<N>Array) to a single number (big endian) */
 Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
   let esize = arr.BYTES_PER_ELEMENT || 1;
@@ -1425,7 +1385,7 @@ Util.FireEvent = function _Util_FireEvent(e) {
 
 /* End event handling 0}}} */
 
-/* Parsing, formatting, escaping, and string functions {{{0 */
+/* Parsing, formatting, and string functions {{{0 */
 
 /* Return whether or not a string is a number */
 Util.IsNumber = function _Util_IsNumber(str) {
@@ -1450,7 +1410,7 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
   } else if (str === "-Infinity") {
     return -Infinity;
   } else if (str === "NaN") {
-    return NaN;
+    return Number.NaN;
   } else if (str.match(/^\d*\.\d+(?:e\d+)?$/)) {
     return Number.parseFloat(str);
   } else if (base === 2 && str.match(/^[+-]?[01]+$/)) {
@@ -1463,7 +1423,7 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
     return Number.parseInt(str, 16);
   } else {
     /* Failed to parse */
-    return NaN;
+    return Number.NaN;
   }
 };
 
@@ -1601,7 +1561,7 @@ Util.JSONClone = function _Util_JSONClone(obj, opts=null) {
   }
 };
 
-/* End parsing, formatting, escaping, and string functions 0}}} */
+/* End parsing, formatting, and string functions 0}}} */
 
 /* Configuration and localStorage functions {{{0 */
 
@@ -2090,3 +2050,44 @@ Util.StyleToObject = function _Util_StyleToObject(style) {
 
 /* End miscellaneous functions 0}}} */
 
+/* Construct global objects {{{0 */
+
+/* PRNG instance */
+Util.Random = new Util.RandomGenerator();
+
+/* Logger instance  */
+Util.Logger = new Logging();
+
+/* Log with stacktrace */
+Util.Trace = Util.Logger.Trace.bind(Util.Logger);
+Util.Debug = Util.Logger.Debug.bind(Util.Logger);
+Util.Log = Util.Logger.Info.bind(Util.Logger);
+Util.Info = Util.Logger.Info.bind(Util.Logger);
+Util.Warn = Util.Logger.Warn.bind(Util.Logger);
+Util.Error = Util.Logger.Error.bind(Util.Logger);
+
+/* Log without stacktrace */
+Util.TraceOnly = Util.Logger.TraceOnly.bind(Util.Logger);
+Util.DebugOnly = Util.Logger.DebugOnly.bind(Util.Logger);
+Util.LogOnly = Util.Logger.InfoOnly.bind(Util.Logger);
+Util.InfoOnly = Util.Logger.InfoOnly.bind(Util.Logger);
+Util.WarnOnly = Util.Logger.WarnOnly.bind(Util.Logger);
+Util.ErrorOnly = Util.Logger.ErrorOnly.bind(Util.Logger);
+
+/* Log once with stacktrace */
+Util.TraceOnce = Util.Logger.TraceOnce.bind(Util.Logger);
+Util.DebugOnce = Util.Logger.DebugOnce.bind(Util.Logger);
+Util.LogOnce = Util.Logger.InfoOnce.bind(Util.Logger);
+Util.InfoOnce = Util.Logger.InfoOnce.bind(Util.Logger);
+Util.WarnOnce = Util.Logger.WarnOnce.bind(Util.Logger);
+Util.ErrorOnce = Util.Logger.ErrorOnce.bind(Util.Logger);
+
+/* Log once without stacktrace */
+Util.TraceOnlyOnce = Util.Logger.TraceOnlyOnce.bind(Util.Logger);
+Util.DebugOnlyOnce = Util.Logger.DebugOnlyOnce.bind(Util.Logger);
+Util.LogOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
+Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
+Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
+Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
+
+/* End constructing global objects 0}}} */
