@@ -3413,18 +3413,23 @@ Util.ClampToScreen = function _Util_ClampToScreen(offset) {
   return { top: offset.top, left: offset.left };
 };
 
-/* Return a promise for the given image */
-Util.PromiseImage = function _Util_PromiseImage(url) {
+/* Return a promise for the given asset (via onload/onerror) */
+Util.PromiseElement = function _Util_PromiseElement(e) {
   return new Promise(function (resolve, reject) {
-    var e = document.createElement("img");
     e.onload = function (event) {
       resolve(event);
     };
-    e.onerror = function (err) {
-      reject(err);
+    e.onerror = function (event) {
+      reject(event);
     };
-    e.src = url;
   });
+};
+
+/* Return a promise for the given image */
+Util.PromiseImage = function _Util_PromiseImage(url) {
+  var e = document.createElement("img");
+  e.src = url;
+  return Util.PromiseElement(e);
 };
 
 /* Split a GIF into frames. Returns a promise for an array of base64-encoded
