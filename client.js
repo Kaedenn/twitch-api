@@ -7,6 +7,13 @@
  */
 
 /* TODO:
+ * Change APIs from Kraken to Helix
+ *  Twitch.URL.Rooms(channelid)
+ *  Twitch.URL.Stream(channelid)
+ *    `${Twitch.Helix}/streams?user_id=${channelid}`
+ *  Twitch.URL.GlobalCheers()
+ *  Twitch.URL.Cheers(channelid)
+ *  Twitch.URL.EmoteSet(emoteset)
  * Rewrite GetEmote API
  *  Abbreviations:
  *    e_url :== string, emote URL
@@ -420,7 +427,7 @@ class TwitchClient { /* exported TwitchClient */
       this._ws.client = this;
       this._ws.onopen = (function _ws_onopen(event) {
         try {
-          Util.LogOnly("ws open>", this.url, event);
+          Util.LogOnly("ws open>", this._ws.url);
           this._connecting = false;
           this._connected = false;
           this._is_open = true;
@@ -667,23 +674,6 @@ class TwitchClient { /* exported TwitchClient */
         this._global_cheers[cdef.prefix] = cdef;
       }
     }).bind(this), {}, false);
-  }
-
-  /* Private: Load the specified emote set(s); eset can be either a number or a
-   * comma-separated sequence of numbers */
-  _getEmoteSetEmotes(eset) {
-    let eset_url = Twitch.URL.EmoteSet(eset);
-    this._api.Get(eset_url, (function _emoteset_cb(json) {
-      for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
-        if (!this._self_emote_sets[setnr]) {
-          this._self_emote_sets[setnr] = [];
-        }
-        for (let edef of edefs) {
-          this._self_emote_sets[setnr].push(edef.id);
-          this._self_emotes[edef.id] = edef.code;
-        }
-      }
-    }).bind(this));
   }
 
   /* Private: Load in the global and per-channel FFZ emotes */
@@ -1077,8 +1067,8 @@ class TwitchClient { /* exported TwitchClient */
         this.send(`JOIN ${cname}`);
         this._channels.push(cname);
         /* Determine if the channel to join is a real channel */
-        this._api.Get(Twitch.URL.User(user), (resp) => {
-          if (!resp || resp._total === 0) {
+        this._api.Get(Twitch.URL.User(user), (r) => {
+          if (!r || !r.data || r.data.length === 0) {
             Util.Warn(`${cname} doesn't seem to be a real channel; leaving`);
             this.LeaveChannel(channel);
           }
@@ -1257,6 +1247,23 @@ class TwitchClient { /* exported TwitchClient */
       Util.Warn("Unable to get global emotes; are emotes loaded?");
     }
     return emotes;
+  }
+
+  /* Load the specified emote set(s); eset can be either a number or a
+   * comma-separated sequence of numbers */
+  AddEmoteSet(eset) {
+    let eset_url = Twitch.URL.EmoteSet(eset);
+    this._api.Get(eset_url, (function _emoteset_cb(json) {
+      for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
+        if (!this._self_emote_sets[setnr]) {
+          this._self_emote_sets[setnr] = [];
+        }
+        for (let edef of edefs) {
+          this._self_emote_sets[setnr].push(edef.id);
+          this._self_emotes[edef.id] = edef.code;
+        }
+      }
+    }).bind(this));
   }
 
   /* Return the loaded emote sets */
@@ -1592,7 +1599,7 @@ class TwitchClient { /* exported TwitchClient */
           this._connected = true;
           this._capabilities = result.flags;
           /* Obtain global emotes from eset 0 */
-          this._getEmoteSetEmotes(0);
+          this.AddEmoteSet(0);
           /* Obtain global cheermotes */
           this._getGlobalCheers();
           break;
@@ -1743,7 +1750,7 @@ class TwitchClient { /* exported TwitchClient */
       if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
         if (result.flags && result.flags["emote-sets"]) {
           let esets = result.flags["emote-sets"].map((e) => `${e}`).join(",");
-          this._getEmoteSetEmotes(esets);
+          this.AddEmoteSet(esets);
         }
       }
     }
@@ -1792,7 +1799,7 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
-  User: (uname) => `${Twitch.Kraken}/users?login=${uname}`,
+  User: (uname) => `${Twitch.Helix}/users?login=${uname}`,
   Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`,
   Stream: (cid) => `${Twitch.Kraken}/streams?channel=${cid}`,
   Clip: (slug) => `${Twitch.Helix}/clips?id=${slug}`,
