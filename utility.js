@@ -1545,6 +1545,16 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   return result;
 };
 
+/* Convert a pattern to a RegExp */
+Util.StringToRegExp = function _Util_StringToRegExp(s, flags="") {
+  let m = s.match(/^\/(.*)\/(\w*)$/);
+  if (m) {
+    return new RegExp(m[1], m[2]);
+  } else {
+    return new RegExp("\\b" + RegExp.escape(s) + "\\b", flags);
+  }
+};
+
 /* Clone an object using JSON */
 Util.JSONClone = function _Util_JSONClone(obj, opts=null) {
   let result = {};
