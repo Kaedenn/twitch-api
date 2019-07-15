@@ -12,6 +12,7 @@ package-lock.json
 .swo
 .*.swp
 .*.swo
+README.html
 
 # Ignore reference material
 extras/
