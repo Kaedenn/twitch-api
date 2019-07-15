@@ -3702,4 +3702,6 @@ Util.Random = new Util.RandomGenerator();
 try {
   /* globals module */
   module.exports.Util = Util;
+  module.exports.Logging = Logging;
+  module.exports.ColorParser = ColorParser;
 } catch (e) {/* eslint:no-empty */}
