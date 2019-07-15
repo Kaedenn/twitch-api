@@ -3,7 +3,7 @@ SRCS = client.js utility.js
 DIST = dist
 DISTS = $(patsubst %,$(DIST)/%,$(SRCS))
 
-.PHONY: all lint
+.PHONY: all lint test
 
 all: lint $(DISTS)
 
@@ -14,4 +14,5 @@ $(DIST)/%.js: %.js
 	test -d dist || mkdir dist
 	npx babel --presets babel-preset-env $< -d dist/
 
-
+test:
+	./node_modules/mocha/bin/mocha
