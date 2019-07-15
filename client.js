@@ -51,13 +51,16 @@ class TwitchEvent {
     this._cmd = type;
     this._raw = raw || "";
     if (!parsed) {
+      /* Construct from essentially nothing */
       this._parsed = {};
     } else if (parsed instanceof Event) {
+      /* Construct from an event */
       this._parsed = {
         event: parsed,
         name: Object.getPrototypeOf(parsed).constructor.name
       };
     } else {
+      /* Construct from an object */
       this._parsed = parsed;
     }
     if (TwitchEvent.COMMAND_LIST.indexOf(this._cmd) === -1) {
@@ -155,6 +158,7 @@ class TwitchEvent {
     return null;
   }
 
+  /* Return the msg-id, if one is present */
   get noticeMsgId() {
     if (this._cmd === "NOTICE" && this.flags) {
       if (typeof(this.flags["msg-id"]) === "string") {
@@ -164,6 +168,7 @@ class TwitchEvent {
     return null;
   }
 
+  /* Return the class of the msg-id, if one is present */
   get noticeClass() {
     let msgid = this.noticeMsgId;
     if (typeof(msgid) === "string") {
@@ -172,11 +177,16 @@ class TwitchEvent {
     return null;
   }
 
+  /* Object.prototype.toSource convenience function (for debugging) */
   repr() {
     /* Return a value similar to Object.toSource() */
     let cls = Object.getPrototypeOf(this).constructor.name;
     let args = [this._cmd, this._raw, this._parsed];
     return `new ${cls}(${JSON.stringify(args)})`;
+  }
+
+  get [Symbol.toStringTag]() {
+    return `TwitchEvent<${this._cmd}>`;
   }
 }
 
@@ -307,7 +317,9 @@ class TwitchClient { /* exported TwitchClient */
   static get CHANNEL_ROOMS() { return "#chatrooms"; }
 
   /* Requested capabilities */
-  static get CAPABILITIES() { return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"]; }
+  static get CAPABILITIES() {
+    return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"];
+  }
 
   constructor(opts) {
     let cfg_name = opts.Name;
@@ -899,6 +911,10 @@ class TwitchClient { /* exported TwitchClient */
     }
   }
 
+  /* Get the client's current username */
+  GetName() { return this._username; }
+  get name() { return this.GetName(); }
+
   /* Obtain connection status information */
   ConnectionStatus() {
     return {
@@ -913,27 +929,19 @@ class TwitchClient { /* exported TwitchClient */
   get status() { return this.ConnectionStatus(); }
 
   /* Return whether or not the client is currently trying to connect */
-  IsConnecting() {
-    return this._connecting;
-  }
+  IsConnecting() { return this._connecting; }
   get connecting() { return this.IsConnecting(); }
 
   /* Return whether or not we're connected to Twitch */
-  Connected() {
-    return this._connected;
-  }
+  Connected() { return this._connected; }
   get connected() { return this.Connected(); }
 
   /* Return whether or not FFZ support is enabled */
-  FFZEnabled() {
-    return this._enable_ffz;
-  }
+  FFZEnabled() { return this._enable_ffz; }
   get ffzEnabled() { return this.FFZEnabled(); }
 
   /* Return whether or not BTTV support is enabled */
-  BTTVEnabled() {
-    return this._enable_bttv;
-  }
+  BTTVEnabled() { return this._enable_bttv; }
   get bttvEnabled() { return this.BTTVEnabled; }
 
   /* Return a copy of the client's userstate */
@@ -956,16 +964,8 @@ class TwitchClient { /* exported TwitchClient */
     return false;
   }
 
-  /* Get the client's current username */
-  GetName() {
-    return this._username;
-  }
-  get name() { return this.GetName(); }
-
   /* Return whether or not the numeric user ID refers to the client itself */
-  IsUIDSelf(userid) {
-    return userid === this._self_userid;
-  }
+  IsUIDSelf(userid) { return userid === this._self_userid; }
 
   /* End of general status functions 0}}} */
 
@@ -1175,16 +1175,14 @@ class TwitchClient { /* exported TwitchClient */
   }
 
   /* Return whether or not global cheers have been loaded */
-  get cheersLoaded() {
+  AreCheersLoaded() {
     if (this._global_cheers["Cheer"]) {
       return true;
     } else {
       return false;
     }
   }
-
-  /* Return whether or not global cheers have been loaded */
-  AreCheersLoaded() { return this.cheersLoaded; }
+  get cheersLoaded() { return this.AreCheersLoaded(); }
 
   /* Obtain information about a given cheermote. Overloads:
    * GetCheer(channel, cheername)
@@ -1776,6 +1774,8 @@ class TwitchClient { /* exported TwitchClient */
   }
 
   /* End websocket callbacks 0}}} */
+
+  get [Symbol.toStringTag]() { return "TwitchClient"; }
 }
 
 /* Twitch message escape sequences */

@@ -65,13 +65,16 @@ var TwitchEvent = function () {
     this._cmd = type;
     this._raw = raw || "";
     if (!parsed) {
+      /* Construct from essentially nothing */
       this._parsed = {};
     } else if (parsed instanceof Event) {
+      /* Construct from an event */
       this._parsed = {
         event: parsed,
         name: Object.getPrototypeOf(parsed).constructor.name
       };
     } else {
+      /* Construct from an object */
       this._parsed = parsed;
     }
     if (TwitchEvent.COMMAND_LIST.indexOf(this._cmd) === -1) {
@@ -139,8 +142,14 @@ var TwitchEvent = function () {
 
       return null;
     }
+
+    /* Return the msg-id, if one is present */
+
   }, {
     key: "repr",
+
+
+    /* Object.prototype.toSource convenience function (for debugging) */
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
@@ -212,6 +221,9 @@ var TwitchEvent = function () {
       }
       return null;
     }
+
+    /* Return the class of the msg-id, if one is present */
+
   }, {
     key: "noticeClass",
     get: function get() {
@@ -220,6 +232,11 @@ var TwitchEvent = function () {
         return msgid.split("_")[0];
       }
       return null;
+    }
+  }, {
+    key: Symbol.toStringTag,
+    get: function get() {
+      return "TwitchEvent<" + this._cmd + ">";
     }
   }], [{
     key: "COMMAND_LIST",
@@ -1679,10 +1696,18 @@ var TwitchClient = function () {
       }
     }
 
-    /* Obtain connection status information */
+    /* Get the client's current username */
 
   }, {
+    key: "GetName",
+    value: function GetName() {
+      return this._username;
+    }
+  }, {
     key: "ConnectionStatus",
+
+
+    /* Obtain connection status information */
     value: function ConnectionStatus() {
       return {
         endpoint: this._endpoint,
@@ -1773,18 +1798,10 @@ var TwitchClient = function () {
       return false;
     }
 
-    /* Get the client's current username */
+    /* Return whether or not the numeric user ID refers to the client itself */
 
-  }, {
-    key: "GetName",
-    value: function GetName() {
-      return this._username;
-    }
   }, {
     key: "IsUIDSelf",
-
-
-    /* Return whether or not the numeric user ID refers to the client itself */
     value: function IsUIDSelf(userid) {
       return userid === this._self_userid;
     }
@@ -2152,19 +2169,20 @@ var TwitchClient = function () {
 
   }, {
     key: "AreCheersLoaded",
-
-
-    /* Return whether or not global cheers have been loaded */
     value: function AreCheersLoaded() {
-      return this.cheersLoaded;
+      if (this._global_cheers["Cheer"]) {
+        return true;
+      } else {
+        return false;
+      }
     }
+  }, {
+    key: "GetCheer",
+
 
     /* Obtain information about a given cheermote. Overloads:
      * GetCheer(channel, cheername)
      * GetCheer(cheername) -> GetCheer("GLOBAL", cheername) */
-
-  }, {
-    key: "GetCheer",
     value: function GetCheer() {
       var cname = "GLOBAL",
           name = null;
@@ -3236,6 +3254,11 @@ var TwitchClient = function () {
     /* End websocket callbacks 0}}} */
 
   }, {
+    key: "name",
+    get: function get() {
+      return this.GetName();
+    }
+  }, {
     key: "status",
     get: function get() {
       return this.ConnectionStatus();
@@ -3266,11 +3289,6 @@ var TwitchClient = function () {
       return this.SelfUserState();
     }
   }, {
-    key: "name",
-    get: function get() {
-      return this.GetName();
-    }
-  }, {
     key: "authed",
     get: function get() {
       return this._authed;
@@ -3283,11 +3301,7 @@ var TwitchClient = function () {
   }, {
     key: "cheersLoaded",
     get: function get() {
-      if (this._global_cheers["Cheer"]) {
-        return true;
-      } else {
-        return false;
-      }
+      return this.AreCheersLoaded();
     }
   }, {
     key: "history",
@@ -3303,6 +3317,11 @@ var TwitchClient = function () {
     key: "historyLength",
     get: function get() {
       return this.GetHistoryLength();
+    }
+  }, {
+    key: Symbol.toStringTag,
+    get: function get() {
+      return "TwitchClient";
     }
   }]);
 
