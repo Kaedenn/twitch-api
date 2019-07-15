@@ -1106,6 +1106,7 @@ class TwitchClient { /* exported TwitchClient */
   GetJoinedChannels() {
     return this._channels;
   }
+  get channels() { return this.GetJoinedChannels(); }
 
   /* Get information regarding the channel specified */
   GetChannelInfo(channel) {
@@ -1999,12 +2000,12 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   } else if (key === "emotes") {
     result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
-    result = value.split(",").map(e => Number.parse(e));
+    result = value.split(",").map(e => Util.ParseNumber(e));
   } else {
     result = Twitch.DecodeFlag(value);
   }
   if (typeof(result) === "string") {
-    let temp = Number.parse(result);
+    let temp = Util.ParseNumber(result);
     if (!Number.isNaN(temp)) {
       result = temp;
     }
@@ -2288,3 +2289,13 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   return result;
 };
 
+/* Construct the module */
+try {
+  /* globals module */
+  module.exports.TwitchEvent = TwitchEvent;
+  module.exports.TwitchChatEvent = TwitchChatEvent;
+  module.exports.TwitchSubEvent = TwitchSubEvent;
+  module.exports.TwitchClient = TwitchClient;
+  module.exports.Twitch = Twitch;
+}
+catch (e) { /* eslint:no-empty */ }

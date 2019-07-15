@@ -1979,11 +1979,11 @@ var TwitchClient = function () {
     value: function GetJoinedChannels() {
       return this._channels;
     }
-
-    /* Get information regarding the channel specified */
-
   }, {
     key: "GetChannelInfo",
+
+
+    /* Get information regarding the channel specified */
     value: function GetChannelInfo(channel) {
       var cname = Twitch.FormatChannel(this.ParseChannel(channel));
       return this._rooms[cname] || {};
@@ -3276,6 +3276,11 @@ var TwitchClient = function () {
       return this._authed;
     }
   }, {
+    key: "channels",
+    get: function get() {
+      return this.GetJoinedChannels();
+    }
+  }, {
     key: "cheersLoaded",
     get: function get() {
       if (this._global_cheers["Cheer"]) {
@@ -3705,13 +3710,13 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
     result = Twitch.ParseEmote(value);
   } else if (key === "emote-sets") {
     result = value.split(",").map(function (e) {
-      return Number.parse(e);
+      return Util.ParseNumber(e);
     });
   } else {
     result = Twitch.DecodeFlag(value);
   }
   if (typeof result === "string") {
-    var temp = Number.parse(result);
+    var temp = Util.ParseNumber(result);
     if (!Number.isNaN(temp)) {
       result = temp;
     }
@@ -4163,3 +4168,13 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
 
   return result;
 };
+
+/* Construct the module */
+try {
+  /* globals module */
+  module.exports.TwitchEvent = TwitchEvent;
+  module.exports.TwitchChatEvent = TwitchChatEvent;
+  module.exports.TwitchSubEvent = TwitchSubEvent;
+  module.exports.TwitchClient = TwitchClient;
+  module.exports.Twitch = Twitch;
+} catch (e) {/* eslint:no-empty */}

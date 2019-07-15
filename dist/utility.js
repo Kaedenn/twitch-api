@@ -179,6 +179,8 @@ Util.Defined = function _Util_Defined(identifier) {
     var f = func ? func : function (b) {
       return Boolean(b);
     };
+    /* Empty array is false */
+    if (this.length === 0) return false;
     var _iteratorNormalCompletion = true;
     var _didIteratorError = false;
     var _iteratorError = undefined;
@@ -214,6 +216,8 @@ Util.Defined = function _Util_Defined(identifier) {
     var f = func ? func : function (b) {
       return Boolean(b);
     };
+    /* Empty array is false */
+    if (this.length === 0) return false;
     var _iteratorNormalCompletion2 = true;
     var _didIteratorError2 = false;
     var _iteratorError2 = undefined;
@@ -658,13 +662,6 @@ String.prototype.toTitleCase = function _String_toTitleCase() {
   });
 };
 
-/* Parse a number (calling Util.ParseNumber) */
-Number.parse = function _Number_parse(str) {
-  var base = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 10;
-
-  return Util.ParseNumber(str, base);
-};
-
 /* End standard object additions 0}}} */
 
 /* Array and sequence functions {{{0 */
@@ -1007,10 +1004,15 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       var frame = {
         text: line,
         name: "???",
-        file: window.location.pathname,
+        file: null,
         line: 0,
         column: 0
       };
+      try {
+        frame.file = window.location.pathname;
+      } catch (e) {
+        frame.file = "unknown";
+      }
       if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/)) !== null) {
         // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)\)"
         frame.name = m[1];
@@ -2202,9 +2204,8 @@ Util.Color = function () {
 
 /* Calculate the Relative Luminance of a color.
  * Overloads:
- *  Util.RelativeLuminance('css color spec')
- *  Util.RelativeLuminance([r, g, b])
- *  Util.RelativeLuminance([r, g, b, a])
+ *  Util.RelativeLuminance("css color")
+ *  Util.RelativeLuminance([r, g, b[, a]])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance() {
   for (var _len28 = arguments.length, args = Array(_len28), _key28 = 0; _key28 < _len28; _key28++) {
@@ -3151,7 +3152,7 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
       } else if (v === "null") {
         obj[k] = null;
       } else if (Util.IsNumber(v)) {
-        obj[k] = Number.parse(v);
+        obj[k] = Util.ParseNumber(v);
       } else {
         obj[k] = v;
       }
@@ -3657,9 +3658,6 @@ Util.StyleToObject = function _Util_StyleToObject(style) {
 
 /* Construct global objects {{{0 */
 
-/* PRNG instance */
-Util.Random = new Util.RandomGenerator();
-
 /* Logger instance  */
 Util.Logger = new Logging();
 
@@ -3695,4 +3693,13 @@ Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
 Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
 Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 
+/* PRNG instance */
+Util.Random = new Util.RandomGenerator();
+
 /* End constructing global objects 0}}} */
+
+/* Construct the module */
+try {
+  /* globals module */
+  module.exports.Util = Util;
+} catch (e) {/* eslint:no-empty */}

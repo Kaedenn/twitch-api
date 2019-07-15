@@ -173,6 +173,8 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Return true if any of the values satisfy the function given */
   polyfill(Array.prototype, "any", function _Array_any(func) {
     let f = func ? func : (b) => Boolean(b);
+    /* Empty array is false */
+    if (this.length === 0) return false;
     for (let e of this) {
       if (f(e)) {
         return true;
@@ -184,6 +186,8 @@ Util.Defined = function _Util_Defined(identifier) {
   /* Return true if all of the values satisfy the function given */
   polyfill(Array.prototype, "all", function _Array_all(func) {
     let f = func ? func : (b) => Boolean(b);
+    /* Empty array is false */
+    if (this.length === 0) return false;
     for (let e of this) {
       if (!f(e)) {
         return false;
@@ -364,11 +368,6 @@ String.prototype.xor = function _String_xor(byte) {
 /* Title-case a string (akin to Python's str.title function) */
 String.prototype.toTitleCase = function _String_toTitleCase() {
   return this.replace(/\b[a-z]/g, (c) => c.toUpperCase());
-};
-
-/* Parse a number (calling Util.ParseNumber) */
-Number.parse = function _Number_parse(str, base=10) {
-  return Util.ParseNumber(str,base);
 };
 
 /* End standard object additions 0}}} */
@@ -575,10 +574,11 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     let frame = {
       text: line,
       name: "???",
-      file: window.location.pathname,
+      file: null,
       line: 0,
       column: 0
     };
+    try { frame.file = window.location.pathname; } catch (e) { frame.file = "unknown"; }
     if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/)) !== null) {
       // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)\)"
       frame.name = m[1];
@@ -1155,9 +1155,8 @@ Util.Color = class _Util_Color {
 
 /* Calculate the Relative Luminance of a color.
  * Overloads:
- *  Util.RelativeLuminance('css color spec')
- *  Util.RelativeLuminance([r, g, b])
- *  Util.RelativeLuminance([r, g, b, a])
+ *  Util.RelativeLuminance("css color")
+ *  Util.RelativeLuminance([r, g, b[, a]])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
   let color = ColorParser.parse(args.length === 1 ? args[0] : args);
@@ -1767,7 +1766,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(queryString=null) {
     } else if (v === "null") {
       obj[k] = null;
     } else if (Util.IsNumber(v)) {
-      obj[k] = Number.parse(v);
+      obj[k] = Util.ParseNumber(v);
     } else {
       obj[k] = v;
     }
@@ -2067,9 +2066,6 @@ Util.StyleToObject = function _Util_StyleToObject(style) {
 
 /* Construct global objects {{{0 */
 
-/* PRNG instance */
-Util.Random = new Util.RandomGenerator();
-
 /* Logger instance  */
 Util.Logger = new Logging();
 
@@ -2105,4 +2101,14 @@ Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
 Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
 Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
 
+/* PRNG instance */
+Util.Random = new Util.RandomGenerator();
+
 /* End constructing global objects 0}}} */
+
+/* Construct the module */
+try {
+  /* globals module */
+  module.exports.Util = Util;
+}
+catch (e) { /* eslint:no-empty */ }
