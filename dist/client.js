@@ -379,7 +379,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
 
           if (badge_name === badge) {
             /* null rev matches all badges with this name */
-            return rev === null ? true : badge_rev === rev;
+            return rev === badge_rev || rev === null;
           }
         }
       } catch (err) {
@@ -421,12 +421,17 @@ var TwitchChatEvent = function (_TwitchEvent) {
   }, {
     key: "ismod",
     get: function get() {
-      return this.flags.mod || this.hasBadge("moderator") || this.iscaster;
+      return this.hasBadge("moderator") || this.flags.mod || this.iscaster;
     }
   }, {
     key: "issub",
     get: function get() {
-      return this.flags.subscriber || this.hasBadge("subscriber");
+      return this.hasBadge("subscriber") || this.flags.subscriber;
+    }
+  }, {
+    key: "isstaff",
+    get: function get() {
+      return this.hasBadge("staff") || this.flags.staff;
     }
   }, {
     key: "isvip",
@@ -691,6 +696,14 @@ var TwitchClient = function () {
     key: "ESET_GLOBAL",
     get: function get() {
       return 0;
+    }
+
+    /* Emote set number for Twitch Prime emotes */
+
+  }, {
+    key: "ESET_PRIME",
+    get: function get() {
+      return 19194;
     }
 
     /* Default emote size */

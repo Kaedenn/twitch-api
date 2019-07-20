@@ -213,15 +213,16 @@ class TwitchChatEvent extends TwitchEvent {
   }
   get id() { return this._id; }
   get iscaster() { return this.hasBadge("broadcaster"); }
-  get ismod() { return this.flags.mod || this.hasBadge("moderator") || this.iscaster; }
-  get issub() { return this.flags.subscriber || this.hasBadge("subscriber"); }
+  get ismod() { return this.hasBadge("moderator") || this.flags.mod || this.iscaster; }
+  get issub() { return this.hasBadge("subscriber") || this.flags.subscriber; }
+  get isstaff() { return this.hasBadge("staff") || this.flags.staff; }
   get isvip() { return this.hasBadge("vip"); }
   get badges() { return this.flags.badges || []; }
   hasBadge(badge, rev=null) {
     for (let [badge_name, badge_rev] of this.badges) {
       if (badge_name === badge) {
         /* null rev matches all badges with this name */
-        return rev === null ? true : badge_rev === rev;
+        return rev === badge_rev || rev === null;
       }
     }
     return false;
@@ -324,6 +325,9 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Emote set number for global emotes */
   static get ESET_GLOBAL() { return 0; }
+
+  /* Emote set number for Twitch Prime emotes */
+  static get ESET_PRIME() { return 19194; }
 
   /* Default emote size */
   static get DEFAULT_EMOTE_SIZE() { return "1.0"; }
