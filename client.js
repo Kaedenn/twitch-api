@@ -6,6 +6,10 @@
  *  https://www.frankerfacez.com/developers
  */
 
+/* FIXME:
+ * Emotes like ":-D" show more than one emote (turbo 1, turbo 2, global)
+ */
+
 /* TODO:
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Rooms(channelid)
@@ -325,6 +329,12 @@ class TwitchClient { /* exported TwitchClient */
 
   /* Emote set number for global emotes */
   static get ESET_GLOBAL() { return 0; }
+
+  /* Emote set numbers for Turbo (sets 1, 2, 3, and 4) */
+  static get ESET_TURBO_1() { return 33; }
+  static get ESET_TURBO_2() { return 42; }
+  static get ESET_TURBO_3() { return 457; }
+  static get ESET_TURBO_4() { return 793; }
 
   /* Emote set number for Twitch Prime emotes */
   static get ESET_PRIME() { return 19194; }
@@ -1615,8 +1625,15 @@ class TwitchClient { /* exported TwitchClient */
         case "ACK":
           this._connected = true;
           this._capabilities = result.flags;
-          /* Obtain global emotes from eset 0 */
-          this.AddEmoteSet(0);
+          /* Load global emotes */
+          this.AddEmoteSet(TwitchClient.ESET_GLOBAL);
+          /* Fix duplicate emotes in Twitch.FormatEmotes first
+          this.AddEmoteSet(TwitchClient.ESET_TURBO_1);
+          this.AddEmoteSet(TwitchClient.ESET_TURBO_2);
+          this.AddEmoteSet(TwitchClient.ESET_TURBO_3);
+          this.AddEmoteSet(TwitchClient.ESET_TURBO_4);
+          */
+          this.AddEmoteSet(TwitchClient.ESET_PRIME);
           /* Obtain global cheermotes */
           this._getGlobalCheers();
           break;
