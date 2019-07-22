@@ -752,6 +752,7 @@ class Logging {
 
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
   doLog(sev, argobj, stacktrace=false, log_once=false) {
+    const SEV_ALL = Logging.SEVERITIES.ALL;
     let val = this._sevValue(sev);
     if (!this.severityEnabled(sev)) { return; }
     if (this.shouldFilter(argobj, sev)) { return; }
@@ -764,8 +765,14 @@ class Logging {
         this._logged_messages[msg_key] = 1;
       }
     }
-    for (let hook of this._hooks[val]) {
+    let hooksToCall = [];
+    /* Add hooks for severity "ALL" */
+    let hooks = this._hooks[val].concat(this._hooks[SEV_ALL]);
+    for (let hook of hooks) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
+      hooksToCall.push([hook, args]);
+    }
+    for (let [hook, args] of hooksToCall) {
       hook.apply(hook, args);
     }
     let func = Logging.FUNCTION_MAP[val];
@@ -911,6 +918,7 @@ Util.Color = class _Util_Color {
     else if (max === b0) h = (r0 - g0) / d + 4;
     let l = (min + max) / 2;
     let s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+    if (h < 0) h += 6;
     return [h * 60, s, l];
   }
 
