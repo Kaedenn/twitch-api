@@ -304,7 +304,7 @@ String.prototype.strip = function _String_strip(chrs) {
       chars.push(c);
     }
   } else {
-    chars = [" ", "\r", "\n"];
+    chars = [" ", "\r", "\n", "\v", "\t"];
   }
   let si = 0;
   let ei = this.length - 1;

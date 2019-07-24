@@ -548,7 +548,7 @@ String.prototype.strip = function _String_strip(chrs) {
       }
     }
   } else {
-    chars = [" ", "\r", "\n"];
+    chars = [" ", "\r", "\n", "\v", "\t"];
   }
   var si = 0;
   var ei = this.length - 1;
