@@ -4278,7 +4278,7 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
       var name = _ref34[0];
       var pat = _ref34[1];
 
-      if (result.search(pat)) {
+      if (result.match(pat)) {
         result = result.replace(pat, name + "<removed>");
       }
     }

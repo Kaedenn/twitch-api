@@ -2333,7 +2333,7 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
   ];
   let result = msg;
   for (let [name, pat] of pats) {
-    if (result.search(pat)) {
+    if (result.match(pat)) {
       result = result.replace(pat, `${name}<removed>`);
     }
   }
