@@ -15,4 +15,4 @@ $(DIST)/%.js: %.js
 	npx babel --presets babel-preset-env $< -d dist/
 
 test:
-	./node_modules/mocha/bin/mocha
+	./node_modules/mocha/bin/mocha --require test/harness.js
