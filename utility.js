@@ -324,7 +324,7 @@ String.prototype.escape = function _String_escape() {
   result = result.replace(/</g, "&lt;");
   result = result.replace(/>/g, "&gt;");
   result = result.replace(/"/g, "&quot;");
-  result = result.replace(/"/g, "&apos;");
+  result = result.replace(/'/g, "&apos;");
   return result;
 };
 
@@ -367,7 +367,9 @@ String.prototype.xor = function _String_xor(byte) {
 
 /* Title-case a string (akin to Python's str.title function) */
 String.prototype.toTitleCase = function _String_toTitleCase() {
-  return this.replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  const pat = /\b(\w)(\w+)/ig;
+  const func = (w, g1, g2) => g1.toUpperCase() + g2.toLowerCase();
+  return this.replace(pat, func);
 };
 
 /* End standard object additions 0}}} */
@@ -1232,20 +1234,32 @@ Util.RandomGenerator = class _Util_Random {
     if (Util.Defined("crypto")) {
       if ((new Function("return crypto.getRandomValues"))()) {
         return (new Function("return crypto"))();
+      } else if ((new Function("return crypto.randomBytes"))()) {
+        return (new Function("return crypto"))();
+      } else {
+        Util.Warn("Crypto object lacks expected API");
       }
-    }
-    if (Util.Defined("msCrypto")) {
+    } else if (Util.Defined("msCrypto")) {
       return (new Function("return msCrypto"))();
+    } else {
+      Util.Warn("Failed to get secure PRNG; falling back to Math.random");
     }
-    Util.Warn("Failed to get secure PRNG; falling back to Math.random");
     return null;
   }
 
   /* Obtain Uint8Array of random values using crypto */
   _genRandCrypto(num_bytes) {
-    let a = new Uint8Array(num_bytes);
-    this._crypto.getRandomValues(a);
-    return a;
+    if (this._crypto !== null) {
+      let a = new Uint8Array(num_bytes);
+      if (this._crypto.getRandomValues) {
+        this._crypto.getRandomValues(a);
+        return a;
+      } else if (this._crypto.randomBytes) {
+        return this._crypto.randomBytes(num_bytes);
+      }
+    } else {
+      throw new Error("this._crypto undefined");
+    }
   }
 
   /* Obtain Uint8Array of random values using Math.random */
