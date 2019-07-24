@@ -1,42 +1,21 @@
 
 global.crypto = require("crypto");
+const {JSDOM} = require("jsdom");
 
-function ensureGlobal(path, value) {
-  let items = typeof(path) === "string" ? [path] : Array.of(...path);
-  let cobj = global;
-  while (items.length > 1) {
-    if (cobj.hasOwnProperty(items[0])) {
-      cobj = cobj[items.shift()];
-    } else {
-      throw new Error(`Object ${cobj} lacks property ${items[0]}`);
-    }
+const dom = new JSDOM(`<!DOCTYPE html><head><title>twapi tests</title></head><body></body></html>`);
+global.window = dom.window;
+
+/* Persist window.* into global.* */
+for (let key of Reflect.ownKeys(dom.window)) {
+  if (!global.hasOwnProperty(key)) {
+    /* These raise SecurityError */
+    if (key === "localStorage") continue;
+    if (key === "sessionStorage") continue;
+    global[key] = dom.window[key];
   }
-  cobj[items[0]] = value;
 }
 
-/*
-console.log(Reflect.ownKeys(global).sort((a, b) => {
-  let as = "";
-  let bs = "";
-  try { as = `${a}`; } catch (e) { as = JSON.stringify(a); }
-  try { bs = `${b}`; } catch (e) { bs = JSON.stringify(b); }
-  if (as < bs) return -1;
-  if (as > bs) return 1;
-  return 0;
-}));
-*/
+function getOwnKeysOf(obj) {
+  return Reflect.ownKeys(global.window).map((k) => JSON.stringify(k)).sort();
+}
 
-ensureGlobal("window", global);
-ensureGlobal("navigator", {});
-ensureGlobal("localStorage", {});
-
-ensureGlobal("location", {});
-ensureGlobal(["location", "origin"], null);
-ensureGlobal(["location", "protocol"], "file:");
-ensureGlobal(["location", "host"], "localhost");
-ensureGlobal(["location", "hostname"], "localhost");
-ensureGlobal(["location", "port"], "");
-ensureGlobal(["location", "pathname"], process.cwd() + "/test/harness.js");
-ensureGlobal(["location", "search"], "");
-ensureGlobal(["location", "hash"], "");
-ensureGlobal(["location", "href"], location.protocol + "//" + location.pathname + location.search + location.hash);
