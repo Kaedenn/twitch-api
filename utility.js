@@ -1,5 +1,12 @@
 "use strict";
 
+/* FIXME:
+ *
+ * Util.URL_REGEX doesn't match valid URLs:
+ *  http://example.com
+ *  https://example.com/
+ */
+
 /* TODO:
  * Rename Logger functions: "" -> "Stack", "Only" -> ""
  *  Logger.${Sev} -> Logger.${Sev}Stack
@@ -101,6 +108,19 @@ Util.EscapeChars = {
   '"': "&quot;",
   "'": "&apos;",
   "&": "&amp;"
+};
+
+/* Attempt to change the name of the function given */
+Util.SetFunctionName = function _Util_SetFunctionName(func, name, nothrow=false) {
+  if (func.name !== name) {
+    try { func.name = name; } catch (e) { /* ignore */ }
+  }
+  if (func.name !== name) {
+    try { func.__defineGetter__("name", () => name); } catch (e) { /* ignore */ }
+  }
+  if (func.name !== name && !nothrow) {
+    throw new Error("Failed to set function name");
+  }
 };
 
 /* End of general utilities 0}}} */
@@ -296,16 +316,30 @@ Array.range = function _Array_range(nelem, dflt=null) {
   return a;
 };
 
-/* Remove `chrs` from the beginning and end of the string */
-String.prototype.strip = function _String_strip(chrs) {
-  let chars = [];
-  if (chrs && chrs.length > 0) {
-    for (let c of chrs) {
-      chars.push(c);
-    }
-  } else {
-    chars = [" ", "\r", "\n", "\v", "\t"];
+/* Return true if the string matches the character class */
+(function() {
+  let classes = {};
+  classes.isspace = (c) => /^\s*$/.test(c);
+  classes.isdigit = (c) => /^\d*$/.test(c);
+  classes.isalpha = (c) => /^[A-Za-z]*$/.test(c);
+  classes.isalnum = (c) => classes.isalpha(c) || classes.isdigit(c);
+  classes.islower = (c) => c === c.toLowerCase();
+  classes.isupper = (c) => c === c.toUpperCase();
+  for (let [cname, cfunc] of Object.entries(classes)) {
+    String.prototype[cname] = function _String_isclass_wrapper() {
+      for (let c of this) {
+        if (!cfunc(c)) return false;
+      }
+      return true;
+    };
+    Util.SetFunctionName(String.prototype[cname], "_String_" + cname);
   }
+})();
+
+/* Remove `chrs` from the beginning and end of the string */
+String.prototype.strip = function _String_strip(chrs=null) {
+  const WHITESPACE = Array.of(..." \r\n\v\t");
+  let chars = chrs ? Array.of(...chrs) : WHITESPACE;
   let si = 0;
   let ei = this.length - 1;
   while (si < this.length && chars.indexOf(this[si]) > -1) {
@@ -539,6 +573,24 @@ Util.DebugLevel = Util.LEVEL_OFF;
 
 /* Current top-stack trim level */
 Util._stack_trim_level = [0];
+
+/* Current stack of debug levels */
+Util._debug_levels = [];
+
+/* Save the current debug level and set it to the value given */
+Util.PushDebugLevel = function _Util_PushDebugLevel(newLevel) {
+  Util._debug_levels.push(newLevel);
+  Util.DebugLevel = newLevel;
+};
+
+/* Restore the debug level; return whether or not this succeeded */
+Util.PopDebugLevel = function _Util_PopDebugLevel() {
+  if (Util._debug_levels.length > 0) {
+    Util.DebugLevel = Util._debug_levels.pop();
+    return true;
+  }
+  return false;
+};
 
 /* Save the current top-stack trim level and push a new value to use */
 Util.PushStackTrimBegin = function _Util_PushStackTrimBegin(level) {
@@ -862,19 +914,21 @@ class ColorParser {
     if (this._cache[color]) {
       return this._cache[color];
     }
+    /* Detect invalid colors (style.color setter fails) */
     this._e.style.color = null;
     this._e.style.color = color;
     if (this._e.style.color.length === 0) {
       Util.Throw(TypeError, `ColorParser: Invalid color ${color}`);
     }
-    let rgbstr = getComputedStyle(this._e).color;
+    let rgbstr = window.getComputedStyle(this._e).color;
     let rgbtuple = [];
     let m = this._rgb_pat.exec(rgbstr) || this._rgba_pat.exec(rgbstr);
     if (m !== null) {
       rgbtuple = m.slice(1);
     } else {
-      /* Shouldn't ever happen unless getComputedStyle breaks */
-      Util.Throw(`Failed to parse computed color ${rgbstr}`);
+      Util.Error("getComputedStyle broke:", rgbstr, ", this._e:", this._e);
+      Util.Error("getComputedStyle(e): ", window.getComputedStyle(this._e));
+      Util.Throw(Error, `Failed to parse computed color ${rgbstr}`);
     }
     let r = Number(rgbtuple[0]); r = Number.isNaN(r) ? 0 : r;
     let g = Number(rgbtuple[1]); g = Number.isNaN(g) ? 0 : g;
@@ -1039,7 +1093,7 @@ Util.Color = class _Util_Color {
       [this.r, this.g, this.b] = args;
       if (args.length === 4) this.a = args[3];
     } else if (args.length > 0) {
-      Util.Throw(`Invalid arguments "${args}" to Color()`);
+      Util.Throw(TypeError, `Invalid arguments "${args}" to Color()`);
     }
   }
 
@@ -1411,7 +1465,7 @@ Util.FireEvent = function _Util_FireEvent(e) {
 /* Return whether or not a string is a number */
 Util.IsNumber = function _Util_IsNumber(str) {
   let temp = Util.ParseNumber(str);
-  return typeof(temp) === "number" && !Number.isNaN(temp);
+  return typeof(temp) === "number";
 };
 
 /* Parse a number */
@@ -1444,7 +1498,7 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
     return Number.parseInt(str, 16);
   } else {
     /* Failed to parse */
-    return Number.NaN;
+    return null;
   }
 };
 
