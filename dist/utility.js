@@ -5,6 +5,8 @@
  * Util.URL_REGEX doesn't match valid URLs:
  *  http://example.com
  *  https://example.com/
+ *
+ * ColorParser doesn't work in node.js. Use tinycolor2 instead.
  */
 
 /* TODO:
@@ -1057,7 +1059,7 @@ Util._debug_levels = [];
 
 /* Save the current debug level and set it to the value given */
 Util.PushDebugLevel = function _Util_PushDebugLevel(newLevel) {
-  Util._debug_levels.push(newLevel);
+  Util._debug_levels.push(Util.DebugLevel);
   Util.DebugLevel = newLevel;
 };
 
@@ -2076,18 +2078,23 @@ Util.Color = function () {
 
         this.scale = arg.scale;
       } else if (typeof arg === "string") {
-        var _ColorParser$parse = ColorParser.parse(arg),
-            _ColorParser$parse2 = _slicedToArray(_ColorParser$parse, 4),
-            r = _ColorParser$parse2[0],
-            g = _ColorParser$parse2[1],
-            b = _ColorParser$parse2[2],
-            a = _ColorParser$parse2[3];
+        var rgba = ColorParser.parse(arg);
+        if (rgba.length === 3) {
+          var _rgba = _slicedToArray(rgba, 3);
 
-        var _ref8 = [r, g, b, a];
-        this.r = _ref8[0];
-        this.g = _ref8[1];
-        this.b = _ref8[2];
-        this.a = _ref8[3];
+          this.r = _rgba[0];
+          this.g = _rgba[1];
+          this.b = _rgba[2];
+
+          this.a = 255;
+        } else if (rgba.length === 4) {
+          var _rgba2 = _slicedToArray(rgba, 4);
+
+          this.r = _rgba2[0];
+          this.g = _rgba2[1];
+          this.b = _rgba2[2];
+          this.a = _rgba2[3];
+        }
       } else {
         Util.Throw(TypeError, "Invalid argument \"" + arg + "\" to Color()");
       }
@@ -2148,25 +2155,6 @@ Util.Color = function () {
     value: function inverted() {
       return new Util.Color(255 - this.r, 255 - this.g, 255 - this.b);
     }
-
-    /* Testcases:
-     *  Color classes:
-     *    Pure: 000, F00, 0F0, 00F, FF0, F0F, 0FF, FFF
-     *    Named CSS1:
-     *      maroon, red, purple, fuchsia, green, lime
-     *      olive, yellow, navy, blue, teal, aqua
-     *    Named CSS2:
-     *      orange
-     *    Named CSS3:
-     *    Named CSS4:
-     *      rebeccapurple
-     *  Case 1:
-     *    rgb1 -> hsl -> rgb2 => rgb1 === rgb2
-     *  Case 2:
-     *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
-     *  "#ff0000" -> hsl -> "#ff0000"
-     */
-
   }, {
     key: "hex",
     get: function get() {
@@ -2645,10 +2633,10 @@ Util.RandomGenerator = function () {
       var h = this.bytesToHex(a);
       var parts = [[0, 8], [8, 4], [12, 4], [16, 4], [20, 12]];
       var result = [];
-      parts.forEach(function (_ref9) {
-        var _ref10 = _slicedToArray(_ref9, 2),
-            s = _ref10[0],
-            l = _ref10[1];
+      parts.forEach(function (_ref8) {
+        var _ref9 = _slicedToArray(_ref8, 2),
+            s = _ref9[0],
+            l = _ref9[1];
 
         return result.push(h.substr(s, l));
       });
@@ -2845,14 +2833,14 @@ Util.FormatDate = function _Util_FormatDate(date) {
   var pad2 = function pad2(n) {
     return Util.Pad(n, 2);
   };
-  var _ref11 = [date.getFullYear(), date.getMonth(), date.getDay()],
-      y = _ref11[0],
-      m = _ref11[1],
-      d = _ref11[2];
-  var _ref12 = [date.getHours(), date.getMinutes(), date.getSeconds()],
-      h = _ref12[0],
-      mi = _ref12[1],
-      s = _ref12[2];
+  var _ref10 = [date.getFullYear(), date.getMonth(), date.getDay()],
+      y = _ref10[0],
+      m = _ref10[1],
+      d = _ref10[2];
+  var _ref11 = [date.getHours(), date.getMinutes(), date.getSeconds()],
+      h = _ref11[0],
+      mi = _ref11[1],
+      s = _ref11[2];
 
   var ms = date.getMilliseconds();
   var ymd = y + "-" + pad2(m) + "-" + pad2(d);
@@ -2954,12 +2942,12 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
 
   try {
     for (var _iterator31 = Util.Zip(Util.StringToCodes(str), str)[Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-      var _ref13 = _step31.value;
+      var _ref12 = _step31.value;
 
-      var _ref14 = _slicedToArray(_ref13, 2);
+      var _ref13 = _slicedToArray(_ref12, 2);
 
-      var cn = _ref14[0];
-      var ch = _ref14[1];
+      var cn = _ref13[0];
+      var ch = _ref13[1];
 
       if (cn < 0x20) {
         result = result.concat(Util.EscapeCharCode(cn));
@@ -3011,12 +2999,12 @@ Util.JSONClone = function _Util_JSONClone(obj) {
 
     try {
       for (var _iterator32 = Object.entries(obj)[Symbol.iterator](), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-        var _ref15 = _step32.value;
+        var _ref14 = _step32.value;
 
-        var _ref16 = _slicedToArray(_ref15, 2);
+        var _ref15 = _slicedToArray(_ref14, 2);
 
-        var k = _ref16[0];
-        var v = _ref16[1];
+        var k = _ref15[0];
+        var v = _ref15[1];
 
         if (Util.IsArray(opts.exclude) && opts.exclude.indexOf(k) > -1) {
           continue;
@@ -3296,12 +3284,12 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
 
         try {
           for (var _iterator36 = Object.entries(Util.ParseQueryString(atob(val)))[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-            var _ref17 = _step36.value;
+            var _ref16 = _step36.value;
 
-            var _ref18 = _slicedToArray(_ref17, 2);
+            var _ref17 = _slicedToArray(_ref16, 2);
 
-            var k2 = _ref18[0];
-            var v2 = _ref18[1];
+            var k2 = _ref17[0];
+            var v2 = _ref17[1];
 
             obj[k2] = v2;
           }
@@ -3358,12 +3346,12 @@ Util.FormatQueryString = function _Util_FormatQueryString(query) {
 
   try {
     for (var _iterator37 = Object.entries(query)[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
-      var _ref19 = _step37.value;
+      var _ref18 = _step37.value;
 
-      var _ref20 = _slicedToArray(_ref19, 2);
+      var _ref19 = _slicedToArray(_ref18, 2);
 
-      var k = _ref20[0];
-      var v = _ref20[1];
+      var k = _ref19[0];
+      var v = _ref19[1];
 
       var key = encodeURIComponent(k);
       var val = encodeURIComponent(v);
@@ -3653,12 +3641,12 @@ Util.Open = function _Util_Open(url, id, attrs) {
 
   try {
     for (var _iterator42 = Object.entries(attrs)[Symbol.iterator](), _step42; !(_iteratorNormalCompletion42 = (_step42 = _iterator42.next()).done); _iteratorNormalCompletion42 = true) {
-      var _ref21 = _step42.value;
+      var _ref20 = _step42.value;
 
-      var _ref22 = _slicedToArray(_ref21, 2);
+      var _ref21 = _slicedToArray(_ref20, 2);
 
-      var k = _ref22[0];
-      var v = _ref22[1];
+      var k = _ref21[0];
+      var v = _ref21[1];
 
       a.push(k + "=" + v);
     }

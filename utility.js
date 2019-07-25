@@ -5,6 +5,8 @@
  * Util.URL_REGEX doesn't match valid URLs:
  *  http://example.com
  *  https://example.com/
+ *
+ * ColorParser doesn't work in node.js. Use tinycolor2 instead.
  */
 
 /* TODO:
@@ -579,7 +581,7 @@ Util._debug_levels = [];
 
 /* Save the current debug level and set it to the value given */
 Util.PushDebugLevel = function _Util_PushDebugLevel(newLevel) {
-  Util._debug_levels.push(newLevel);
+  Util._debug_levels.push(Util.DebugLevel);
   Util.DebugLevel = newLevel;
 };
 
@@ -1098,8 +1100,13 @@ Util.Color = class _Util_Color {
         [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
         this.scale = arg.scale;
       } else if (typeof(arg) === "string") {
-        let [r, g, b, a] = ColorParser.parse(arg);
-        [this.r, this.g, this.b, this.a] = [r, g, b, a];
+        let rgba = ColorParser.parse(arg);
+        if (rgba.length === 3) {
+          [this.r, this.g, this.b] = rgba;
+          this.a = 255;
+        } else if (rgba.length === 4) {
+          [this.r, this.g, this.b, this.a] = rgba;
+        }
       } else {
         Util.Throw(TypeError, `Invalid argument "${arg}" to Color()`);
       }
@@ -1213,23 +1220,6 @@ Util.Color = class _Util_Color {
     return new Util.Color(255 - this.r, 255 - this.g, 255 - this.b);
   }
 
-  /* Testcases:
-   *  Color classes:
-   *    Pure: 000, F00, 0F0, 00F, FF0, F0F, 0FF, FFF
-   *    Named CSS1:
-   *      maroon, red, purple, fuchsia, green, lime
-   *      olive, yellow, navy, blue, teal, aqua
-   *    Named CSS2:
-   *      orange
-   *    Named CSS3:
-   *    Named CSS4:
-   *      rebeccapurple
-   *  Case 1:
-   *    rgb1 -> hsl -> rgb2 => rgb1 === rgb2
-   *  Case 2:
-   *    rgba1 -> hsla -> rgba2 => rgba1 === rgba2
-   *  "#ff0000" -> hsl -> "#ff0000"
-   */
 };
 
 /* Calculate the Relative Luminance of a color.
