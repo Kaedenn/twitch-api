@@ -1,7 +1,6 @@
 
 "use strict";
 var assert = require("assert");
-var { JSDOM } = require("jsdom");
 
 var {
   Util,
@@ -42,19 +41,19 @@ describe("Util", function() {
       }
     });
     it("defines Util.StringEscapeChars", function() {
-      /* Define known escape sequences */
+      /* Has known escape sequences */
       assert.equal(Util.StringEscapeChars["\b"], "b");
       assert.equal(Util.StringEscapeChars["\f"], "f");
       assert.equal(Util.StringEscapeChars["\n"], "n");
       assert.equal(Util.StringEscapeChars["\r"], "r");
       assert.equal(Util.StringEscapeChars["\t"], "t");
       assert.equal(Util.StringEscapeChars["\v"], "v");
-      /* Define no additional items */
+      /* Has no additional items */
       assert.equal(Object.keys(Util.StringEscapeChars).length, 6);
     });
     it("defines Util.EscapeChars", function() {
       /* TODO: verify content without rewriting content? */
-      /* Define no additional items */
+      /* Has no additional items */
       assert.equal(Object.keys(Util.EscapeChars).length, 5);
     });
     it("defines Util.SetFunctionName", function() {
@@ -217,8 +216,7 @@ describe("Util", function() {
   });
   describe("URL handling", function() {
     it("defines Util.URL_REGEX", function() {
-      /* TODO: fix Util.URL_REGEX and rewrite tests */
-      /*
+      /* TODO: fix Util.URL_REGEX and rewrite tests
       const match = (u) => Util.URL_REGEX.test(u);
       assert.ok(match("http://example.com"));
       assert.ok(match("http://example.com/"));
@@ -229,14 +227,52 @@ describe("Util", function() {
       assert.ok(!match("notasite"));
       */
     });
-    /* TODO */
-  });
-  describe("Error handling", function() {
-    /* TODO */
-  });
-  describe("Logging", function() {
-    it("defines Util.Throw", function() {
+    it("defines Util.URL", function() {
       /* TODO */
+    });
+    it("defines Util.SplitPath", function() {
+      assert.deepEqual(Util.SplitPath("foo/bar"), ["foo", "bar"]);
+      assert.deepEqual(Util.SplitPath("foo/bar/baz"), ["foo/bar", "baz"]);
+      assert.deepEqual(Util.SplitPath("foo"), ["", "foo"]);
+      assert.deepEqual(Util.SplitPath("foo/"), ["foo", ""]);
+    });
+    it("defines Util.JoinPath", function() {
+      assert.equal(Util.JoinPath("foo", "bar"), "foo/bar");
+      assert.equal(Util.JoinPath("", "bar"), "bar");
+      assert.equal(Util.JoinPath("foo", ""), "foo/");
+    });
+    it("defines Util.StripCommonPrefix", function() {
+      /* TODO */
+    });
+  });
+  /* Section "Error handling" tested below */
+  describe("Logging", function() {
+    function foo() {
+      function bar() {
+        Util.Throw(Error, "test");
+        throw new Error("fallback");
+      }
+      bar();
+    }
+    it("defines Util.Throw with stack handling", function() {
+      let err = null;
+      try { foo(); } catch (e) { err = e; }
+      assert.ok(err);
+      assert.ok(err instanceof Error);
+      assert.ok(err.message.startsWith("test"));
+      assert.ok(err._stack_raw);
+      assert.ok(err._stack);
+      assert.ok(err._stack.length > 0);
+      assert.ok(err._stacktrace);
+      assert.ok(err._stacktrace.length > 0);
+      assert.equal(err._stacktrace[0].name, "bar");
+      assert.ok(err._stacktrace[0].file.indexOf("/twitch-api/") > -1);
+      assert.ok(err._stacktrace[0].file.endsWith(".js"));
+      assert.equal(err._stacktrace[0].file, __filename);
+      assert.equal(err._stacktrace[1].name, "foo");
+      /* TODO: ParseStack */
+      /* TODO: FormatStack */
+      /* TODO: Stack trimming */
     });
     it("provides debug levels", function() {
       Util.PushDebugLevel(Util.LEVEL_DEBUG);
@@ -245,12 +281,25 @@ describe("Util", function() {
       assert.ok(Util.LEVEL_DEBUG < Util.LEVEL_TRACE);
       assert.ok(Util.LEVEL_TRACE === Util.LEVEL_MAX);
       assert.ok(Util.PopDebugLevel());
-    });
-    it("provides stack handling", function() {
-      /* TODO */
-    });
-    it("responds to DebugLevel modifications", function() {
-      /* TODO */
+      Util.PushDebugLevel(Util.LEVEL_TRACE);
+      assert.equal(Util.DebugLevel, Util.LEVEL_TRACE);
+      assert.ok(Util.Logger.severityEnabled("ALL"));
+      assert.ok(Util.Logger.severityEnabled("ERROR"));
+      assert.ok(Util.Logger.severityEnabled("WARN"));
+      assert.ok(Util.Logger.severityEnabled("INFO"));
+      assert.ok(Util.Logger.severityEnabled("DEBUG"));
+      assert.ok(Util.Logger.severityEnabled("TRACE"));
+      Util.PushDebugLevel(Util.LEVEL_DEBUG);
+      assert.equal(Util.DebugLevel, Util.LEVEL_DEBUG);
+      assert.ok(Util.Logger.severityEnabled("ERROR"));
+      assert.ok(Util.Logger.severityEnabled("WARN"));
+      assert.ok(Util.Logger.severityEnabled("INFO"));
+      assert.ok(Util.Logger.severityEnabled("DEBUG"));
+      assert.ok(!Util.Logger.severityEnabled("TRACE"));
+      Util.PopDebugLevel();
+      assert.equal(Util.DebugLevel, Util.LEVEL_TRACE);
+      Util.PopDebugLevel();
+      /* TODO: actually log things */
     });
     it("provides hooks", function() {
       /* TODO */
@@ -267,13 +316,46 @@ describe("Util", function() {
   });
   describe("Color handling", function() {
     it("can parse colors", function() {
+      assert.ok(ColorParser.parse);
       /* FIXME: ColorParser is broken as getComputedStyle() returns color names
       assert.ok(ColorParser.parse("red"));
       */
     });
-    /* TODO */
+    it("can convert colors to different formats", function() {
+      /* TODO */
+    });
+    it("defines Color object", function() {
+      let black = new Util.Color(0, 0, 0);
+      let white = new Util.Color(255, 255, 255);
+      assert.equal(black.hex, "#000000");
+      assert.equal(white.hex, "#ffffff");
+      assert.deepEqual(black.rgb, [0, 0, 0]);
+      assert.deepEqual(white.rgb, [255, 255, 255]);
+      assert.deepEqual(black.rgba, [0, 0, 0, 255]);
+      assert.deepEqual(white.rgba, [255, 255, 255, 255]);
+      assert.deepEqual(new Util.Color(black).rgba, [0, 0, 0, 255]);
+      assert.deepEqual(new Util.Color().rgba, [0, 0, 0, 255]);
+      assert.deepEqual(new Util.Color(0, 0, 0, 0).rgba, [0, 0, 0, 0]);
+      assert.deepEqual(new Util.Color([0, 0, 0]).rgba, [0, 0, 0, 255]);
+      assert.deepEqual(new Util.Color([0, 0, 0, 127]).rgba, [0, 0, 0, 127]);
+      assert.deepEqual(new Util.Color("#ff0000").rgba, [255, 0, 0, 255]);
+      /* TODO: Fix ColorParser and test named colors */
+      /* TODO: rgb_1, rgba_1, hsl, hsla, yiq */
+      /* TODO: relative luminance */
+      /* TODO: contrast ratio */
+      /* TODO: inverted */
+    });
+    it("can calculate relative luminances", function() {
+      /* TODO */
+    });
+    it("can calculate contrast ratios", function() {
+      /* TODO */
+    });
+    it("can maximize contrast", function() {
+      /* TODO */
+    });
   });
-  describe("PRNG (Pseudo-Random Number Generator)", function() {
+  describe("PRNG", function() {
     it("defines numToHex", function() {
       assert.equal(Util.Random.numToHex(0), "00");
       assert.equal(Util.Random.numToHex(8), "08");
@@ -316,11 +398,40 @@ describe("Util", function() {
       assert.ok(Util.IsNumber("Infinity"));
       assert.ok(Util.IsNumber("-Infinity"));
       assert.ok(Util.IsNumber("-0"));
-      assert.ok(!Util.IsNumber("1e4"));
+      assert.ok(!Util.IsNumber("0x1a0", 2));
+      assert.ok(!Util.IsNumber("0x1a0", 8));
+      assert.ok(!Util.IsNumber("0x1a0", 10));
+      assert.ok(Util.IsNumber("0x1a0", 16));
+      assert.ok(!Util.IsNumber("07", 2));
+      assert.ok(Util.IsNumber("07", 8));
+      assert.ok(!Util.IsNumber("07asd", 8));
+      assert.ok(!Util.IsNumber("08", 2));
+      assert.ok(!Util.IsNumber("08", 8));
+      assert.ok(Util.IsNumber("08", 10));
+      assert.ok(!Util.IsNumber("asd08", 10));
+      assert.ok(Util.IsNumber("1e4"));
+      assert.ok(Util.IsNumber("1.2e4"));
     });
     it("defines Util.ParseNumber", function() {
+      const tests = {
+        "1": 1,
+        "0": 0,
+        "-1": -1,
+        "-0": 0,
+        "Infinity": Infinity,
+        "-Infinity": -Infinity,
+        "true": true,
+        "false": false,
+        "1e4": 10000,
+        "1.0e4": 10000.0
+      };
+      for (let [k, v] of Object.entries(tests)) {
+        assert.equal(Util.ParseNumber(k), v);
+      }
+      assert.ok(Number.isNaN(Util.ParseNumber("NaN")));
     });
     it("defines Util.EscapeWithMap", function() {
+      /* TODO */
     });
     it("defines Util.Pad", function() {
       assert.equal(Util.Pad(1, 2), "01");
@@ -333,34 +444,101 @@ describe("Util", function() {
       assert.equal(Util.Pad(0, 2, "-"), "-0");
     });
     it("defines Util.StringToCodes", function() {
+      /* TODO */
     });
     it("defines Util.FormatDate", function() {
+      /* TODO */
     });
     it("defines Util.FormatInterval", function() {
+      /* TODO */
     });
     it("defines Util.DecodeFlags", function() {
+      /* TODO */
     });
     it("defines Util.EncodeFlags", function() {
+      /* TODO */
     });
     it("defines Util.EscapeCharCode", function() {
+      /* TODO */
     });
     it("defines Util.EscapeSlashes", function() {
+      /* TODO */
     });
     it("defines Util.StringToRegExp", function() {
+      /* TODO */
     });
     it("defines Util.JSONClone", function() {
+      /* TODO */
     });
-    /* TODO */
   });
   describe("Configuration and localStorage functions", function() {
-    /* NOTE: localStorage may not be implemented */
+    it("supports get/set", function() {
+      Util.SetWebStorageKey("config");
+      assert.equal(Util.GetWebStorage(), null);
+      Util.SetWebStorage({"foo": "bar"});
+      assert.deepEqual(Util.GetWebStorage(), {"foo": "bar"});
+      Util.SetWebStorageKey("config2");
+      assert.equal(Util.GetWebStorage(), null);
+      assert.deepEqual(Util.GetWebStorage("config"), {"foo": "bar"});
+      /* TODO: local storage parser options: b64, xor, bs, etc */
+      /* TODO: StorageAppend */
+      /* TODO: StorageParse, StorageFormat direct tests */
+      /* TODO: DisableLocalStorage tests */
+    });
     /* TODO */
   });
   describe("Query String handling", function() {
-    /* TODO */
+    it("parses query strings", function() {
+      let tests = {
+        "?foo=bar": {"foo": "bar"},
+        "?foo=": {"foo": false},
+        "?foo=1": {"foo": 1},
+        "?foo=true": {"foo": true},
+        "?foo=false": {"foo": false},
+        "?foo=bar%20baz": {"foo": "bar baz"},
+        "?foo": {"foo": true},
+        "?foo=bar&bar=baz": {"foo": "bar", "bar": "baz"},
+        "?foo=bar&foo=baz": {"foo": "baz"},
+        "?foo=1e4": {"foo": 1e4},
+        "?foo=1x12": {"foo": "1x12"},
+        "?foo=bar=baz": {"foo": "bar=baz"}
+      };
+      /* base64: simple */
+      tests[`?base64=${btoa("?foo=bar")}`] = {"foo": "bar"};
+      /* base64: with non-base64 value */
+      tests[`?bar=baz&base64=${btoa("?foo=bar")}`] = {"foo": "bar", "bar": "baz"};
+      /* base64: overriding */
+      tests[`?foo=baz&base64=${btoa("?foo=bar")}`] = {"foo": "bar"};
+      tests[`?base64=${btoa("?foo=bar")}&foo=baz`] = {"foo": "baz"};
+      for (let [qs, obj] of Object.entries(tests)) {
+        assert.deepEqual(Util.ParseQueryString(qs), obj);
+        assert.deepEqual(Util.ParseQueryString(qs.substr(1)), obj);
+        /* possibly nested base64 */
+        assert.deepEqual(Util.ParseQueryString(`?base64=${btoa(qs)}`), obj);
+      }
+    });
+    it("formats query strings", function() {
+      /* TODO */
+    });
   });
   describe("Point-box functions", function() {
-    /* TODO */
+    it("defines {Box,Rect}Contains", function() {
+      let box = [0, 0, 100, 100];
+      let rect = {left: 0, top: 0, right: 100, bottom: 100};
+      assert.ok(Util.BoxContains(0, 0, ...box));
+      assert.ok(Util.BoxContains(100, 0, ...box));
+      assert.ok(Util.BoxContains(0, 100, ...box));
+      assert.ok(Util.BoxContains(100, 100, ...box));
+      assert.ok(Util.BoxContains(50, 50, ...box));
+      assert.ok(!Util.BoxContains(50, 101, ...box));
+      assert.ok(Util.RectContains(0, 0, rect));
+      assert.ok(Util.RectContains(100, 0, rect));
+      assert.ok(Util.RectContains(0, 100, rect));
+      assert.ok(Util.RectContains(100, 100, rect));
+      assert.ok(Util.RectContains(50, 50, rect));
+      assert.ok(!Util.RectContains(50, 101, rect));
+    });
+    /* NOTE: PointIsOn may not be testable */
   });
   describe("CSS functions", function() {
     /* TODO */
@@ -369,16 +547,64 @@ describe("Util", function() {
     /* TODO */
   });
   describe("Miscellaneous functions", function() {
-    /* TODO */
+    it("defines Util.Open", function() {
+      /* Can't really test Util.Open */
+    });
+    it("defines Object{Has,Get,Set,Remove}", function() {
+      let o = {attr: 1, o: {attr: 2, a: {attr: 3}}};
+      assert.equal(Util.ObjectGet(o, "attr"), 1);
+      assert.equal(Util.ObjectGet(o, "o.attr"), 2);
+      assert.equal(Util.ObjectGet(o, "o.a.attr"), 3);
+      assert.ok(Util.ObjectHas(o, "attr"));
+      assert.ok(Util.ObjectHas(o, "o.attr"));
+      assert.ok(Util.ObjectHas(o, "o.a.attr"));
+      Util.ObjectSet(o, "attr", 4);
+      Util.ObjectSet(o, "o.attr", 5);
+      Util.ObjectSet(o, "o.a.attr", 6);
+      assert.equal(Util.ObjectGet(o, "attr"), 4);
+      assert.equal(Util.ObjectGet(o, "o.attr"), 5);
+      assert.equal(Util.ObjectGet(o, "o.a.attr"), 6);
+      assert.deepEqual(o, {attr: 4, o: {attr: 5, a: {attr: 6}}});
+      Util.ObjectRemove(o, "o.a.attr");
+      assert.ok(!Util.ObjectHas(o, "o.a.attr"));
+      assert.deepEqual(o, {attr: 4, o: {attr: 5, a: {}}});
+      Util.ObjectRemove(o, "o.a");
+      assert.ok(!Util.ObjectHas(o, "o.a"));
+      assert.deepEqual(o, {attr: 4, o: {attr: 5}});
+      Util.ObjectSet(o, "o", 1);
+      assert.deepEqual(o, {attr: 4, o: 1});
+    });
+    it("defines ObjectDiff", function() {
+      let o1 = {attr: 1, attr2: 2};
+      let o2 = {attr: 1, attr2: 3};
+      let diff = Util.ObjectDiff(o1, o2);
+      assert.equal(Object.entries(diff).length, 1);
+      assert.deepEqual(diff.attr2, ["value", 2, 3]);
+      o1.attr3 = 3;
+      o2.attr3 = "3";
+      diff = Util.ObjectDiff(o1, o2);
+      assert.equal(Object.entries(diff).length, 2);
+      assert.deepEqual(diff.attr3, ["type", 3, "3"]);
+      o1.attr4 = 4;
+      o2.attr5 = 5;
+      diff = Util.ObjectDiff(o1, o2);
+      assert.equal(Object.entries(diff).length, 4);
+      assert.deepEqual(diff.attr4, ["<", 4, null]);
+      assert.deepEqual(diff.attr5, [">", null, 5]);
+      o1.obj = {attr: 1};
+      o2.obj = {attr: 2};
+      diff = Util.ObjectDiff(o1, o2);
+      assert.deepEqual(diff.obj, ["value", o1.obj, o2.obj]);
+    });
+    it("defines StyleToObject", function() {
+      /* TODO */
+    });
   });
-  describe("Construct global objects", function() {
-    /* TODO */
-  });
+  /* Section "Construct global objects" tested indirectly already */
 });
 
-/* folds: `execute getline(".")`
-%g/^[ ]\+it(/norm $zf%
-%g/^[ ]\+describe(/norm $zf%
-*/
+/*
+ * vim-fold: ^[ ]\+it(
+ */
 
 /* globals describe it */

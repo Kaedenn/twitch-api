@@ -15,6 +15,17 @@ for (let key of Reflect.ownKeys(dom.window)) {
   }
 }
 
+/* Define localStorage */
+const Storage = require("jsdom/lib/jsdom/living/generated/Storage.js");
+delete window.localStorage;
+window.localStorage = Storage.create([], {
+  associatedWindow: dom.window,
+  storageArea: new Map(),
+  type: "localStorage",
+  url: dom.window.document.documentURI,
+  storageQuota: 1000000
+});
+
 function getOwnKeysOf(obj) {
   return Reflect.ownKeys(global.window).map((k) => JSON.stringify(k)).sort();
 }

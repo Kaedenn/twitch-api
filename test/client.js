@@ -5,6 +5,7 @@ var mocha = require("mocha");
 var assert = require("assert");
 
 var {Util} = require("../utility.js");
+Util.DebugLevel = Util.LEVEL_DEBUG;
 
 /* Must be stored in global for client.js */
 global.Util = Util;
@@ -55,7 +56,6 @@ describe("Client", function() {
     assert.ok(TwitchClient.ESET_TURBO_3);
     assert.ok(TwitchClient.ESET_TURBO_4);
     assert.ok(TwitchClient.ESET_PRIME);
-    Util.DebugLevel = Util.LEVEL_OFF;
     assert.equal(new TwitchClient({}).toString(), "[object TwitchClient]");
   });
   describe("Simple connection", function() {
