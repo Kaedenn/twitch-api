@@ -555,7 +555,7 @@ Util.Throw = function _Util_Throw(type, msg) {
   e._stack_raw = e.stack;
   e._stack = Util.GetStack();
   e._stacktrace = Util.ParseStack(Util.GetStack()) || [];
-  e._stacktrace.shift();
+  e._stacktrace.shift(); /* Throw */
   throw e;
 };
 
@@ -613,7 +613,12 @@ Util.GetStackTrimBegin = function _Util_GetStackTrimBegin() {
 Util.GetStack = function _Util_GetStack() {
   let lines = [];
   try { throw new Error(); } catch (e) { lines = e.stack.trim().split("\n"); }
-  lines.shift(); /* Discard _Util_GetStack */
+  if (lines.length > 0) {
+    /* Sometimes browsers add one more frame: the Error constructor */
+    if (lines[0] === "Error") lines.shift();
+    /* Discard _Util_GetStack */
+    lines.shift();
+  }
   for (let i = 0; i < Util.GetStackTrimBegin(); ++i) {
     lines.shift();
   }
@@ -627,12 +632,17 @@ Util.ParseStack = function _Util_ParseStack(lines) {
     let m = null;
     let frame = {
       text: line,
-      name: "???",
+      name: "<unnamed>",
       file: null,
       line: 0,
       column: 0
     };
-    try { frame.file = window.location.pathname; } catch (e) { frame.file = "unknown"; }
+    try {
+      frame.file = window.location.pathname;
+    }
+    catch (e) {
+      frame.file = "unknown";
+    }
     if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/)) !== null) {
       // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)\)"
       frame.name = m[1];
@@ -646,6 +656,11 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frame.file = m[2];
       frame.line = Util.ParseNumber(m[3]);
       frame.column = Util.ParseNumber(m[4]);
+    } else if ((m = line.match(/^[ ]*at (.*):(\d+):(\d+)$/)) !== null) {
+      // nodejs?
+      frame.file = m[1];
+      frame.line = Util.ParseNumber(m[2]);
+      frame.column = Util.ParseNumber(m[3]);
     } else if ((m = line.match(/^(.*):(\d+):(\d+)$/)) !== null) {
       /* (name and/or label):(line):(column) */
       frame.name = m[1];
@@ -1463,8 +1478,8 @@ Util.FireEvent = function _Util_FireEvent(e) {
 /* Parsing, formatting, and string functions {{{0 */
 
 /* Return whether or not a string is a number */
-Util.IsNumber = function _Util_IsNumber(str) {
-  let temp = Util.ParseNumber(str);
+Util.IsNumber = function _Util_IsNumber(str, base=10) {
+  let temp = Util.ParseNumber(str, base);
   return typeof(temp) === "number";
 };
 
@@ -1479,15 +1494,13 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
     return null;
   } else if (str === "true" || str === "false") {
     /* Technically not a number, but parse anyway */
-    return Boolean(str);
+    return str === "true";
   } else if (str === "Infinity") {
     return Infinity;
   } else if (str === "-Infinity") {
     return -Infinity;
   } else if (str === "NaN") {
     return Number.NaN;
-  } else if (str.match(/^\d*\.\d+(?:e\d+)?$/)) {
-    return Number.parseFloat(str);
   } else if (base === 2 && str.match(/^[+-]?[01]+$/)) {
     return Number.parseInt(str, 2);
   } else if (base === 8 && str.match(/^[+-]?[0-7]+$/)) {
@@ -1496,6 +1509,8 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
     return Number.parseInt(str, 10);
   } else if (base === 16 && str.match(/^[+-]?0[Xx][0-9a-fA-F]+$/)) {
     return Number.parseInt(str, 16);
+  } else if (base === 10 && str.match(/^\d*(?:\.\d+)?(?:e\d+)?$/)) {
+    return Number.parseFloat(str);
   } else {
     /* Failed to parse */
     return null;
@@ -1838,7 +1853,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(queryString=null) {
     } else if (v.length === 0) {
       obj[k] = false;
     } else if (v === "true" || v === "false") {
-      obj[k] = Boolean(v);
+      obj[k] = v === "true";
     } else if (v === "null") {
       obj[k] = null;
     } else if (Util.IsNumber(v)) {
@@ -2099,7 +2114,7 @@ Util.ObjectHas = function _Util_ObjectHas(obj, path) {
 /* Return the (first level) differences between two objects
  *  [<status>, <o1 value>, <o2 value>]
  *  "type": o1 value and o2 value differ in type
- *  "value": o1 value and o2 value differ
+ *  "value": o1 value and o2 value differ in values only
  *  "<": o1 key exists but o2 key does not: o2 value is null
  *  ">": o1 key does not exist but o2 key does: o1 value is null */
 Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
@@ -2109,10 +2124,10 @@ Util.ObjectDiff = function _Util_ObjectDiff(o1, o2) {
     let o1_has = Util.ObjectHas(o1, key);
     let o2_has = Util.ObjectHas(o2, key);
     if (o1_has && o2_has) {
-      if (o1[key] !== o2[key]) {
-        results[key] = ["value", o1[key], o2[key]];
-      } else if (typeof(o1[key]) !== typeof(o2[key])) {
+      if (typeof(o1[key]) !== typeof(o2[key])) {
         results[key] = ["type", o1[key], o2[key]];
+      } else if (o1[key] !== o2[key]) {
+        results[key] = ["value", o1[key], o2[key]];
       } else if (typeof(o1[key]) === "object") {
         let o1_val = JSON.stringify(Object.entries(o1[key]).sort());
         let o2_val = JSON.stringify(Object.entries(o2[key]).sort());
