@@ -1279,6 +1279,8 @@ class TwitchClient { /* exported TwitchClient */
   /* Load the specified emote set(s); eset can be either a number or a
    * comma-separated sequence of numbers */
   AddEmoteSet(eset) {
+    /* FIXME: Duplicates emotes present in more than one emote set.
+     * Emotes in higher emote set take precedence over lower emote sets? */
     let eset_url = Twitch.URL.EmoteSet(eset);
     this._api.Get(eset_url, (json) => {
       for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
@@ -1627,13 +1629,6 @@ class TwitchClient { /* exported TwitchClient */
           this._capabilities = result.flags;
           /* Load global emotes */
           this.AddEmoteSet(TwitchClient.ESET_GLOBAL);
-          /* Fix duplicate emotes in Twitch.FormatEmotes first
-          this.AddEmoteSet(TwitchClient.ESET_TURBO_1);
-          this.AddEmoteSet(TwitchClient.ESET_TURBO_2);
-          this.AddEmoteSet(TwitchClient.ESET_TURBO_3);
-          this.AddEmoteSet(TwitchClient.ESET_TURBO_4);
-          */
-          this.AddEmoteSet(TwitchClient.ESET_PRIME);
           /* Obtain global cheermotes */
           this._getGlobalCheers();
           break;
@@ -2055,11 +2050,8 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   } else {
     result = Twitch.DecodeFlag(value);
   }
-  if (typeof(result) === "string") {
-    let temp = Util.ParseNumber(result);
-    if (!Number.isNaN(temp)) {
-      result = temp;
-    }
+  if (typeof(result) === "string" && Util.IsNumber(result)) {
+    result = Util.ParseNumber(result);
   }
   return result;
 };

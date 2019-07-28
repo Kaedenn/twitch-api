@@ -2432,6 +2432,8 @@ var TwitchClient = function () {
     value: function AddEmoteSet(eset) {
       var _this11 = this;
 
+      /* FIXME: Duplicates emotes present in more than one emote set.
+       * Emotes in higher emote set take precedence over lower emote sets? */
       var eset_url = Twitch.URL.EmoteSet(eset);
       this._api.Get(eset_url, function (json) {
         var _iteratorNormalCompletion28 = true;
@@ -3026,13 +3028,6 @@ var TwitchClient = function () {
             _this12._capabilities = result.flags;
             /* Load global emotes */
             _this12.AddEmoteSet(TwitchClient.ESET_GLOBAL);
-            /* Fix duplicate emotes in Twitch.FormatEmotes first
-            this.AddEmoteSet(TwitchClient.ESET_TURBO_1);
-            this.AddEmoteSet(TwitchClient.ESET_TURBO_2);
-            this.AddEmoteSet(TwitchClient.ESET_TURBO_3);
-            this.AddEmoteSet(TwitchClient.ESET_TURBO_4);
-            */
-            _this12.AddEmoteSet(TwitchClient.ESET_PRIME);
             /* Obtain global cheermotes */
             _this12._getGlobalCheers();
             break;
@@ -3846,11 +3841,8 @@ Twitch.ParseFlag = function _Twitch_ParseFlag(key, value) {
   } else {
     result = Twitch.DecodeFlag(value);
   }
-  if (typeof result === "string") {
-    var temp = Util.ParseNumber(result);
-    if (!Number.isNaN(temp)) {
-      result = temp;
-    }
+  if (typeof result === "string" && Util.IsNumber(result)) {
+    result = Util.ParseNumber(result);
   }
   return result;
 };
