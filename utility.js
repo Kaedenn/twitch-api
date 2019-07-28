@@ -1,12 +1,10 @@
 "use strict";
 
 /* FIXME:
- *
+ * On-demand module loading fails: we can't determine our own path
  * Util.URL_REGEX doesn't match valid URLs:
  *  http://example.com
  *  https://example.com/
- *
- * ColorParser doesn't work in node.js. Use tinycolor2 instead.
  */
 
 /* TODO:
@@ -48,12 +46,124 @@ let Util = {};
 Util.__wskey = null;
 Util.__wscfg = "kae-twapi-local-key";
 
+/* Functions to run at the bottom of this script */
+Util._deferred = [];
+
+/* Append a function to run, optionally storing the value in a Util key */
+Util._defer = function _Util_defer(...args) {
+  if (args.length === 1) {
+    Util._deferred.push(args[0]);
+  } else if (args.length === 2) {
+    Util._deferred.push(args);
+  } else {
+    throw new Error(`Can't defer ${args}; expected at most two arguments`);
+  }
+};
+
+/* As above, but insert the function before others */
+Util._deferFirst = function _Util_deferFirst(...args) {
+  if (args.length === 1) {
+    Util._deferred.unshift(args[0]);
+  } else if (args.length === 2) {
+    Util._deferred.unshift(args);
+  } else {
+    throw new Error(`Can't defer ${args}; expected at most two arguments`);
+  }
+};
+
 /* Everyone needs an ASCII table */
 Util.ASCII = "\u0000\u0001\u0002\u0003\u0004\u0005\u0006\u0007\b\t\n" +
              "\u000b\f\r\u000e\u000f\u0010\u0011\u0012\u0013\u0014" +
              "\u0015\u0016\u0017\u0018\u0019\u001a\u001b\u001c\u001d" +
              "\u001e\u001f !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJK" +
              "LMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~\u007f";
+
+/* Runtime identification */
+Util.Runtime = class {
+  static get Node() { return "Node"; }
+  static get AMD() { return "AMD"; }
+  static get Browser() { return "Browser"; }
+
+  static get() {
+    if (typeof module !== "undefined" && module.exports) {
+      return Util.Runtime.Node;
+    } else if (typeof define === "function" && define.amd) {
+      return Util.Runtime.AMD;
+    } else {
+      return Util.Runtime.Browser;
+    }
+  }
+};
+
+/* Path to the Twitch API library */
+Util.Path = class {
+  /* Filenames for Twitch API library objects */
+  static get UtilityJS() { return "utility.js"; }
+  static get ClientJS() { return "client.js"; }
+  static get TinyColorJS() { return "assets/tinycolor.js"; }
+
+  /* Private: Enumerate loaded scripts */
+  static _getScripts() {
+    if (document.scripts) {
+      return Array.of(...document.scripts);
+    } else {
+      return $("script");
+    }
+  }
+
+  /* Private: Obtain a script with the given basename */
+  static _getScript(basename) {
+    let filename = "/" + basename.replace(/^[/]*/, "");
+    for (let s of Util.Path._getScripts()) {
+      let src = s.hasAttribute("src") ? s.getAttribute("src") : null;
+      if (src && src.endsWith(filename)) {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  /* Private: Get the directory containing the given script filename */
+  static _getPathTo(filename) {
+    if (Util.Runtime.get() === Util.Runtime.Node) {
+      /* TODO: Figure this out */
+      if (filename.indexOf('/') > -1) {
+        return filename.substr(0, filename.lastIndexOf('/'));
+      } else {
+        return "";
+      }
+    } else {
+      let s = Util.Path._getScript(filename);
+      if (s) {
+        let src = s.getAttribute("src");
+        return src.substr(0, src.lastIndexOf('/'));
+      }
+    }
+    return null;
+  }
+
+  static get TWAPI() {
+    return Util.Path._getPathTo(Util.Path.UtilityJS);
+  }
+};
+
+/* Module imports */
+Util._deferFirst(() => {
+  /* tinycolor2: color parser and color arithmetic library */
+  if (typeof tinycolor === "undefined") {
+    if (Util.Runtime.get() === Util.Runtime.Browser) {
+      let s = document.createElement("script");
+      s.setAttribute("type", "text/javascript");
+      s.setAttribute("src", Util.Path.TWAPI + "/" + Util.Path.TinyColorJS);
+      s.onload = function() {
+        Util._tinycolor = window.tinycolor;
+      };
+      document.querySelector("head").appendChild(s);
+    } else {
+      Util._tinycolor = window.tinycolor = require("tinycolor2");
+    }
+  }
+});
 
 /* WebSocket status codes */
 Util.WSStatusCode = {
@@ -904,6 +1014,35 @@ class Logging {
   ErrorOnlyOnce(...args) { this.doLog("ERROR", args, false, true); }
 }
 
+/* Defer logger construction */
+Util._defer("Logger", () => new Logging());
+
+/* Defer creation of logging functions */
+Util._defer("Trace", () => Util.Logger.Trace.bind(Util.Logger));
+Util._defer("Debug", () => Util.Logger.Debug.bind(Util.Logger));
+Util._defer("Log", () => Util.Logger.Info.bind(Util.Logger));
+Util._defer("Info", () => Util.Logger.Info.bind(Util.Logger));
+Util._defer("Warn", () => Util.Logger.Warn.bind(Util.Logger));
+Util._defer("Error", () => Util.Logger.Error.bind(Util.Logger));
+Util._defer("TraceOnly", () => Util.Logger.TraceOnly.bind(Util.Logger));
+Util._defer("DebugOnly", () => Util.Logger.DebugOnly.bind(Util.Logger));
+Util._defer("LogOnly", () => Util.Logger.InfoOnly.bind(Util.Logger));
+Util._defer("InfoOnly", () => Util.Logger.InfoOnly.bind(Util.Logger));
+Util._defer("WarnOnly", () => Util.Logger.WarnOnly.bind(Util.Logger));
+Util._defer("ErrorOnly", () => Util.Logger.ErrorOnly.bind(Util.Logger));
+Util._defer("TraceOnce", () => Util.Logger.TraceOnce.bind(Util.Logger));
+Util._defer("DebugOnce", () => Util.Logger.DebugOnce.bind(Util.Logger));
+Util._defer("LogOnce", () => Util.Logger.InfoOnce.bind(Util.Logger));
+Util._defer("InfoOnce", () => Util.Logger.InfoOnce.bind(Util.Logger));
+Util._defer("WarnOnce", () => Util.Logger.WarnOnce.bind(Util.Logger));
+Util._defer("ErrorOnce", () => Util.Logger.ErrorOnce.bind(Util.Logger));
+Util._defer("TraceOnlyOnce", () => Util.Logger.TraceOnlyOnce.bind(Util.Logger));
+Util._defer("DebugOnlyOnce", () => Util.Logger.DebugOnlyOnce.bind(Util.Logger));
+Util._defer("LogOnlyOnce", () => Util.Logger.InfoOnlyOnce.bind(Util.Logger));
+Util._defer("InfoOnlyOnce", () => Util.Logger.InfoOnlyOnce.bind(Util.Logger));
+Util._defer("WarnOnlyOnce", () => Util.Logger.WarnOnlyOnce.bind(Util.Logger));
+Util._defer("ErrorOnlyOnce", () => Util.Logger.ErrorOnlyOnce.bind(Util.Logger));
+
 /* End logging 0}}} */
 
 /* Color handling {{{0 */
@@ -923,11 +1062,30 @@ class ColorParser {
     this._e.setAttribute("height", "0px");
     document.body.appendChild(this._e);
     /* Define parsing regexes */
+    this._hex_pat = /#([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})([0-9a-fA-F]{2})?/;
     this._rgb_pat = /rgb\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
     this._rgba_pat = /rgba\(([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+),[ ]*([.\d]+)\)/;
   }
 
+  _addColor(name, hex) {
+    let m = hex.match(this._hex_pat);
+    if (m !== null) {
+      let color = [
+        Util.ParseNumber("0x" + m[1], 16),
+        Util.ParseNumber("0x" + m[2], 16),
+        Util.ParseNumber("0x" + m[3], 16)
+      ];
+      if (m[4]) {
+        color.push(Util.ParseNumber("0x" + m[4], 16));
+      }
+      this._cache[name] = color;
+    } else {
+      Util.Error(`Invalid color "${hex}" for "${name}"; expected hex code`);
+    }
+  }
+
   _parse(color) {
+    /* Returned cached colors */
     if (this._cache[color]) {
       return this._cache[color];
     }
@@ -943,7 +1101,7 @@ class ColorParser {
     if (m !== null) {
       rgbtuple = m.slice(1);
     } else {
-      Util.Error("getComputedStyle broke:", rgbstr, ", this._e:", this._e);
+      Util.Error(`getComputedStyle broke: "${rgbstr}", this._e:`, this._e);
       Util.Error("getComputedStyle(e): ", window.getComputedStyle(this._e));
       Util.Throw(Error, `Failed to parse computed color ${rgbstr}`);
     }
@@ -959,12 +1117,34 @@ class ColorParser {
     return res;
   }
 
-  static parse(color, failQuiet=false) {
+  /* Private: Obtain a reference to the parser */
+  static _getParser() {
     if (Util._ColorParser === null) {
-      Util._ColorParser = new ColorParser();
+      Util._ColorParser = new Util.ColorParser();
     }
+    return Util._ColorParser;
+  }
+
+  /* Return whether or not the given color is cached */
+  static cached(color) {
+    return Util.ColorParser._getParser()._cache.hasOwnProperty(color);
+  }
+
+  /* Parse a color string: try tinycolor, then the internal element */
+  static parse(color, failQuiet=false) {
     try {
-      return Util._ColorParser._parse(color);
+      const tc = Util._tinycolor || window.tinycolor || tinycolor;
+      let c = tc(color);
+      if (c.isValid()) {
+        let res = c.toRgb();
+        /* tinycolor alpha goes from 0 to 1, but we want 0 to 255 */
+        return [res.r, res.g, res.b, res.a * 255];
+      }
+      /* fall-through on false */
+    }
+    catch (e) { /* fall-through */ }
+    try {
+      return Util.ColorParser._getParser()._parse(color);
     }
     catch (e) {
       if (failQuiet) {
@@ -974,9 +1154,34 @@ class ColorParser {
       }
     }
   }
+
+  /* Add a color to the color parser */
+  static addColor(name, hex) {
+    Util.ColorParser._getParser()._addColor(name, hex);
+  }
+
+  /* Add multiple colors to the color parser. A color is either an array of two
+   * elements [name, hex] or an object with .name and .code attributes */
+  static addColors(...colors) {
+    for (let c of colors) {
+      if (Util.IsArray(c) && c.length === 2) {
+        Util.ColorParser.addColor(c[0], c[1]);
+      } else if (c.name && c.code) {
+        Util.ColorParser.addColor(c.name, c.code);
+      } else if (c.name && c.hex) {
+        Util.ColorParser.addColor(c.name, c.hex);
+      } else {
+        Util.Error("Invalid color", c);
+      }
+    }
+  }
 }
 
-/* Class for handling colors and color arithmetic */
+/* Expose ColorParser in Util */
+Util._defer("ColorParser", () => ColorParser);
+
+/* Class for handling colors and color arithmetic.
+ * Note that changing hue, saturation, or luminance can be irreversible. */
 Util.Color = class _Util_Color {
   /* Convert (r, g, b) (0~255) to (h, s, l) (deg, 0~100, 0~100) */
   static RGBToHSL(r, g, b) {
@@ -1100,7 +1305,7 @@ Util.Color = class _Util_Color {
         [this.r, this.g, this.b, this.a] = [arg.r, arg.g, arg.b, arg.a];
         this.scale = arg.scale;
       } else if (typeof(arg) === "string") {
-        let rgba = ColorParser.parse(arg);
+        let rgba = Util.ColorParser.parse(arg);
         if (rgba.length === 3) {
           [this.r, this.g, this.b] = rgba;
           this.a = 255;
@@ -1128,11 +1333,28 @@ Util.Color = class _Util_Color {
     return `#${r}${g}${b}${a}`;
   }
 
+  /* Attribute: r, g, b, a, scaled to [0,1] */
+  get r_1() { return this.r / 255; }
+  get g_1() { return this.g / 255; }
+  get b_1() { return this.b / 255; }
+  get a_1() { return this.a / 255; }
+
   /* Attribute: [r, g, b] */
   get rgb() { return [this.r, this.g, this.b]; }
+  set rgb(rgb) {
+    this.r = rgb.r || rgb[0];
+    this.g = rgb.g || rgb[1];
+    this.b = rgb.b || rgb[2];
+  }
 
   /* Attribute: [r, g, b, a] */
   get rgba() { return [this.r, this.g, this.b, this.a]; }
+  set rgba(rgba) {
+    this.r = rgba.r || rgba[0];
+    this.g = rgba.g || rgba[1];
+    this.b = rgba.b || rgba[2];
+    this.a = rgba.a || rgba[3];
+  }
 
   /* Attribute: [r, g, b] scaled to [0,1] */
   get rgb_1() {
@@ -1153,15 +1375,15 @@ Util.Color = class _Util_Color {
     [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
   }
 
-  /* Attribute: [h, s, l, a] */
+  /* Attribute: [h, s, l, a]; 0 <= a <= 1 */
   get hsla() {
     let [r, g, b] = Util.Color.RGBToHSL(this.r, this.g, this.b);
-    return [r, g, b, this.a];
+    return [r, g, b, this.a_1];
   }
   set hsla(hsla) {
     let [h, s, l, a] = hsla;
     [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
-    this.a = a;
+    this.a = a * 255;
   }
 
   /* Attribute: hue of [h, s, l] */
@@ -1220,6 +1442,13 @@ Util.Color = class _Util_Color {
     return new Util.Color(255 - this.r, 255 - this.g, 255 - this.b);
   }
 
+  /* Returns true if the color matches */
+  equals(color) {
+    let [rs, gs, bs, as] = this.rgba;
+    let [ro, go, bo, ao] = new Util.Color(color).rgba;
+    return rs === ro && gs === go && bs === bo && as === ao;
+  }
+
 };
 
 /* Calculate the Relative Luminance of a color.
@@ -1228,8 +1457,7 @@ Util.Color = class _Util_Color {
  *  Util.RelativeLuminance([r, g, b[, a]])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
-  let color = ColorParser.parse(args.length === 1 ? args[0] : args);
-  let color_rgb = [color[0] / 255.0, color[1] / 255.0, color[2] / 255.0];
+  let color = (new Util.Color(...args)).rgb_1;
   function c2cx(c) {
     if (c < 0.03928) {
       return c / 12.92;
@@ -1237,9 +1465,9 @@ Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
       return Math.pow((c + 0.055) / 1.055, 2.4);
     }
   }
-  let l_red = 0.2126 * c2cx(color_rgb[0]);
-  let l_green = 0.7152 * c2cx(color_rgb[1]);
-  let l_blue = 0.0722 * c2cx(color_rgb[2]);
+  let l_red = 0.2126 * c2cx(color[0]);
+  let l_green = 0.7152 * c2cx(color[1]);
+  let l_blue = 0.0722 * c2cx(color[2]);
   return l_red + l_green + l_blue;
 };
 
@@ -1398,6 +1626,9 @@ Util.RandomGenerator = class _Util_Random {
   }
 
 };
+
+/* Defer loading */
+Util._defer("Random", () => new Util.RandomGenerator());
 
 /* Convert a fixed-size array (Uint<N>Array) to a single number (big endian) */
 Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
@@ -2145,53 +2376,38 @@ Util.StyleToObject = function _Util_StyleToObject(style) {
 
 /* End miscellaneous functions 0}}} */
 
-/* Construct global objects {{{0 */
+/* Construct and export global objects {{{0 */
 
-/* Logger instance  */
-Util.Logger = new Logging();
-
-/* Log with stacktrace */
-Util.Trace = Util.Logger.Trace.bind(Util.Logger);
-Util.Debug = Util.Logger.Debug.bind(Util.Logger);
-Util.Log = Util.Logger.Info.bind(Util.Logger);
-Util.Info = Util.Logger.Info.bind(Util.Logger);
-Util.Warn = Util.Logger.Warn.bind(Util.Logger);
-Util.Error = Util.Logger.Error.bind(Util.Logger);
-
-/* Log without stacktrace */
-Util.TraceOnly = Util.Logger.TraceOnly.bind(Util.Logger);
-Util.DebugOnly = Util.Logger.DebugOnly.bind(Util.Logger);
-Util.LogOnly = Util.Logger.InfoOnly.bind(Util.Logger);
-Util.InfoOnly = Util.Logger.InfoOnly.bind(Util.Logger);
-Util.WarnOnly = Util.Logger.WarnOnly.bind(Util.Logger);
-Util.ErrorOnly = Util.Logger.ErrorOnly.bind(Util.Logger);
-
-/* Log once with stacktrace */
-Util.TraceOnce = Util.Logger.TraceOnce.bind(Util.Logger);
-Util.DebugOnce = Util.Logger.DebugOnce.bind(Util.Logger);
-Util.LogOnce = Util.Logger.InfoOnce.bind(Util.Logger);
-Util.InfoOnce = Util.Logger.InfoOnce.bind(Util.Logger);
-Util.WarnOnce = Util.Logger.WarnOnce.bind(Util.Logger);
-Util.ErrorOnce = Util.Logger.ErrorOnce.bind(Util.Logger);
-
-/* Log once without stacktrace */
-Util.TraceOnlyOnce = Util.Logger.TraceOnlyOnce.bind(Util.Logger);
-Util.DebugOnlyOnce = Util.Logger.DebugOnlyOnce.bind(Util.Logger);
-Util.LogOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
-Util.InfoOnlyOnce = Util.Logger.InfoOnlyOnce.bind(Util.Logger);
-Util.WarnOnlyOnce = Util.Logger.WarnOnlyOnce.bind(Util.Logger);
-Util.ErrorOnlyOnce = Util.Logger.ErrorOnlyOnce.bind(Util.Logger);
-
-/* PRNG instance */
-Util.Random = new Util.RandomGenerator();
+(function() {
+  for (let f of Util._deferred) {
+    if (typeof(f) === "function") {
+      f();
+    } else if (Util.IsArray(f) && f.length === 2) {
+      Util[f[0]] = f[1]();
+    }
+  }
+  const twapiExports = {
+    "Util": Util,
+    "Logging": Logging,
+    "ColorParser": ColorParser,
+    "tinycolor": window.tinycolor
+  };
+  if (typeof module !== "undefined" && module.exports) {
+    /* nodejs: module exports */
+    for (let [k, v] of Object.entries(twapiExports)) {
+      module.exports[k] = v;
+    }
+  } else if (typeof define !== "undefined") {
+    /* AMD/requirejs: define module */
+    define(() => twapiExports);
+  } else if (typeof window !== "undefined") {
+    /* Browser: define objects */
+    for (let [k, v] of Object.entries(twapiExports)) {
+      window[k] = v;
+    }
+  }
+})();
 
 /* End constructing global objects 0}}} */
 
-/* Construct the module */
-try {
-  /* globals module */
-  module.exports.Util = Util;
-  module.exports.Logging = Logging;
-  module.exports.ColorParser = ColorParser;
-}
-catch (e) { /* eslint:no-empty */ }
+/* globals tinycolor module define require */

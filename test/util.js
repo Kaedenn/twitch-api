@@ -5,7 +5,8 @@ var assert = require("assert");
 var {
   Util,
   Logging,
-  ColorParser} = require("../utility.js");
+  ColorParser,
+  tinycolor} = require("../utility.js");
 
 Util.DebugLevel = Util.LEVEL_TRACE;
 
@@ -315,40 +316,95 @@ describe("Util", function() {
     });
   });
   describe("Color handling", function() {
+    const C = (...args) => new Util.Color(...args);
+    const black = new Util.Color(0, 0, 0);
+    const white = new Util.Color(255, 255, 255);
     it("can parse colors", function() {
-      assert.ok(ColorParser.parse);
-      /* FIXME: ColorParser is broken as getComputedStyle() returns color names
-      assert.ok(ColorParser.parse("red"));
-      */
+      assert.ok(typeof tinycolor !== "undefined");
+      assert.ok(Util.ColorParser.parse);
+      assert.ok(Util.ColorParser.parse("red"));
+      assert.ok(Util.ColorParser.parse("rebeccapurple"));
+      assert.ok(Util.ColorParser.parse("#000000"));
+      assert.ok(Util.ColorParser.parse("#00000000"));
+      assert.ok(Util.ColorParser.parse("#aabbcc"));
+      assert.ok(Util.ColorParser.parse("#aabbccdd"));
+      assert.throws(() => Util.ColorParser.parse("lemon"));
     });
     it("can convert colors to different formats", function() {
       /* TODO */
     });
     it("defines Color object", function() {
-      let black = new Util.Color(0, 0, 0);
-      let white = new Util.Color(255, 255, 255);
+      let red = new Util.Color("red");
       assert.equal(black.hex, "#000000");
       assert.equal(white.hex, "#ffffff");
       assert.deepEqual(black.rgb, [0, 0, 0]);
       assert.deepEqual(white.rgb, [255, 255, 255]);
       assert.deepEqual(black.rgba, [0, 0, 0, 255]);
       assert.deepEqual(white.rgba, [255, 255, 255, 255]);
-      assert.deepEqual(new Util.Color(black).rgba, [0, 0, 0, 255]);
-      assert.deepEqual(new Util.Color().rgba, [0, 0, 0, 255]);
-      assert.deepEqual(new Util.Color(0, 0, 0, 0).rgba, [0, 0, 0, 0]);
-      assert.deepEqual(new Util.Color([0, 0, 0]).rgba, [0, 0, 0, 255]);
-      assert.deepEqual(new Util.Color([0, 0, 0, 127]).rgba, [0, 0, 0, 127]);
-      assert.deepEqual(new Util.Color("#ff0000").rgba, [255, 0, 0, 255]);
-      /* TODO: Fix ColorParser and test named colors */
-      /* TODO: rgb_1, rgba_1, hsl, hsla, yiq */
-      /* TODO: relative luminance */
-      /* TODO: contrast ratio */
-      /* TODO: inverted */
+      assert.deepEqual(C(black).rgba, [0, 0, 0, 255]);
+      assert.deepEqual(C().rgba, [0, 0, 0, 255]);
+      assert.deepEqual(C(0, 0, 0, 0).rgba, [0, 0, 0, 0]);
+      assert.deepEqual(C([0, 0, 0]).rgba, [0, 0, 0, 255]);
+      assert.deepEqual(C([0, 0, 0, 127]).rgba, [0, 0, 0, 127]);
+      assert.deepEqual(C("#ff0000").rgba, [255, 0, 0, 255]);
+      assert.ok(red.equals("#ff0000"));
+      assert.ok(red.equals("#ff0000ff"));
+      assert.ok(red.equals("rgb(255, 0, 0)"));
+      assert.ok(red.equals("rgba(255, 0, 0, 1)"));
+      assert.ok(red.equals("hsl(0, 1, 0.5)"));
+      assert.ok(red.equals("hsla(0, 1, 0.5, 1)"));
+      assert.throws(() => C("notacolor"));
+      assert.deepEqual(red.rgb_1, [1, 0, 0]);
+      assert.deepEqual(red.rgba_1, [1, 0, 0, 1]);
+      assert.deepEqual(red.hsl, [0, 1, 0.5]);
+      assert.deepEqual(red.hsla, [0, 1, 0.5, 1]);
+      assert.equal(red.r, 255);
+      assert.equal(red.g, 0);
+      assert.equal(red.b, 0);
+      assert.equal(red.a, 255);
+      assert.equal(red.r_1, 1);
+      assert.equal(red.g_1, 0);
+      assert.equal(red.b_1, 0);
+      assert.equal(red.a_1, 1);
+      /* TODO: yiq */
+      assert.equal(white.inverted().hex, "#000000");
+      assert.equal(black.inverted().hex, "#ffffff");
+      assert.equal(red.inverted().hex, "#00ffff");
+      assert.equal(red.inverted().inverted().hex, "#ff0000");
+      assert.equal(C("#7f7f7f").inverted().hex, "#808080");
+      assert.equal(C("#808080").inverted().hex, "#7f7f7f");
+    });
+    it("supports color modification", function() {
+      let c = new Util.Color("yellow");
+      assert.equal(c.hex, "#ffff00");
+      c.hue = 0;
+      assert.equal(c.hex, "#ff0000");
+      c.saturation = 0;
+      /* This causes the hue to be lost */
+      assert.equal(c.hex, "#808080");
+      c.saturation = 1;
+      c.luminance = 0;
+      assert.equal(c.hex, "#000000");
+      c.luminance = 1;
+      assert.equal(c.hex, "#ffffff");
+      c.rgba = [0, 0, 0, 255];
+      assert.equal(c.hex, "#000000");
+      c.rgba = [255, 255, 255, 255];
+      assert.equal(c.hex, "#ffffff");
     });
     it("can calculate relative luminances", function() {
-      /* TODO */
+      /* TODO: more relative luminance coverage */
+      assert.equal(white.getRelativeLuminance(), 1);
+      assert.equal(black.getRelativeLuminance(), 0);
+      assert.equal(Util.RelativeLuminance(white), 1);
+      assert.equal(Util.RelativeLuminance(black), 0);
+      assert.equal(Util.RelativeLuminance("white"), 1);
+      assert.equal(Util.RelativeLuminance("black"), 0);
+      assert.equal(Util.RelativeLuminance("rgba(0, 0, 0, 255)"), 0);
+      assert.equal(Util.RelativeLuminance("hsl(0, 1, 1)"), 1);
     });
     it("can calculate contrast ratios", function() {
+      /* TODO: contrast ratio */
       /* TODO */
     });
     it("can maximize contrast", function() {
