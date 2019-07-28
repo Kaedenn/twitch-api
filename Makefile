@@ -7,6 +7,7 @@ TESTS = test/util.js test/client.js
 
 # Programs
 LN = ln -s
+CP = cp
 MKDIR = mkdir
 ESLINT = npx eslint
 BABEL = npx babel
@@ -25,7 +26,7 @@ $(DIST)/%.js: %.js
 	$(BABEL) --presets babel-preset-env $< -d $(DIST)/
 
 assets/tinycolor.js: node_modules/tinycolor2/tinycolor.js
-	$(LN) -f $< $@
+	$(CP) -f $< $@
 
 test:
 	$(MOCHA) --require test/harness.js
