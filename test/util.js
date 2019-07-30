@@ -2,11 +2,11 @@
 "use strict";
 var assert = require("assert");
 
-var {
-  Util,
-  Logging,
-  ColorParser,
-  tinycolor} = require("../utility.js");
+const TWUtil = require("../utility.js");
+var Util = TWUtil.Util;
+var Logging = TWUtil.Logging;
+var ColorParser = TWUtil.ColorParser;
+var tinycolor = TWUtil.tinycolor;
 
 Util.DebugLevel = Util.LEVEL_TRACE;
 
@@ -17,6 +17,17 @@ const GREEK_SIGMA_UC = "\u03a3";
 
 /* Test utility.js */
 describe("Util", function() {
+  describe("Globals", function() {
+    it("provides Logging", function() {
+      assert.equal(Logging, Util.Logging);
+    });
+    it("provides ColorParser", function() {
+      assert.equal(ColorParser, Util.ColorParser);
+    });
+    it("provides tinycolor", function() {
+      assert.equal(tinycolor, window.tinycolor);
+    });
+  });
   describe("General utilities", function() {
     it("defines Util.ASCII", function() {
       assert.equal(Util.ASCII.length, 128);
@@ -123,9 +134,33 @@ describe("Util", function() {
       a1 = Array.of(...base); a1.extend(base);
       assert.deepEqual(a1, base.concat(base));
     });
-    /* TODO: Array.min (with/without key func) */
-    /* TODO: Array.max (with/without key func) */
-    /* TODO: Array.range (with/without dflt) */
+    it("defines Array.{min,max}", function() {
+      /* TODO: Test with a more advanced key function */
+      const keyFn = (a) => a;
+      assert.equal([1, 2, 3].min(), 1);
+      assert.equal(['a', 'b', 'c'].min(), 'a');
+      assert.equal(['a', 'b', 'c'].min(keyFn), 'a');
+      assert.equal(['a', 'b', 'c'].max(), 'c');
+      assert.equal(['a', 'b', 'c'].max(keyFn), 'c');
+      assert.equal([].min(), null);
+      assert.equal([].min(keyFn), null);
+      assert.equal([].max(), null);
+      assert.equal([].max(keyFn), null);
+      assert.equal(Array.of(..."text").max(), "x");
+      assert.equal(Array.of(..."text").max(keyFn), "x");
+      assert.equal(Array.of(..."text").min(), "e");
+      assert.equal(Array.of(..."text").min(keyFn), "e");
+      assert.equal([-1, -2, -3].min(), -3);
+      assert.equal([-1, -2, -3].max(), -1);
+    });
+    it("defines Array.range", function() {
+      assert.deepEqual(Array.range(-1), []);
+      assert.deepEqual(Array.range(-1, "x"), []);
+      assert.deepEqual(Array.range(0, "x"), []);
+      assert.deepEqual(Array.range(5), [null, null, null, null, null]);
+      assert.deepEqual(Array.range(1, Array), [Array]);
+      assert.deepEqual(Array.range(2, [1, 2]), [[1, 2], [1, 2]]);
+    });
     it("defines String.is<class>", function() {
       assert.ok("123".isdigit());
       assert.ok(!"abc".isdigit());
@@ -155,7 +190,9 @@ describe("Util", function() {
         assert.equal(c.escape(), e);
       }
     });
-    /* TODO: String.map */
+    it("defines String.map", function() {
+      /* TODO */
+    });
     it("defines String.equalsLowerCase", function() {
       assert.ok("foo".equalsLowerCase("FOO"));
       assert.ok("FOO".equalsLowerCase("FOO"));
@@ -195,9 +232,6 @@ describe("Util", function() {
     });
   });
   describe("Array and sequence functions", function() {
-    it("defines Util.ToArray", function() {
-      /* TODO */
-    });
     it("defines Util.Zip", function() {
       const a = [1, 2, 3];
       const b = ["a", "b", "c"];
@@ -300,7 +334,9 @@ describe("Util", function() {
       Util.PopDebugLevel();
       assert.equal(Util.DebugLevel, Util.LEVEL_TRACE);
       Util.PopDebugLevel();
-      /* TODO: actually log things */
+    });
+    it("logs", function() {
+      /* TODO */
     });
     it("provides hooks", function() {
       /* TODO */
@@ -330,49 +366,58 @@ describe("Util", function() {
       assert.ok(Util.ColorParser.parse("#aabbccdd"));
       assert.throws(() => Util.ColorParser.parse("lemon"));
     });
-    it("can convert colors to different formats", function() {
-      /* TODO */
-    });
-    it("defines Color object", function() {
+    describe("Util.Color oject", function() {
       let red = new Util.Color("red");
-      assert.equal(black.hex, "#000000");
-      assert.equal(white.hex, "#ffffff");
-      assert.deepEqual(black.rgb, [0, 0, 0]);
-      assert.deepEqual(white.rgb, [255, 255, 255]);
-      assert.deepEqual(black.rgba, [0, 0, 0, 255]);
-      assert.deepEqual(white.rgba, [255, 255, 255, 255]);
-      assert.deepEqual(C(black).rgba, [0, 0, 0, 255]);
-      assert.deepEqual(C().rgba, [0, 0, 0, 255]);
-      assert.deepEqual(C(0, 0, 0, 0).rgba, [0, 0, 0, 0]);
-      assert.deepEqual(C([0, 0, 0]).rgba, [0, 0, 0, 255]);
-      assert.deepEqual(C([0, 0, 0, 127]).rgba, [0, 0, 0, 127]);
-      assert.deepEqual(C("#ff0000").rgba, [255, 0, 0, 255]);
-      assert.ok(red.equals("#ff0000"));
-      assert.ok(red.equals("#ff0000ff"));
-      assert.ok(red.equals("rgb(255, 0, 0)"));
-      assert.ok(red.equals("rgba(255, 0, 0, 1)"));
-      assert.ok(red.equals("hsl(0, 1, 0.5)"));
-      assert.ok(red.equals("hsla(0, 1, 0.5, 1)"));
-      assert.throws(() => C("notacolor"));
-      assert.deepEqual(red.rgb_1, [1, 0, 0]);
-      assert.deepEqual(red.rgba_1, [1, 0, 0, 1]);
-      assert.deepEqual(red.hsl, [0, 1, 0.5]);
-      assert.deepEqual(red.hsla, [0, 1, 0.5, 1]);
-      assert.equal(red.r, 255);
-      assert.equal(red.g, 0);
-      assert.equal(red.b, 0);
-      assert.equal(red.a, 255);
-      assert.equal(red.r_1, 1);
-      assert.equal(red.g_1, 0);
-      assert.equal(red.b_1, 0);
-      assert.equal(red.a_1, 1);
-      /* TODO: yiq */
-      assert.equal(white.inverted().hex, "#000000");
-      assert.equal(black.inverted().hex, "#ffffff");
-      assert.equal(red.inverted().hex, "#00ffff");
-      assert.equal(red.inverted().inverted().hex, "#ff0000");
-      assert.equal(C("#7f7f7f").inverted().hex, "#808080");
-      assert.equal(C("#808080").inverted().hex, "#7f7f7f");
+      it("has basic operations", function() {
+        assert.equal(black.hex, "#000000");
+        assert.equal(white.hex, "#ffffff");
+        assert.deepEqual(black.rgb, [0, 0, 0]);
+        assert.deepEqual(white.rgb, [255, 255, 255]);
+        assert.deepEqual(black.rgba, [0, 0, 0, 255]);
+        assert.deepEqual(white.rgba, [255, 255, 255, 255]);
+      });
+      it("provides constructors", function() {
+        assert.deepEqual(C(black).rgba, [0, 0, 0, 255]);
+        assert.deepEqual(C().rgba, [0, 0, 0, 255]);
+        assert.deepEqual(C("black").rgba, [0, 0, 0, 255]);
+        assert.deepEqual(C("white").rgba, [255, 255, 255, 255]);
+        assert.deepEqual(C(0, 0, 0, 0).rgba, [0, 0, 0, 0]);
+        assert.deepEqual(C([0, 0, 0]).rgba, [0, 0, 0, 255]);
+        assert.deepEqual(C([0, 0, 0, 127]).rgba, [0, 0, 0, 127]);
+        assert.deepEqual(C("#ff0000").rgba, [255, 0, 0, 255]);
+        assert.throws(() => C("notacolor"));
+      });
+      it("provides .equals", function() {
+        assert.ok(red.equals("#ff0000"));
+        assert.ok(red.equals("#ff0000ff"));
+        assert.ok(red.equals("rgb(255, 0, 0)"));
+        assert.ok(red.equals("rgba(255, 0, 0, 1)"));
+        assert.ok(red.equals("hsl(0, 1, 0.5)"));
+        assert.ok(red.equals("hsla(0, 1, 0.5, 1)"));
+      });
+      it("provides getters/conversion getters", function() {
+        assert.deepEqual(red.rgb_1, [1, 0, 0]);
+        assert.deepEqual(red.rgba_1, [1, 0, 0, 1]);
+        assert.deepEqual(red.hsl, [0, 1, 0.5]);
+        assert.deepEqual(red.hsla, [0, 1, 0.5, 1]);
+        assert.equal(red.r, 255);
+        assert.equal(red.g, 0);
+        assert.equal(red.b, 0);
+        assert.equal(red.a, 255);
+        assert.equal(red.r_1, 1);
+        assert.equal(red.g_1, 0);
+        assert.equal(red.b_1, 0);
+        assert.equal(red.a_1, 1);
+        /* TODO: yiq */
+      });
+      it("has .inverted", function() {
+        assert.equal(white.inverted().hex, "#000000");
+        assert.equal(black.inverted().hex, "#ffffff");
+        assert.equal(red.inverted().hex, "#00ffff");
+        assert.equal(red.inverted().inverted().hex, "#ff0000");
+        assert.equal(C("#7f7f7f").inverted().hex, "#808080");
+        assert.equal(C("#808080").inverted().hex, "#7f7f7f");
+      });
     });
     it("supports color modification", function() {
       let c = new Util.Color("yellow");
@@ -508,10 +553,7 @@ describe("Util", function() {
     it("defines Util.FormatInterval", function() {
       /* TODO */
     });
-    it("defines Util.DecodeFlags", function() {
-      /* TODO */
-    });
-    it("defines Util.EncodeFlags", function() {
+    it("defines Util.{Encode,Decode}Flags", function() {
       /* TODO */
     });
     it("defines Util.EscapeCharCode", function() {
@@ -524,11 +566,11 @@ describe("Util", function() {
       /* TODO */
     });
     it("defines Util.JSONClone", function() {
-      /* TODO */
+      /* TODO: test with opts.exclude */
     });
   });
   describe("Configuration and localStorage functions", function() {
-    it("supports get/set", function() {
+    it("supports get/set/append", function() {
       Util.SetWebStorageKey("config");
       assert.equal(Util.GetWebStorage(), null);
       Util.SetWebStorage({"foo": "bar"});
@@ -537,7 +579,20 @@ describe("Util", function() {
       assert.equal(Util.GetWebStorage(), null);
       assert.deepEqual(Util.GetWebStorage("config"), {"foo": "bar"});
       /* TODO: local storage parser options: b64, xor, bs, etc */
-      /* TODO: StorageAppend */
+      Util.SetWebStorage(["foo", "bar"]);
+      assert.deepEqual(Util.GetWebStorage(), ["foo", "bar"]);
+      Util.StorageAppend(Util.GetWebStorageKey(), "baz");
+      assert.deepEqual(Util.GetWebStorage(), ["foo", "bar", "baz"]);
+      Util.SetWebStorage(["foo"]);
+      Util.StorageAppend(Util.GetWebStorageKey(), Util.GetWebStorage());
+      assert.deepEqual(Util.GetWebStorage(), ["foo", ["foo"]]);
+      /* Appending to an unknown key */
+      Util.StorageAppend("newkey", 1);
+      assert.deepEqual(Util.GetWebStorage("newkey"), [1]);
+      /* Appending to not-an-array */
+      Util.SetWebStorage("foo");
+      Util.StorageAppend(Util.GetWebStorageKey(), "bar");
+      assert.deepEqual(Util.GetWebStorage(), ["foo", "bar"]);
       /* TODO: StorageParse, StorageFormat direct tests */
       /* TODO: DisableLocalStorage tests */
     });
@@ -594,18 +649,18 @@ describe("Util", function() {
       assert.ok(Util.RectContains(50, 50, rect));
       assert.ok(!Util.RectContains(50, 101, rect));
     });
-    /* NOTE: PointIsOn may not be testable */
+    /* NOTE: PointIsOn may not be testable via nodejs */
   });
   describe("CSS functions", function() {
     /* TODO */
+    /* NOTE: These may not be testable via nodejs */
   });
   describe("DOM functions", function() {
     /* TODO */
+    /* NOTE: These may not be testable via nodejs */
   });
   describe("Miscellaneous functions", function() {
-    it("defines Util.Open", function() {
-      /* Can't really test Util.Open */
-    });
+    /* Can't test Util.Open via nodejs; ignore */
     it("defines Object{Has,Get,Set,Remove}", function() {
       let o = {attr: 1, o: {attr: 2, a: {attr: 3}}};
       assert.equal(Util.ObjectGet(o, "attr"), 1);

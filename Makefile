@@ -13,7 +13,7 @@ ESLINT = npx eslint
 BABEL = npx babel
 MOCHA = npx mocha
 
-.PHONY: all lint test
+.PHONY: all lint test $(TESTS)
 
 all: lint $(DISTS) $(ASSETS)
 
@@ -30,3 +30,9 @@ assets/tinycolor.js: node_modules/tinycolor2/tinycolor.js
 
 test:
 	$(MOCHA) --require test/harness.js
+
+test/util.js:
+	$(MOCHA) --require test/harness.js $@
+
+test/client.js:
+	$(MOCHA) --require test/harness.js $@
