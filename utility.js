@@ -1680,6 +1680,20 @@ Util.Unbind = function _Util_Unbind(name, callback) {
   return false;
 };
 
+/* Unbind callbacks from a set of events; by prefix or regexp */
+Util.UnbindAll = function _Util_UnbindAll(pat=null) {
+  for (let name of Object.keys(Util._events)) {
+    if (pat !== null) {
+      if (typeof(pat) === "string" && !name.startsWith(pat)) {
+        continue;
+      } else if (pat instanceof RegExp && !pat.test(name)) {
+        continue;
+      }
+    }
+    Util._events[name] = [];
+  }
+};
+
 /* Fire an event: dispatchEvent with a _stacktrace attribute  */
 Util.FireEvent = function _Util_FireEvent(e) {
   let fired = false;
