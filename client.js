@@ -11,6 +11,12 @@
  */
 
 /* TODO:
+ * Provide promises
+ *  WS connected to twitch.tv
+ *  Client received ACK
+ *  JoinChannel
+ *  LeaveChannel
+ *  etc
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Rooms(channelid)
  *  Twitch.URL.Stream(channelid)
@@ -438,92 +444,106 @@ class TwitchClient { /* exported TwitchClient */
     }
     this._api = new Twitch.API(pub_headers, priv_headers);
 
-    /* TwitchClient.Connect() */
+    /* TwitchClient.Connect(): Returns a Promise  */
     this.Connect = (function _TwitchClient_Connect() {
-      /* Prevent recursion */
-      if (this._connecting) {
-        Util.Error("Client is already attempting to connect");
-        return;
-      }
-      this._connecting = true;
-      /* Ensure the socket is indeed closed */
-      this.close();
+      return new Promise((resolve, reject) => {
+        /* Prevent recursion */
+        if (this._connecting) {
+          Util.Error("Client is already attempting to connect");
+          reject(new Error("Client is already attempting to connect"));
+        }
+        this._connecting = true;
 
-      /* Store the presently-connected channels as pending */
-      for (let c of this._channels) {
-        if (this._pending_channels.indexOf(c) === -1) {
-          this._pending_channels.push(c);
-        }
-      }
-      this._channels = [];
-      this._rooms = {};
-      this._capabilities = [];
-      this._username = null;
-      this._is_open = false;
-      this._connected = false;
+        /* Ensure the socket is indeed closed */
+        this.close();
 
-      /* Construct the websocket and bind to its events */
-      this._endpoint = "wss://irc-ws.chat.twitch.tv";
-      this._ws = new WebSocket(this._endpoint);
-      this._ws.client = this;
-      this._ws.onopen = (function _ws_onopen(event) {
-        try {
-          Util.LogOnly("ws open>", this._ws.url);
-          this._connecting = false;
-          this._connected = false;
-          this._is_open = true;
-          this._onWebsocketOpen(cfg_name, oauth);
-        } catch (e) {
-          alert("ws.onopen error: " + e.toString());
-          throw e;
+        /* Store the presently-connected channels as pending */
+        for (let c of this._channels) {
+          if (this._pending_channels.indexOf(c) === -1) {
+            this._pending_channels.push(c);
+          }
         }
-      }).bind(this);
-      this._ws.onmessage = (function _ws_onmessage(event) {
-        try {
-          let data = Twitch.StripCredentials(JSON.stringify(event.data));
-          Util.TraceOnly("ws recv>", data);
-          this._onWebsocketMessage(event);
-        } catch (e) {
-          alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
-          throw e;
-        }
-      }).bind(this);
-      this._ws.onerror = (function _ws_onerror(event) {
-        try {
-          Util.LogOnly("ws error>", event);
-          this._connected = false;
-          this._onWebsocketError(event);
-        } catch (e) {
-          alert("ws.onerror error: " + e.toString());
-          throw e;
-        }
-      }).bind(this);
-      this._ws.onclose = (function _ws_onclose(event) {
-        try {
-          Util.LogOnly("ws close>", event);
-          this._connected = false;
-          this._is_open = false;
-          this._onWebsocketClose(event);
-        } catch (e) {
-          alert("ws.onclose error: " + e.toString());
-          throw e;
-        }
-      }).bind(this);
-      this.send = (function _TwitchClient_send(m) {
-        try {
-          this._ws.send(m);
-          Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
-        } catch (e) {
-          alert("this.send error: " + e.toString());
-          throw e;
-        }
-      }).bind(this);
+        this._channels = [];
+        this._rooms = {};
+        this._capabilities = [];
+        this._username = null;
+        this._is_open = false;
+        this._connected = false;
 
-      Util.LogOnly("Connecting to Twitch...");
+        /* Construct the websocket and bind to its events */
+        this._endpoint = "wss://irc-ws.chat.twitch.tv";
+        this._ws = new WebSocket(this._endpoint);
+        this._ws.client = this;
+        this._ws.onopen = (event) => {
+          try {
+            Util.LogOnly("ws open>", this._ws.url);
+            this._connecting = false;
+            this._connected = false;
+            this._is_open = true;
+            this._onWebsocketOpen(cfg_name, oauth);
+            resolve(this);
+          } catch (e) {
+            Util.Alert("ws.onopen error: " + e.toString());
+            reject(e);
+          }
+        };
+        this._ws.onmessage = this._ws_onmessage.bind(this);
+        this._ws.onerror = this._ws_onerror.bind(this);
+        this._ws.onclose = this._ws_onclose.bind(this);
+        this.send = (function _TwitchClient_send(m) {
+          try {
+            this._ws.send(m);
+            Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
+          } catch (e) {
+            Util.Alert("this.send error: " + e.toString());
+            throw e;
+          }
+        }).bind(this);
+
+        Util.LogOnly("Connecting to Twitch...");
+      });
     }).bind(this);
 
     Util.LogOnly("Client constructed and ready for action");
   }
+
+  /* Private: WebSocket event handlers {{{0 */
+
+  _ws_onmessage(event) {
+    try {
+      let data = Twitch.StripCredentials(JSON.stringify(event.data));
+      Util.TraceOnly("ws recv>", data);
+      this._onWebsocketMessage(event);
+    } catch (e) {
+      Util.Alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
+      throw e;
+    }
+  }
+
+  _ws_onerror(event) {
+    try {
+      Util.LogOnly("ws error>", event);
+      this._connected = false;
+      this._onWebsocketError(event);
+    } catch (e) {
+      Util.Alert("ws.onerror error: " + e.toString());
+      throw e;
+    }
+  }
+
+  _ws_onclose(event) {
+    try {
+      Util.LogOnly("ws close>", event);
+      this._connected = false;
+      this._is_open = false;
+      this._onWebsocketClose(event);
+    } catch (e) {
+      Util.Alert("ws.onclose error: " + e.toString());
+      throw e;
+    }
+  }
+
+  /* End WebSocket event handlers 0}}} */
 
   /* Event handling {{{0 */
 
@@ -1600,9 +1620,6 @@ class TwitchClient { /* exported TwitchClient */
         continue;
       }
 
-      /* Fire top-level event */
-      Util.FireEvent(new TwitchEvent(result.cmd, line, result));
-
       /* Parse and handle result.channel to simplify code below */
       let cname = null;
       let cstr = null;
@@ -1782,6 +1799,9 @@ class TwitchClient { /* exported TwitchClient */
           this.AddEmoteSet(esets);
         }
       }
+
+      /* Fire top-level event after event was handled */
+      Util.FireEvent(new TwitchEvent(result.cmd, line, result));
     }
   }
 
@@ -1799,7 +1819,7 @@ class TwitchClient { /* exported TwitchClient */
       }
     }
     this._channels = [];
-    Util.Log("WebSocket Closed", event);
+    Util.LogOnly("WebSocket Closed", event);
     Util.FireEvent(new TwitchEvent("CLOSE", "", event));
   }
 

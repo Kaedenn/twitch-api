@@ -5,6 +5,7 @@
  * Util.URL_REGEX doesn't match valid URLs:
  *  http://example.com
  *  https://example.com/
+ * DebugLevel Util.LEVEL_OFF still shows Log messages?
  */
 
 /* TODO:
@@ -49,16 +50,15 @@ var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+var _Util;
+
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-var Util = {};
-Util.__wskey = null;
-Util.__wscfg = "kae-twapi-local-key";
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-/* Functions to run at the bottom of this script */
-Util._deferred = [];
+var Util = (_Util = {}, _defineProperty(_Util, Symbol.toStringTag, "Util"), _defineProperty(_Util, "__wskey", null), _defineProperty(_Util, "__wscfg", "kae-twapi-local-key"), _defineProperty(_Util, "_deferred", []), _Util);
 
 /* Append a function to run, optionally storing the value in a Util key */
 Util._defer = function _Util_defer() {
@@ -636,12 +636,14 @@ Array.prototype.extend = function _Array_extend() {
 };
 
 /* Obtain the maximal element from an array */
-Array.prototype.max = function _Array_max(cmp) {
+Array.prototype.max = function _Array_max() {
+  var keyFn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
   var key = function key(x) {
     return x;
   };
-  if (cmp instanceof Function || typeof cmp === "function") {
-    key = cmp;
+  if (keyFn instanceof Function || typeof keyFn === "function") {
+    key = keyFn;
   }
   if (this.length === 0) {
     return;
@@ -684,12 +686,14 @@ Array.prototype.max = function _Array_max(cmp) {
 };
 
 /* Obtain the minimal element from an array */
-Array.prototype.min = function _Array_min(cmp) {
+Array.prototype.min = function _Array_min() {
+  var keyFn = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
   var key = function key(x) {
     return x;
   };
-  if (cmp instanceof Function || typeof cmp === "function") {
-    key = cmp;
+  if (keyFn instanceof Function || typeof keyFn === "function") {
+    key = keyFn;
   }
   if (this.length === 0) {
     return;
@@ -1236,7 +1240,10 @@ Util.Throw = function _Util_Throw(type, msg) {
 /* Debugging levels; verbosity increases with value */
 Util.LEVEL_MIN = 0;
 Util.LEVEL_OFF = Util.LEVEL_MIN;
-Util.LEVEL_DEBUG = Util.LEVEL_OFF + 1;
+Util.LEVEL_FATAL = Util.LEVEL_MIN + 1;
+Util.LEVEL_WARN = Util.LEVEL_FATAL + 1;
+Util.LEVEL_INFO = Util.LEVEL_WARN + 1;
+Util.LEVEL_DEBUG = Util.LEVEL_INFO + 1;
 Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = Util.LEVEL_OFF;
@@ -1622,10 +1629,14 @@ var Logging = function () {
         return true;
       } else if (Util.DebugLevel === Util.LEVEL_DEBUG) {
         return val >= Logging.SEVERITIES.DEBUG;
-      } else if (Util.DebugLevel === Util.LEVEL_OFF) {
+      } else if (Util.DebugLevel === Util.LEVEL_INFO) {
         return val >= Logging.SEVERITIES.INFO;
-      } else {
+      } else if (Util.DebugLevel === Util.LEVEL_WARN) {
         return val >= Logging.SEVERITIES.WARN;
+      } else if (Util.DebugLevel === Util.LEVEL_FATAL) {
+        return val >= Logging.SEVERITIES.ERROR;
+      } else {
+        return false;
       }
     }
 
@@ -1995,9 +2006,12 @@ var Logging = function () {
   return Logging;
 }();
 
-/* Defer logger construction */
+/* Defer logger and logger construction */
 
 
+Util._defer("Logging", function () {
+  return Logging;
+});
 Util._defer("Logger", function () {
   return new Logging();
 });
@@ -3534,6 +3548,7 @@ Util.SetWebStorage = function _Util_SetWebStorage() {
   var opts = {};
   if (!Util._ws_enabled) {
     Util.WarnOnly("Local Storage disabled");
+    return;
   }
   if (arguments.length === 1) {
     key = Util.GetWebStorageKey();
@@ -3555,6 +3570,10 @@ Util.SetWebStorage = function _Util_SetWebStorage() {
 
 /* Append a value to the given localStorage key */
 Util.StorageAppend = function _Util_StorageAppend(key, value) {
+  if (!Util._ws_enabled) {
+    Util.WarnOnly("Local Storage disabled");
+    return;
+  }
   var v = Util.GetWebStorage(key);
   var new_v = [];
   if (v === null) {
@@ -3650,7 +3669,7 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
   return s;
 };
 
-/* Disables localStorage suppport entirely */
+/* Disables localStorage suppport entirely; cannot be undone */
 Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
   Util._ws_enabled = false;
   function wsapiWrap(f) {
@@ -4244,6 +4263,15 @@ Util.StyleToObject = function _Util_StyleToObject(style) {
   }
 
   return result;
+};
+
+/* Show an alert box for browsers only */
+Util.Alert = function _Util_Alert(message) {
+  if (Util.Runtime.get() === Util.Runtime.Browser) {
+    window.alert(message);
+  } else {
+    Util.Error("alert() not implemented, message ignored:", message);
+  }
 };
 
 /* End miscellaneous functions 0}}} */

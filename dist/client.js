@@ -11,6 +11,12 @@
  */
 
 /* TODO:
+ * Provide promises
+ *  WS connected to twitch.tv
+ *  Client received ACK
+ *  JoinChannel
+ *  LeaveChannel
+ *  etc
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Rooms(channelid)
  *  Twitch.URL.Stream(channelid)
@@ -855,121 +861,140 @@ var TwitchClient = function () {
     }
     this._api = new Twitch.API(pub_headers, priv_headers);
 
-    /* TwitchClient.Connect() */
+    /* TwitchClient.Connect(): Returns a Promise  */
     this.Connect = function _TwitchClient_Connect() {
-      /* Prevent recursion */
-      if (this._connecting) {
-        Util.Error("Client is already attempting to connect");
-        return;
-      }
-      this._connecting = true;
-      /* Ensure the socket is indeed closed */
-      this.close();
+      var _this3 = this;
 
-      /* Store the presently-connected channels as pending */
-      var _iteratorNormalCompletion5 = true;
-      var _didIteratorError5 = false;
-      var _iteratorError5 = undefined;
-
-      try {
-        for (var _iterator5 = this._channels[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
-          var c = _step5.value;
-
-          if (this._pending_channels.indexOf(c) === -1) {
-            this._pending_channels.push(c);
-          }
+      return new Promise(function (resolve, reject) {
+        /* Prevent recursion */
+        if (_this3._connecting) {
+          Util.Error("Client is already attempting to connect");
+          reject(new Error("Client is already attempting to connect"));
         }
-      } catch (err) {
-        _didIteratorError5 = true;
-        _iteratorError5 = err;
-      } finally {
+        _this3._connecting = true;
+
+        /* Ensure the socket is indeed closed */
+        _this3.close();
+
+        /* Store the presently-connected channels as pending */
+        var _iteratorNormalCompletion5 = true;
+        var _didIteratorError5 = false;
+        var _iteratorError5 = undefined;
+
         try {
-          if (!_iteratorNormalCompletion5 && _iterator5.return) {
-            _iterator5.return();
+          for (var _iterator5 = _this3._channels[Symbol.iterator](), _step5; !(_iteratorNormalCompletion5 = (_step5 = _iterator5.next()).done); _iteratorNormalCompletion5 = true) {
+            var c = _step5.value;
+
+            if (_this3._pending_channels.indexOf(c) === -1) {
+              _this3._pending_channels.push(c);
+            }
           }
+        } catch (err) {
+          _didIteratorError5 = true;
+          _iteratorError5 = err;
         } finally {
-          if (_didIteratorError5) {
-            throw _iteratorError5;
+          try {
+            if (!_iteratorNormalCompletion5 && _iterator5.return) {
+              _iterator5.return();
+            }
+          } finally {
+            if (_didIteratorError5) {
+              throw _iteratorError5;
+            }
           }
         }
-      }
 
-      this._channels = [];
-      this._rooms = {};
-      this._capabilities = [];
-      this._username = null;
-      this._is_open = false;
-      this._connected = false;
+        _this3._channels = [];
+        _this3._rooms = {};
+        _this3._capabilities = [];
+        _this3._username = null;
+        _this3._is_open = false;
+        _this3._connected = false;
 
-      /* Construct the websocket and bind to its events */
-      this._endpoint = "wss://irc-ws.chat.twitch.tv";
-      this._ws = new WebSocket(this._endpoint);
-      this._ws.client = this;
-      this._ws.onopen = function _ws_onopen(event) {
-        try {
-          Util.LogOnly("ws open>", this._ws.url);
-          this._connecting = false;
-          this._connected = false;
-          this._is_open = true;
-          this._onWebsocketOpen(cfg_name, oauth);
-        } catch (e) {
-          alert("ws.onopen error: " + e.toString());
-          throw e;
-        }
-      }.bind(this);
-      this._ws.onmessage = function _ws_onmessage(event) {
-        try {
-          var data = Twitch.StripCredentials(JSON.stringify(event.data));
-          Util.TraceOnly("ws recv>", data);
-          this._onWebsocketMessage(event);
-        } catch (e) {
-          alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
-          throw e;
-        }
-      }.bind(this);
-      this._ws.onerror = function _ws_onerror(event) {
-        try {
-          Util.LogOnly("ws error>", event);
-          this._connected = false;
-          this._onWebsocketError(event);
-        } catch (e) {
-          alert("ws.onerror error: " + e.toString());
-          throw e;
-        }
-      }.bind(this);
-      this._ws.onclose = function _ws_onclose(event) {
-        try {
-          Util.LogOnly("ws close>", event);
-          this._connected = false;
-          this._is_open = false;
-          this._onWebsocketClose(event);
-        } catch (e) {
-          alert("ws.onclose error: " + e.toString());
-          throw e;
-        }
-      }.bind(this);
-      this.send = function _TwitchClient_send(m) {
-        try {
-          this._ws.send(m);
-          Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
-        } catch (e) {
-          alert("this.send error: " + e.toString());
-          throw e;
-        }
-      }.bind(this);
+        /* Construct the websocket and bind to its events */
+        _this3._endpoint = "wss://irc-ws.chat.twitch.tv";
+        _this3._ws = new WebSocket(_this3._endpoint);
+        _this3._ws.client = _this3;
+        _this3._ws.onopen = function (event) {
+          try {
+            Util.LogOnly("ws open>", _this3._ws.url);
+            _this3._connecting = false;
+            _this3._connected = false;
+            _this3._is_open = true;
+            _this3._onWebsocketOpen(cfg_name, oauth);
+            resolve(_this3);
+          } catch (e) {
+            Util.Alert("ws.onopen error: " + e.toString());
+            reject(e);
+          }
+        };
+        _this3._ws.onmessage = _this3._ws_onmessage.bind(_this3);
+        _this3._ws.onerror = _this3._ws_onerror.bind(_this3);
+        _this3._ws.onclose = _this3._ws_onclose.bind(_this3);
+        _this3.send = function _TwitchClient_send(m) {
+          try {
+            this._ws.send(m);
+            Util.DebugOnly("ws send>", Twitch.StripCredentials(JSON.stringify(m)));
+          } catch (e) {
+            Util.Alert("this.send error: " + e.toString());
+            throw e;
+          }
+        }.bind(_this3);
 
-      Util.LogOnly("Connecting to Twitch...");
+        Util.LogOnly("Connecting to Twitch...");
+      });
     }.bind(this);
 
     Util.LogOnly("Client constructed and ready for action");
   }
 
-  /* Event handling {{{0 */
-
-  /* Bind a function to the event specified */
-
+  /* Private: WebSocket event handlers {{{0 */
 
   _createClass(TwitchClient, [{
+    key: "_ws_onmessage",
+    value: function _ws_onmessage(event) {
+      try {
+        var data = Twitch.StripCredentials(JSON.stringify(event.data));
+        Util.TraceOnly("ws recv>", data);
+        this._onWebsocketMessage(event);
+      } catch (e) {
+        Util.Alert("ws.onmessage error: " + e.toString() + "\n" + e.stack);
+        throw e;
+      }
+    }
+  }, {
+    key: "_ws_onerror",
+    value: function _ws_onerror(event) {
+      try {
+        Util.LogOnly("ws error>", event);
+        this._connected = false;
+        this._onWebsocketError(event);
+      } catch (e) {
+        Util.Alert("ws.onerror error: " + e.toString());
+        throw e;
+      }
+    }
+  }, {
+    key: "_ws_onclose",
+    value: function _ws_onclose(event) {
+      try {
+        Util.LogOnly("ws close>", event);
+        this._connected = false;
+        this._is_open = false;
+        this._onWebsocketClose(event);
+      } catch (e) {
+        Util.Alert("ws.onclose error: " + e.toString());
+        throw e;
+      }
+    }
+
+    /* End WebSocket event handlers 0}}} */
+
+    /* Event handling {{{0 */
+
+    /* Bind a function to the event specified */
+
+  }, {
     key: "bind",
     value: function bind(event, callback) {
       Util.Bind(event, callback);
@@ -1152,7 +1177,7 @@ var TwitchClient = function () {
   }, {
     key: "_getRooms",
     value: function _getRooms(cname, cid) {
-      var _this3 = this;
+      var _this4 = this;
 
       if (this._no_assets) return;
       this._api.Get(Twitch.URL.Rooms(cid), function (json) {
@@ -1165,11 +1190,11 @@ var TwitchClient = function () {
             var room_def = _step7.value;
 
             var room_name = room_def["name"];
-            if (!_this3._rooms[cname].rooms) {
-              _this3._rooms[cname].rooms = {};
+            if (!_this4._rooms[cname].rooms) {
+              _this4._rooms[cname].rooms = {};
             }
-            _this3._rooms[cname].rooms[room_name] = room_def;
-            _this3._rooms[cname].rooms[room_name].uid = room_def._id;
+            _this4._rooms[cname].rooms[room_name] = room_def;
+            _this4._rooms[cname].rooms[room_name].uid = room_def._id;
           }
         } catch (err) {
           _didIteratorError7 = true;
@@ -1193,7 +1218,7 @@ var TwitchClient = function () {
   }, {
     key: "_getChannelBadges",
     value: function _getChannelBadges(cname, cid) {
-      var _this4 = this;
+      var _this5 = this;
 
       var channel = this.ParseChannel(cname);
       var c = channel.channel;
@@ -1253,7 +1278,7 @@ var TwitchClient = function () {
               }
             }
 
-            _this4._channel_badges[c][badge_name] = badge;
+            _this5._channel_badges[c][badge_name] = badge;
           }
         } catch (err) {
           _didIteratorError8 = true;
@@ -1277,7 +1302,7 @@ var TwitchClient = function () {
   }, {
     key: "_getChannelCheers",
     value: function _getChannelCheers(cname, cid) {
-      var _this5 = this;
+      var _this6 = this;
 
       this._channel_cheers[cname] = {};
       this._api.Get(Twitch.URL.Cheers(cid), function (json) {
@@ -1291,7 +1316,7 @@ var TwitchClient = function () {
 
             /* Simplify things later by adding the regex here */
             cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
-            _this5._channel_cheers[cname][cdef.prefix] = cdef;
+            _this6._channel_cheers[cname][cdef.prefix] = cdef;
           }
         } catch (err) {
           _didIteratorError10 = true;
@@ -1315,7 +1340,7 @@ var TwitchClient = function () {
   }, {
     key: "_getGlobalCheers",
     value: function _getGlobalCheers() {
-      var _this6 = this;
+      var _this7 = this;
 
       this._api.Get(Twitch.URL.GlobalCheers(), function (json) {
         var _iteratorNormalCompletion11 = true;
@@ -1328,7 +1353,7 @@ var TwitchClient = function () {
 
             /* Simplify things later by adding the regex here */
             cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
-            _this6._global_cheers[cdef.prefix] = cdef;
+            _this7._global_cheers[cdef.prefix] = cdef;
           }
         } catch (err) {
           _didIteratorError11 = true;
@@ -1352,11 +1377,11 @@ var TwitchClient = function () {
   }, {
     key: "_getFFZEmotes",
     value: function _getFFZEmotes(cname, cid) {
-      var _this7 = this;
+      var _this8 = this;
 
       this._ffz_channel_emotes[cname] = {};
       this._api.GetSimple(Twitch.URL.FFZEmotes(cid), function (json) {
-        var ffz = _this7._ffz_channel_emotes[cname];
+        var ffz = _this8._ffz_channel_emotes[cname];
         ffz.id = json.room.uid;
         ffz.set_id = json.room.set;
         ffz.css = json.room.css;
@@ -1475,13 +1500,13 @@ var TwitchClient = function () {
   }, {
     key: "_getBTTVEmotes",
     value: function _getBTTVEmotes(cname, cid) {
-      var _this8 = this;
+      var _this9 = this;
 
       var url = Twitch.URL.BTTVEmotes(cname.replace(/^#/, ""));
       this._bttv_channel_emotes[cname] = {};
       this._api.GetSimple(url, function (json) {
         var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
-        var bttv = _this8._bttv_channel_emotes[cname];
+        var bttv = _this9._bttv_channel_emotes[cname];
         var _iteratorNormalCompletion15 = true;
         var _didIteratorError15 = false;
         var _iteratorError15 = undefined;
@@ -1529,7 +1554,7 @@ var TwitchClient = function () {
           for (var _iterator16 = json.emotes[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
             var emote = _step16.value;
 
-            _this8._bttv_global_emotes[emote.code] = {
+            _this9._bttv_global_emotes[emote.code] = {
               "id": emote.id,
               "code": emote.code,
               "channel": emote.channel,
@@ -1563,7 +1588,7 @@ var TwitchClient = function () {
   }, {
     key: "_getGlobalBadges",
     value: function _getGlobalBadges() {
-      var _this9 = this;
+      var _this10 = this;
 
       this._global_badges = {};
       if (this._no_assets) return;
@@ -1576,7 +1601,7 @@ var TwitchClient = function () {
           for (var _iterator17 = Object.keys(json["badge_sets"])[Symbol.iterator](), _step17; !(_iteratorNormalCompletion17 = (_step17 = _iterator17.next()).done); _iteratorNormalCompletion17 = true) {
             var badge_name = _step17.value;
 
-            _this9._global_badges[badge_name] = json["badge_sets"][badge_name];
+            _this10._global_badges[badge_name] = json["badge_sets"][badge_name];
           }
         } catch (err) {
           _didIteratorError17 = true;
@@ -1603,7 +1628,7 @@ var TwitchClient = function () {
             for (var _iterator18 = Object.values(resp.badges)[Symbol.iterator](), _step18; !(_iteratorNormalCompletion18 = (_step18 = _iterator18.next()).done); _iteratorNormalCompletion18 = true) {
               var badge = _step18.value;
 
-              _this9._ffz_badges[badge.id] = badge;
+              _this10._ffz_badges[badge.id] = badge;
             }
           } catch (err) {
             _didIteratorError18 = true;
@@ -1633,7 +1658,7 @@ var TwitchClient = function () {
               var badge_nr = _ref14[0];
               var users = _ref14[1];
 
-              _this9._ffz_badge_users[badge_nr] = users;
+              _this10._ffz_badge_users[badge_nr] = users;
             }
           } catch (err) {
             _didIteratorError19 = true;
@@ -2018,7 +2043,7 @@ var TwitchClient = function () {
   }, {
     key: "JoinChannel",
     value: function JoinChannel(channel) {
-      var _this10 = this;
+      var _this11 = this;
 
       var chobj = this.ParseChannel(channel);
       var cname = Twitch.FormatChannel(chobj);
@@ -2031,7 +2056,7 @@ var TwitchClient = function () {
           this._api.Get(Twitch.URL.User(user), function (r) {
             if (!r || !r.data || r.data.length === 0) {
               Util.Warn(cname + " doesn't seem to be a real channel; leaving");
-              _this10.LeaveChannel(channel);
+              _this11.LeaveChannel(channel);
             }
           });
         } else {
@@ -2430,7 +2455,7 @@ var TwitchClient = function () {
   }, {
     key: "AddEmoteSet",
     value: function AddEmoteSet(eset) {
-      var _this11 = this;
+      var _this12 = this;
 
       /* FIXME: Duplicates emotes present in more than one emote set.
        * Emotes in higher emote set take precedence over lower emote sets? */
@@ -2449,8 +2474,8 @@ var TwitchClient = function () {
             var setnr = _ref24[0];
             var edefs = _ref24[1];
 
-            if (!_this11._self_emote_sets[setnr]) {
-              _this11._self_emote_sets[setnr] = [];
+            if (!_this12._self_emote_sets[setnr]) {
+              _this12._self_emote_sets[setnr] = [];
             }
             var _iteratorNormalCompletion29 = true;
             var _didIteratorError29 = false;
@@ -2460,8 +2485,8 @@ var TwitchClient = function () {
               for (var _iterator29 = edefs[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
                 var edef = _step29.value;
 
-                _this11._self_emote_sets[setnr].push(edef.id);
-                _this11._self_emotes[edef.id] = edef.code;
+                _this12._self_emote_sets[setnr].push(edef.id);
+                _this12._self_emotes[edef.id] = edef.code;
               }
             } catch (err) {
               _didIteratorError29 = true;
@@ -2943,7 +2968,7 @@ var TwitchClient = function () {
   }, {
     key: "_onWebsocketMessage",
     value: function _onWebsocketMessage(ws_event) {
-      var _this12 = this;
+      var _this13 = this;
 
       var lines = ws_event.data.trim().split("\r\n");
       /* Log the lines to the debug console */
@@ -2999,37 +3024,34 @@ var TwitchClient = function () {
           return "continue";
         }
 
-        /* Fire top-level event */
-        Util.FireEvent(new TwitchEvent(result.cmd, line, result));
-
         /* Parse and handle result.channel to simplify code below */
         var cname = null;
         var cstr = null;
         var room = null;
         var roomid = null;
         if (result.channel) {
-          _this12._ensureRoom(result.channel);
+          _this13._ensureRoom(result.channel);
           cname = result.channel.channel;
           cstr = Twitch.FormatChannel(result.channel);
-          room = _this12._rooms[cname];
+          room = _this13._rooms[cname];
           if (result.flags && result.flags["room-id"]) {
             roomid = result.flags["room-id"];
-            _this12._rooms_byid[roomid] = room;
+            _this13._rooms_byid[roomid] = room;
           }
         }
 
         /* Handle each command that could be returned */
         switch (result.cmd) {
           case "PING":
-            _this12.send("PONG :" + result.server);
+            _this13.send("PONG :" + result.server);
             break;
           case "ACK":
-            _this12._connected = true;
-            _this12._capabilities = result.flags;
+            _this13._connected = true;
+            _this13._capabilities = result.flags;
             /* Load global emotes */
-            _this12.AddEmoteSet(TwitchClient.ESET_GLOBAL);
+            _this13.AddEmoteSet(TwitchClient.ESET_GLOBAL);
             /* Obtain global cheermotes */
-            _this12._getGlobalCheers();
+            _this13._getGlobalCheers();
             break;
           case "TOPIC":
             break;
@@ -3042,7 +3064,7 @@ var TwitchClient = function () {
               for (var _iterator35 = result.usernames[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
                 var user = _step35.value;
 
-                _this12._onJoin(result.channel, user);
+                _this13._onJoin(result.channel, user);
               }
             } catch (err) {
               _didIteratorError35 = true;
@@ -3061,25 +3083,25 @@ var TwitchClient = function () {
 
             break;
           case "JOIN":
-            if (result.user.equalsLowerCase(_this12._username)) {
+            if (result.user.equalsLowerCase(_this13._username)) {
               Util.FireEvent(new TwitchEvent("JOINED", line, result));
             }
-            _this12._onJoin(result.channel, result.user);
+            _this13._onJoin(result.channel, result.user);
             break;
           case "PART":
-            if (result.user.equalsLowerCase(_this12._username)) {
+            if (result.user.equalsLowerCase(_this13._username)) {
               Util.FireEvent(new TwitchEvent("PARTED", line, result));
             }
-            _this12._onPart(result.channel, result.user);
+            _this13._onPart(result.channel, result.user);
             break;
           case "RECONNECT":
-            _this12.Connect();
+            _this13.Connect();
             break;
           case "MODE":
             if (result.modeflag === "+o") {
-              _this12._onOp(result.channel, result.user);
+              _this13._onOp(result.channel, result.user);
             } else if (result.modeflag === "-o") {
-              _this12._onDeOp(result.channel, result.user);
+              _this13._onDeOp(result.channel, result.user);
             }
             break;
           case "PRIVMSG":
@@ -3092,13 +3114,13 @@ var TwitchClient = function () {
                 room.users.push(result.user);
               }
               if (!event.flags.badges) event.flags.badges = [];
-              if (_this12._enable_ffz) {
+              if (_this13._enable_ffz) {
                 var _iteratorNormalCompletion36 = true;
                 var _didIteratorError36 = false;
                 var _iteratorError36 = undefined;
 
                 try {
-                  for (var _iterator36 = Object.entries(_this12._ffz_badge_users)[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
+                  for (var _iterator36 = Object.entries(_this13._ffz_badge_users)[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
                     var _ref29 = _step36.value;
 
                     var _ref30 = _slicedToArray(_ref29, 2);
@@ -3109,7 +3131,7 @@ var TwitchClient = function () {
                     if (users.indexOf(result.user) > -1) {
                       var ffz_badges = event.flags["ffz-badges"];
                       if (!ffz_badges) ffz_badges = [];
-                      ffz_badges.push(_this12._ffz_badges[badge_nr]);
+                      ffz_badges.push(_this13._ffz_badges[badge_nr]);
                       event.flags["ffz-badges"] = ffz_badges;
                     }
                   }
@@ -3140,8 +3162,8 @@ var TwitchClient = function () {
           case "WHISPER":
             break;
           case "USERSTATE":
-            if (!_this12._self_userstate.hasOwnProperty(cstr)) {
-              _this12._self_userstate[cstr] = {};
+            if (!_this13._self_userstate.hasOwnProperty(cstr)) {
+              _this13._self_userstate[cstr] = {};
             }
             var _iteratorNormalCompletion37 = true;
             var _didIteratorError37 = false;
@@ -3156,7 +3178,7 @@ var TwitchClient = function () {
                 var key = _ref32[0];
                 var val = _ref32[1];
 
-                _this12._self_userstate[cstr][key] = val;
+                _this13._self_userstate[cstr][key] = val;
               }
             } catch (err) {
               _didIteratorError37 = true;
@@ -3177,21 +3199,21 @@ var TwitchClient = function () {
           case "ROOMSTATE":
             room.id = roomid;
             room.channel = result.channel;
-            if (_this12._authed) {
-              _this12._getRooms(cname, roomid);
+            if (_this13._authed) {
+              _this13._getRooms(cname, roomid);
             }
-            if (!_this12._no_assets) {
-              _this12._getChannelBadges(cname, roomid);
-              _this12._getChannelCheers(cname, roomid);
-              if (_this12._enable_ffz) {
-                _this12._getFFZEmotes(cname, roomid);
+            if (!_this13._no_assets) {
+              _this13._getChannelBadges(cname, roomid);
+              _this13._getChannelCheers(cname, roomid);
+              if (_this13._enable_ffz) {
+                _this13._getFFZEmotes(cname, roomid);
               }
-              if (_this12._enable_bttv) {
-                _this12._getBTTVEmotes(cname, roomid);
+              if (_this13._enable_bttv) {
+                _this13._getBTTVEmotes(cname, roomid);
               }
             }
             if (!Twitch.IsRoom(result.channel)) {
-              _this12._api.Get(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
+              _this13._api.Get(Twitch.URL.Stream(roomid), function _stream_cb(resp) {
                 if (resp.streams && resp.streams.length > 0) {
                   room.stream = resp.streams[0];
                   room.streams = resp.streams;
@@ -3231,7 +3253,7 @@ var TwitchClient = function () {
             }
             break;
           case "GLOBALUSERSTATE":
-            _this12._self_userid = result.flags["user-id"];
+            _this13._self_userid = result.flags["user-id"];
             break;
           case "CLEARCHAT":
             break;
@@ -3256,9 +3278,12 @@ var TwitchClient = function () {
             var esets = result.flags["emote-sets"].map(function (e) {
               return "" + e;
             }).join(",");
-            _this12.AddEmoteSet(esets);
+            _this13.AddEmoteSet(esets);
           }
         }
+
+        /* Fire top-level event after event was handled */
+        Util.FireEvent(new TwitchEvent(result.cmd, line, result));
       };
 
       var _iteratorNormalCompletion34 = true;
@@ -3331,7 +3356,7 @@ var TwitchClient = function () {
       }
 
       this._channels = [];
-      Util.Log("WebSocket Closed", event);
+      Util.LogOnly("WebSocket Closed", event);
       Util.FireEvent(new TwitchEvent("CLOSE", "", event));
     }
 
@@ -3631,23 +3656,23 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
 
   /* Get url, without headers, returning a promise */
   function doFetchSimple(url) {
-    var _this13 = this;
+    var _this14 = this;
 
     return new Promise(function (resolve, reject) {
-      _this13.GetSimple(url, resolve, reject);
+      _this14.GetSimple(url, resolve, reject);
     });
   }
   this.FetchSimple = doFetchSimple.bind(this);
 
   /* GET url, optionally adding private headers, returning a promise */
   function doFetch(url) {
-    var _this14 = this;
+    var _this15 = this;
 
     var headers = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
     var add_private = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
     return new Promise(function (resolve, reject) {
-      _this14.Get(url, resolve, headers, add_private, reject);
+      _this15.Get(url, resolve, headers, add_private, reject);
     });
   }
   this.Fetch = doFetch.bind(this);
