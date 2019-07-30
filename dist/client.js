@@ -8,15 +8,11 @@
 
 /* FIXME:
  * Emotes like ":-D" show more than one emote (turbo 1, turbo 2, global)
+ * Event callbacks should be owned by the client
+ *  Old instances are calling callbacks for new instances
  */
 
 /* TODO:
- * Provide promises
- *  WS connected to twitch.tv
- *  Client received ACK
- *  JoinChannel
- *  LeaveChannel
- *  etc
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Rooms(channelid)
  *  Twitch.URL.Stream(channelid)
@@ -292,6 +288,7 @@ var TwitchEvent = function () {
       "USERSTATE", /* Received user information */
       "ROOMSTATE", /* Received room information */
       "STREAMINFO", /* (s) Received stream information */
+      "ASSETLOADED", /* (s) An asset API request resolved */
       "USERNOTICE", /* Received user-centric notice */
       "GLOBALUSERSTATE", /* Received global client user information */
       "CLEARCHAT", /* Moderator cleared the chat */
@@ -1210,6 +1207,10 @@ var TwitchClient = function () {
             }
           }
         }
+
+        Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+          kind: "rooms"
+        }));
       }, {}, true);
     }
 
@@ -1332,6 +1333,12 @@ var TwitchClient = function () {
             }
           }
         }
+
+        Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+          kind: "channel_cheers",
+          channel: Twitch.ParseChannel(cname),
+          channelId: cid
+        }));
       }, {}, false);
     }
 
@@ -1369,6 +1376,10 @@ var TwitchClient = function () {
             }
           }
         }
+
+        Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+          kind: "global_cheers"
+        }));
       }, {}, false);
     }
 
@@ -1840,6 +1851,14 @@ var TwitchClient = function () {
       return this._connected;
     }
   }, {
+    key: "IsAuthed",
+
+
+    /* Return whether or not the client is authenticated with an AuthID */
+    value: function IsAuthed() {
+      return this._authed;
+    }
+  }, {
     key: "FFZEnabled",
 
 
@@ -1915,18 +1934,10 @@ var TwitchClient = function () {
 
     /* Role and moderation functions {{{0 */
 
-    /* Return whether or not the client is authenticated with an AuthID */
+    /* Return true if the client is a subscriber in the channel given */
 
-  }, {
-    key: "IsAuthed",
-    value: function IsAuthed() {
-      return this._authed;
-    }
   }, {
     key: "IsSub",
-
-
-    /* Return true if the client is a subscriber in the channel given */
     value: function IsSub(channel) {
       if (this._selfUserState(channel, "sub")) return true;
       if (this._hasBadge(channel, "subscriber")) return true;
@@ -3383,6 +3394,11 @@ var TwitchClient = function () {
       return this.Connected();
     }
   }, {
+    key: "authed",
+    get: function get() {
+      return this._authed;
+    }
+  }, {
     key: "ffzEnabled",
     get: function get() {
       return this.FFZEnabled();
@@ -3396,11 +3412,6 @@ var TwitchClient = function () {
     key: "userState",
     get: function get() {
       return this.SelfUserState();
-    }
-  }, {
-    key: "authed",
-    get: function get() {
-      return this._authed;
     }
   }, {
     key: "channels",

@@ -8,15 +8,11 @@
 
 /* FIXME:
  * Emotes like ":-D" show more than one emote (turbo 1, turbo 2, global)
+ * Event callbacks should be owned by the client
+ *  Old instances are calling callbacks for new instances
  */
 
 /* TODO:
- * Provide promises
- *  WS connected to twitch.tv
- *  Client received ACK
- *  JoinChannel
- *  LeaveChannel
- *  etc
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Rooms(channelid)
  *  Twitch.URL.Stream(channelid)
@@ -110,6 +106,7 @@ class TwitchEvent {
       "USERSTATE", /* Received user information */
       "ROOMSTATE", /* Received room information */
       "STREAMINFO", /* (s) Received stream information */
+      "ASSETLOADED", /* (s) An asset API request resolved */
       "USERNOTICE", /* Received user-centric notice */
       "GLOBALUSERSTATE", /* Received global client user information */
       "CLEARCHAT", /* Moderator cleared the chat */
@@ -685,6 +682,9 @@ class TwitchClient { /* exported TwitchClient */
         this._rooms[cname].rooms[room_name] = room_def;
         this._rooms[cname].rooms[room_name].uid = room_def._id;
       }
+      Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+        kind: "rooms"
+      }));
     }, {}, true);
   }
 
@@ -723,6 +723,11 @@ class TwitchClient { /* exported TwitchClient */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._channel_cheers[cname][cdef.prefix] = cdef;
       }
+      Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+        kind: "channel_cheers",
+        channel: Twitch.ParseChannel(cname),
+        channelId: cid
+      }));
     }, {}, false);
   }
 
@@ -734,6 +739,9 @@ class TwitchClient { /* exported TwitchClient */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._global_cheers[cdef.prefix] = cdef;
       }
+      Util.FireEvent(new TwitchEvent("ASSETLOADED", "", {
+        kind: "global_cheers"
+      }));
     }, {}, false);
   }
 
@@ -984,6 +992,10 @@ class TwitchClient { /* exported TwitchClient */
   Connected() { return this._connected; }
   get connected() { return this.Connected(); }
 
+  /* Return whether or not the client is authenticated with an AuthID */
+  IsAuthed() { return this._authed; }
+  get authed() { return this._authed; }
+
   /* Return whether or not FFZ support is enabled */
   FFZEnabled() { return this._enable_ffz; }
   get ffzEnabled() { return this.FFZEnabled(); }
@@ -1018,12 +1030,6 @@ class TwitchClient { /* exported TwitchClient */
   /* End of general status functions 0}}} */
 
   /* Role and moderation functions {{{0 */
-
-  /* Return whether or not the client is authenticated with an AuthID */
-  IsAuthed() {
-    return this._authed;
-  }
-  get authed() { return this._authed; }
 
   /* Return true if the client is a subscriber in the channel given */
   IsSub(channel) {
