@@ -905,6 +905,26 @@ class Logging {
     this._filters[this._sevValue(sev)].push(func);
   }
 
+  /* Remove a filter */
+  removeFilter(filter_obj, sev="ALL") {
+    if (!this._assertSev(sev)) { return false; }
+    let sv = this._sevValue(sev);
+    this._filters[sv] = this._filters[sv].filter((f) => f !== filter_obj);
+  }
+
+  /* Remove all filters for a given severity */
+  removeFilters(sev="ALL") {
+    if (!this._assertSev(sev)) { return false; }
+    this._filters[this._sevValue(sev)] = [];
+  }
+
+  /* Remove all filters */
+  removeAllFilters() {
+    for (let sev of Object.keys(this._filters)) {
+      this._filters[sev] = [];
+    }
+  }
+
   /* Test whether the message is filtered */
   shouldFilter(message_args, severity="ALL") {
     let sev = this._sevValue(severity);
