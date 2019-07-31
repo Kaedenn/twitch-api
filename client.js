@@ -787,7 +787,7 @@ class TwitchClient extends CallbackHandler {
     });
   }
 
-  /* Private: Load in the global and per-channel BTTV emotes */
+  /* Private: Load in the per-channel BTTV emotes */
   _getBTTVEmotes(cname, cid) {
     let url = Twitch.URL.BTTVEmotes(cname.replace(/^#/, ""));
     this._bttv_channel_emotes[cname] = {};
@@ -811,7 +811,10 @@ class TwitchClient extends CallbackHandler {
         Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
       }
     });
+  }
 
+  /* Private: Load in the global BTTV emotes */
+  _getGlobalBTTVEmotes() {
     this._bttv_global_emotes = {};
     this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), (json) => {
       let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
@@ -827,10 +830,6 @@ class TwitchClient extends CallbackHandler {
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "bttv_emotes"
       }));
-    }, (resp) => {
-      if (resp.status === 404) {
-        Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
-      }
     });
   }
 
@@ -975,6 +974,9 @@ class TwitchClient extends CallbackHandler {
       this._ws = null;
     }
   }
+
+  /* Return whether or not the client has a websocket */
+  get hasSocket() { return this._ws !== null; }
 
   /* Get the client's current username */
   GetName() { return this._username; }
@@ -1364,6 +1366,16 @@ class TwitchClient extends CallbackHandler {
     }
   }
 
+  /* Return the ID of the given emote by name */
+  GetEmoteID(emote_name) {
+    for (let [k, v] of Object.entries(this._self_emotes)) {
+      if (k === emote_name) {
+        return v;
+      }
+    }
+    return null;
+  }
+
   /* Return the URL to the image for the emote and size specified (id or name) */
   GetEmote(emote_id, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
     if (typeof(emote_id) === "number" || `${emote_id}`.match(/^[0-9]+$/)) {
@@ -1375,6 +1387,7 @@ class TwitchClient extends CallbackHandler {
         }
       }
     }
+    return null;
   }
 
   /* Obtain the FFZ emotes for a channel */
@@ -1637,6 +1650,8 @@ class TwitchClient extends CallbackHandler {
         this.AddEmoteSet(TwitchClient.ESET_GLOBAL);
         /* Obtain global cheermotes */
         this._getGlobalCheers();
+        /* Obtain global BTTV emotes */
+        this._getGlobalBTTVEmotes();
         break;
       case "TOPIC":
         /* No special processing needed */
