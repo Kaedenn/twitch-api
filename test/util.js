@@ -1,12 +1,48 @@
 
 "use strict";
+
+/* TODO:
+ * Util.EscapeChars
+ * Array.{min,max}
+ * String.map
+ * Util.URL_REGEX
+ * Util.URL
+ * Util.StripCommonPrefix
+ * Util.ParseStack, Util.FormatStack
+ * Stack trimming
+ * Util.Logger
+ *  logging (once, without stack, once without stack)
+ *  hooks
+ *  filters
+ * Util.Color yiq calculation
+ * Util.RelativeLuminance
+ * Util.ContrastRatio
+ * Util.GetMaxContrast
+ * Event handling (CallbackHandler)
+ * Util.EscapeWithMap
+ * Util.StringToCodes
+ * Util.FormatDate, Util.FormatInterval
+ * Util.EncodeFlags, Util.DecodeFlags
+ * Util.EscapeCharCode
+ * Util.EscapeSlashes
+ * Util.StringToRegExp
+ * Util.JSONClone (opts.exclude)
+ * Local storage parser options: b64, xor, bs, etc
+ * Util.StorageParse, Util.StorageFormat
+ * Util.DisableLocalStorage (must be last test)
+ * More localStorage testing?
+ * Util.FormatQueryString
+ * CSS functions
+ * DOM functions
+ * Util.StyleToObject
+ */
+
 var assert = require("assert");
 
 const TWUtil = require("../utility.js");
-var Util = TWUtil.Util;
-var Logging = TWUtil.Logging;
-var ColorParser = TWUtil.ColorParser;
-var tinycolor = TWUtil.tinycolor;
+for (let [k, v] of Object.entries(TWUtil)) {
+  global[k] = v;
+}
 
 Util.DebugLevel = Util.LEVEL_TRACE;
 
@@ -17,7 +53,10 @@ const GREEK_SIGMA_UC = "\u03a3";
 
 /* Test utility.js */
 describe("Util", function() {
-  describe("Globals", function() {
+  describe("Exports", function() {
+    it("provides CallbackHandler", function() {
+      assert.equal(CallbackHandler, Util.CallbackHandler);
+    });
     it("provides Logging", function() {
       assert.equal(Logging, Util.Logging);
     });
@@ -282,14 +321,22 @@ describe("Util", function() {
   });
   /* Section "Error handling" tested below */
   describe("Logging", function() {
-    function foo() {
-      function bar() {
-        Util.Throw(Error, "test");
-        throw new Error("fallback");
-      }
-      bar();
+    /* Reset changes made to the logger */
+    function resetLogger() {
+      Util.Logger.enable();
+      Util.Logger.removeAllHooks();
+      Util.Logger.removeAllFilters();
     }
+
     it("defines Util.Throw with stack handling", function() {
+      /* Throw an error via Util.Throw (then throw, if that fails) */
+      function foo() {
+        function bar() {
+          Util.Throw(Error, "test");
+          throw new Error("fallback");
+        }
+        bar();
+      }
       let err = null;
       try { foo(); } catch (e) { err = e; }
       assert.ok(err);
@@ -310,45 +357,118 @@ describe("Util", function() {
       /* TODO: Stack trimming */
     });
     it("provides debug levels", function() {
+      const oldestLevel = Util.DebugLevel;
       Util.PushDebugLevel(Util.LEVEL_DEBUG);
       assert.equal(Util.DebugLevel, Util.LEVEL_DEBUG);
-      assert.ok(Util.LEVEL_OFF < Util.LEVEL_DEBUG);
+      assert.equal(Util.LEVEL_OFF, Util.LEVEL_MIN);
+      assert.ok(Util.LEVEL_MIN < Util.LEVEL_FATAL);
+      assert.ok(Util.LEVEL_FATAL < Util.LEVEL_WARN);
+      assert.ok(Util.LEVEL_WARN < Util.LEVEL_INFO);
+      assert.ok(Util.LEVEL_INFO < Util.LEVEL_DEBUG);
       assert.ok(Util.LEVEL_DEBUG < Util.LEVEL_TRACE);
       assert.ok(Util.LEVEL_TRACE === Util.LEVEL_MAX);
       assert.ok(Util.PopDebugLevel());
       Util.PushDebugLevel(Util.LEVEL_TRACE);
       assert.equal(Util.DebugLevel, Util.LEVEL_TRACE);
-      assert.ok(Util.Logger.severityEnabled("ALL"));
-      assert.ok(Util.Logger.severityEnabled("ERROR"));
-      assert.ok(Util.Logger.severityEnabled("WARN"));
-      assert.ok(Util.Logger.severityEnabled("INFO"));
-      assert.ok(Util.Logger.severityEnabled("DEBUG"));
-      assert.ok(Util.Logger.severityEnabled("TRACE"));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.ALL));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.ERROR));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.WARN));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.INFO));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.DEBUG));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.TRACE));
       Util.PushDebugLevel(Util.LEVEL_DEBUG);
       assert.equal(Util.DebugLevel, Util.LEVEL_DEBUG);
-      assert.ok(Util.Logger.severityEnabled("ERROR"));
-      assert.ok(Util.Logger.severityEnabled("WARN"));
-      assert.ok(Util.Logger.severityEnabled("INFO"));
-      assert.ok(Util.Logger.severityEnabled("DEBUG"));
-      assert.ok(!Util.Logger.severityEnabled("TRACE"));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.ERROR));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.WARN));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.INFO));
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.DEBUG));
+      assert.ok(!Util.Logger.severityEnabled(Util.Logging.TRACE));
       Util.PopDebugLevel();
       assert.equal(Util.DebugLevel, Util.LEVEL_TRACE);
       Util.PopDebugLevel();
+      Util.PushDebugLevel(Util.LEVEL_FATAL);
+      assert.ok(Util.Logger.severityEnabled(Util.Logging.ERROR));
+      assert.ok(!Util.Logger.severityEnabled(Util.Logging.WARN));
+      assert.ok(!Util.Logger.severityEnabled(Util.Logging.INFO));
+      assert.ok(!Util.Logger.severityEnabled(Util.Logging.DEBUG));
+      assert.ok(!Util.Logger.severityEnabled(Util.Logging.TRACE));
+      Util.PopDebugLevel();
+      assert.ok(!Util.PopDebugLevel());
+      assert.equal(Util.DebugLevel, oldestLevel);
     });
-    it("logs", function() {
-      /* TODO */
+    describe("simple logging", function() {
+      it("logs", function(done) {
+        resetLogger();
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.equal(sev, "INFO");
+          assert.ok(hasStack);
+          assert.deepEqual(args, ["test", 1, 2, 3]);
+          done();
+        });
+        Util.Info("test", 1, 2, 3);
+      });
+      it("logs without a stack", function(done) {
+        resetLogger();
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.equal(sev, "INFO");
+          assert.ok(!hasStack);
+          assert.deepEqual(args, ["test", 1, 2, 3]);
+          done();
+        });
+        Util.InfoOnly("test", 1, 2, 3);
+      });
+      it("logs once", function(done) {
+        resetLogger();
+        let count = 0;
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.equal(sev, "INFO");
+          assert.ok(hasStack);
+          assert.deepEqual(args, ["test", 1, 2, 3]);
+          count += 1;
+        });
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.equal(count, 1);
+          done();
+        });
+        Util.InfoOnce("test", 1, 2, 3);
+        Util.InfoOnce("test", 1, 2, 3);
+        Util.InfoOnce("test", 1, 2, 3);
+        Util.InfoOnlyOnce("test", 1, 2, 3);
+        Util.InfoOnlyOnce("test", 1, 2, 3);
+        Util.InfoOnlyOnce("test", 1, 2, 3);
+        Util.DebugOnly("done");
+      });
+      /* TODO: hooks for specific levels */
     });
-    it("provides hooks", function() {
-      /* TODO */
-    });
-    it("provides filters", function() {
-      /* TODO */
-    });
-    it("logs with/without stacks", function() {
-      /* TODO */
-    });
-    it("logs once (with/without stacks)", function() {
-      /* TODO */
+    describe("filtered logging", function() {
+      it("provides filters", function(done) {
+        resetLogger();
+        Util.Logger.addFilter(/filtered/);
+        Util.Logger.addFilter("omit this message");
+        Util.Logger.addFilter("omit debug", "DEBUG");
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.ok(!/filtered/.test(args.join(" ")));
+          assert.ok(args.join(" ").indexOf("omit this message") === -1);
+          if (sev === "DEBUG") {
+            assert.ok(args.join(" ").indexOf("omit debug") === -1);
+          }
+          if (args[0] === "done") {
+            done();
+          }
+        });
+        Util.LogOnly("this should be filtered");
+        Util.LogOnly("we should", "omit this message");
+        Util.DebugOnlyOnce("omit debug");
+        Util.DebugOnly("omit debug");
+        Util.DebugOnlyOnce("omit", "debug");
+        Util.DebugOnly("omit", "debug");
+        Util.DebugOnly("this should make it through");
+        Util.WarnOnly("this should be", "filtered");
+        Util.WarnOnly("omit debug");
+        Util.LogOnly("this should be logged");
+        Util.LogOnly("done");
+        /* TODO: filter patterns across logging items */
+      });
     });
   });
   describe("Color handling", function() {
@@ -714,8 +834,11 @@ describe("Util", function() {
   /* Section "Construct global objects" tested indirectly already */
 });
 
-/*
- * vim-fold: ^[ ]\+it(
- */
+/* vim-fold-set: ^[ ]\+const makeTest =: */
+/* vim-fold-set: ^[ ]\+makeTest(: */
+/* vim-fold-set: ^[ ]\+it(": */
+/* vim-fold-set: ^[ ]\+describe(": */
+/* vim-fold-set: ^[^ ].*{$: */
+/* vim-fold-opt-set: stop: */
 
-/* globals describe it */
+/* globals describe it Util CallbackHandler Logging ColorParser tinycolor */

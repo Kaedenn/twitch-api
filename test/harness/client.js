@@ -7,6 +7,7 @@ var TWUtil = require("../utility.js");
 for (let [k, v] of Object.entries(TWUtil)) {
   global[k] = v;
 }
+global.Util.DebugLevel = Util.LEVEL_INFO;
 
 var TWClient = require("../client.js");
 for (let [k, v] of Object.entries(TWClient)) {
