@@ -15,7 +15,7 @@ MOCHA = npx mocha
 
 .PHONY: all lint test $(TESTS)
 
-all: lint $(DISTS) $(ASSETS)
+all: lint $(DISTS) $(ASSETS) test
 
 lint:
 	$(ESLINT) --env browser --env es6 $(SRCS)
