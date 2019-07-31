@@ -3,7 +3,7 @@ SRCS = client.js utility.js
 DIST = dist
 DISTS = $(patsubst %,$(DIST)/%,$(SRCS))
 ASSETS = assets/tinycolor.js
-TESTS = test/util.js test/client.js
+TESTS = test/*.js test/harness/*.js
 
 # Programs
 LN = ln -s
@@ -31,8 +31,6 @@ assets/tinycolor.js: node_modules/tinycolor2/tinycolor.js
 test:
 	$(MOCHA) --require test/harness.js
 
-test/util.js:
+test/*.js:
 	$(MOCHA) --require test/harness.js $@
 
-test/client.js:
-	$(MOCHA) --require test/harness.js $@

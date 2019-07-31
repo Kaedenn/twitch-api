@@ -1,8 +1,16 @@
 
+"use strict";
+
+/* Generic test harness for all tests; specific harnesses for individual tests
+ * can be found in the test/harness/ directory */
+
 global.crypto = require("crypto");
 const {JSDOM} = require("jsdom");
+const fs = require("fs");
+const path = require("path");
 
-const dom = new JSDOM(`<!DOCTYPE html><head><title>twapi tests</title></head><body></body></html>`);
+const dom = new JSDOM(
+  `<!DOCTYPE html><head><title>twapi tests</title></head><body></body></html>`);
 global.window = dom.window;
 
 /* Persist window.* into global.* */
@@ -26,7 +34,18 @@ window.localStorage = Storage.create([], {
   storageQuota: 1000000
 });
 
-function getOwnKeysOf(obj) {
-  return Reflect.ownKeys(global.window).map((k) => JSON.stringify(k)).sort();
+function loadHarness(name) {
+  const hpath = path.join("test/harness", name + ".js");
+  return new Promise((resolve, reject) => {
+    fs.readFile(hpath, "ASCII", (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        const resp = eval(data);
+        resolve(resp);
+      }
+    });
+  });
 }
 
+global.loadHarness = loadHarness;

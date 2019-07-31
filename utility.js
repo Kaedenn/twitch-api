@@ -1655,68 +1655,115 @@ Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
 
 /* Event handling {{{0 */
 
-Util._events = {};
-Util._events_default = null;
-
-/* Bind a function to an event by name */
-Util.Bind = function _Util_Bind(name, callback) {
-  if (!Util._events[name]) Util._events[name] = [];
-  Util._events[name].push(callback);
-};
-
-/* Call a function if an event is unbound */
-Util.BindDefault = function _Util_BindDefault(callback) {
-  Util._events_default = callback;
-};
-
-/* Unbind a callback from an event */
-Util.Unbind = function _Util_Unbind(name, callback) {
-  if (Util._events[name]) {
-    if (Util._events[name].indexOf(callback) > -1) {
-      Util._events[name] = Util._events[name].filter((e) => e !== callback);
-      return true;
-    }
-  }
-  return false;
-};
-
-/* Unbind callbacks from a set of events; by prefix or regexp */
-Util.UnbindAll = function _Util_UnbindAll(pat=null) {
-  for (let name of Object.keys(Util._events)) {
-    if (pat !== null) {
-      if (typeof(pat) === "string" && !name.startsWith(pat)) {
-        continue;
-      } else if (pat instanceof RegExp && !pat.test(name)) {
-        continue;
+/* Base class for objects implementing callbacks for event handling */
+class CallbackHandler {
+  /* Construct, optionally with configuration options:
+   *   useDOMEvents:
+   *    boolean (default false)
+   *    Call document.dispatchEvent(e) on all events in fire()
+   *   useDOMEventsFirst: (requires useDOMEvents)
+   *    boolean (default false)
+   *    Call dispatchEvent before the named handlers, instead of after
+   *   useDefaultAfterDOMEvents: (requires useDOMEvents)
+   *    boolean (default false)
+   *    Call default handlers if no named handlers were called, even if the
+   *    event was fired successfully via dispatchEvent()
+   * Note that the callbacks are always invoked, even with useDOMEventsFirst
+   */
+  constructor(opts=null) {
+    this._events = {};
+    this._default_events = [];
+    this._opts = {};
+    if (opts) {
+      if ((this._opts.useDOMEvents = Boolean(opts.useDOMEvents)) === true) {
+        this._opts.useDOMEventsFirst = Boolean(opts.useDOMEventsFirst);
+        this._opts.useDefaultAfterDOMEvents = Boolean(opts.useDefaultAfterDOMEvents);
       }
     }
-    Util._events[name] = [];
   }
-};
 
-/* Fire an event: dispatchEvent with a _stacktrace attribute  */
-Util.FireEvent = function _Util_FireEvent(e) {
-  let fired = false;
-  /* Add a stacktrace to the event for debugging reasons */
-  e._stacktrace = Util.ParseStack(Util.GetStack());
-  /* Discard the Util.FireEvent stack frame */
-  e._stacktrace.shift();
-  /* Fire the event across all the bound functions */
-  if (Util._events[e.type]) {
-    for (let f of Util._events[e.type]) {
-      f(e);
+  /* Call func(obj) when event name is fired */
+  bind(name, func) {
+    if (!this._events.hasOwnProperty(name)) {
+      this._events[name] = [];
     }
-    fired = true;
+    this._events[name].push(func);
   }
-  /* Allow overloading of Event objects */
-  if (e instanceof Event) {
-    document.dispatchEvent(e);
-    fired = true;
+
+  /* Call func(obj) when an event with no handler is fired */
+  bindDefault(func) {
+    this._default_events.push(func);
   }
-  if (!fired && Util._events_default) {
-    Util._events_default(e);
+
+  /* Unbind the given function (or all functions) from the given handler */
+  unbind(name, func=null) {
+    if (this._events.hasOwnProperty(name)) {
+      let filterFn = (ev) => !(func === null || ev === func);
+      this._events[name] = this._events[name].filter(filterFn);
+    }
   }
-};
+
+  /* Unbind all named handlers */
+  unbindNamed() {
+    this._events = {};
+  }
+
+  /* Unbind the given function (or all functions) from the default handler */
+  unbindDefault(func=null) {
+    let filterFn = (ev) => !(func === null || ev === func);
+    this._default_events = this._default_events.filter(filterFn);
+  }
+
+  /* Unbind everything: named and default */
+  unbindAll() {
+    this.unbindNamed();
+    this.unbindDefault();
+  }
+
+  /* Fire the event object with the given name */
+  fire(name, obj) {
+    let fired = false;
+    /* Add a stacktrace for debugging purposes */
+    obj._stacktrace = Util.ParseStack(Util.GetStack());
+    /* Remove CallbackHandler.fire */
+    obj._stacktrace.shift();
+    if (this._opts.useDOMEvents) {
+      if (this._opts.useDOMEventsFirst) {
+        if (obj instanceof Event) {
+          document.dispatchEvent(obj);
+          if (!this._opts.useDefaultAfterDOMEvents) {
+            fired = true;
+          }
+        }
+      }
+    }
+    /* Fire the event across all bound functions */
+    if (this._events.hasOwnProperty(name)) {
+      for (let func of this._events[name]) {
+        func(obj);
+        fired = true;
+      }
+    }
+    if (this._opts.useDOMEvents) {
+      if (!this._opts.useDOMEventsFirst) {
+        if (obj instanceof Event) {
+          document.dispatchEvent(obj);
+          if (!this._opts.useDefaultAfterDOMEvents) {
+            fired = true;
+          }
+        }
+      }
+    }
+    /* Fire the event across all default functions */
+    if (!fired) {
+      for (let func of this._default_events) {
+        func(obj);
+      }
+    }
+  }
+}
+
+Util._defer("CallbackHandler", () => CallbackHandler);
 
 /* End event handling 0}}} */
 
@@ -2426,6 +2473,7 @@ Util.Alert = function _Util_Alert(message) {
   }
   const twapiExports = {
     "Util": Util,
+    "CallbackHandler": CallbackHandler,
     "Logging": Logging,
     "ColorParser": ColorParser,
     "tinycolor": window.tinycolor
@@ -2448,4 +2496,5 @@ Util.Alert = function _Util_Alert(message) {
 
 /* End constructing global objects 0}}} */
 
+/* exported Util CallbackHandler Logging ColorParser tinycolor */
 /* globals tinycolor module define require */

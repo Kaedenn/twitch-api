@@ -3116,114 +3116,197 @@ Util.FixedArrayToNumber = function _Util_FixedArrayToNumber(arr) {
 
 /* Event handling {{{0 */
 
-Util._events = {};
-Util._events_default = null;
+/* Base class for objects implementing callbacks for event handling */
 
-/* Bind a function to an event by name */
-Util.Bind = function _Util_Bind(name, callback) {
-  if (!Util._events[name]) Util._events[name] = [];
-  Util._events[name].push(callback);
-};
+var CallbackHandler = function () {
+  /* Construct, optionally with configuration options:
+   *   useDOMEvents:
+   *    boolean (default false)
+   *    Call document.dispatchEvent(e) on all events in fire()
+   *   useDOMEventsFirst: (requires useDOMEvents)
+   *    boolean (default false)
+   *    Call dispatchEvent before the named handlers, instead of after
+   *   useDefaultAfterDOMEvents: (requires useDOMEvents)
+   *    boolean (default false)
+   *    Call default handlers if no named handlers were called, even if the
+   *    event was fired successfully via dispatchEvent()
+   * Note that the callbacks are always invoked, even with useDOMEventsFirst
+   */
+  function CallbackHandler() {
+    var opts = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
 
-/* Call a function if an event is unbound */
-Util.BindDefault = function _Util_BindDefault(callback) {
-  Util._events_default = callback;
-};
+    _classCallCheck(this, CallbackHandler);
 
-/* Unbind a callback from an event */
-Util.Unbind = function _Util_Unbind(name, callback) {
-  if (Util._events[name]) {
-    if (Util._events[name].indexOf(callback) > -1) {
-      Util._events[name] = Util._events[name].filter(function (e) {
-        return e !== callback;
-      });
-      return true;
+    this._events = {};
+    this._default_events = [];
+    this._opts = {};
+    if (opts) {
+      if ((this._opts.useDOMEvents = Boolean(opts.useDOMEvents)) === true) {
+        this._opts.useDOMEventsFirst = Boolean(opts.useDOMEventsFirst);
+        this._opts.useDefaultAfterDOMEvents = Boolean(opts.useDefaultAfterDOMEvents);
+      }
     }
   }
-  return false;
-};
 
-/* Unbind callbacks from a set of events; by prefix or regexp */
-Util.UnbindAll = function _Util_UnbindAll() {
-  var pat = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
-  var _iteratorNormalCompletion31 = true;
-  var _didIteratorError31 = false;
-  var _iteratorError31 = undefined;
+  /* Call func(obj) when event name is fired */
 
-  try {
-    for (var _iterator31 = Object.keys(Util._events)[Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-      var name = _step31.value;
 
-      if (pat !== null) {
-        if (typeof pat === "string" && !name.startsWith(pat)) {
-          continue;
-        } else if (pat instanceof RegExp && !pat.test(name)) {
-          continue;
+  _createClass(CallbackHandler, [{
+    key: "bind",
+    value: function bind(name, func) {
+      if (!this._events.hasOwnProperty(name)) {
+        this._events[name] = [];
+      }
+      this._events[name].push(func);
+    }
+
+    /* Call func(obj) when an event with no handler is fired */
+
+  }, {
+    key: "bindDefault",
+    value: function bindDefault(func) {
+      this._default_events.push(func);
+    }
+
+    /* Unbind the given function (or all functions) from the given handler */
+
+  }, {
+    key: "unbind",
+    value: function unbind(name) {
+      var func = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
+      if (this._events.hasOwnProperty(name)) {
+        var filterFn = function filterFn(ev) {
+          return !(func === null || ev === func);
+        };
+        this._events[name] = this._events[name].filter(filterFn);
+      }
+    }
+
+    /* Unbind all named handlers */
+
+  }, {
+    key: "unbindNamed",
+    value: function unbindNamed() {
+      this._events = {};
+    }
+
+    /* Unbind the given function (or all functions) from the default handler */
+
+  }, {
+    key: "unbindDefault",
+    value: function unbindDefault() {
+      var func = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+
+      var filterFn = function filterFn(ev) {
+        return !(func === null || ev === func);
+      };
+      this._default_events = this._default_events.filter(filterFn);
+    }
+
+    /* Unbind everything: named and default */
+
+  }, {
+    key: "unbindAll",
+    value: function unbindAll() {
+      this.unbindNamed();
+      this.unbindDefault();
+    }
+
+    /* Fire the event object with the given name */
+
+  }, {
+    key: "fire",
+    value: function fire(name, obj) {
+      var fired = false;
+      /* Add a stacktrace for debugging purposes */
+      obj._stacktrace = Util.ParseStack(Util.GetStack());
+      /* Remove CallbackHandler.fire */
+      obj._stacktrace.shift();
+      if (this._opts.useDOMEvents) {
+        if (this._opts.useDOMEventsFirst) {
+          if (obj instanceof Event) {
+            document.dispatchEvent(obj);
+            if (!this._opts.useDefaultAfterDOMEvents) {
+              fired = true;
+            }
+          }
         }
       }
-      Util._events[name] = [];
-    }
-  } catch (err) {
-    _didIteratorError31 = true;
-    _iteratorError31 = err;
-  } finally {
-    try {
-      if (!_iteratorNormalCompletion31 && _iterator31.return) {
-        _iterator31.return();
-      }
-    } finally {
-      if (_didIteratorError31) {
-        throw _iteratorError31;
-      }
-    }
-  }
-};
+      /* Fire the event across all bound functions */
+      if (this._events.hasOwnProperty(name)) {
+        var _iteratorNormalCompletion31 = true;
+        var _didIteratorError31 = false;
+        var _iteratorError31 = undefined;
 
-/* Fire an event: dispatchEvent with a _stacktrace attribute  */
-Util.FireEvent = function _Util_FireEvent(e) {
-  var fired = false;
-  /* Add a stacktrace to the event for debugging reasons */
-  e._stacktrace = Util.ParseStack(Util.GetStack());
-  /* Discard the Util.FireEvent stack frame */
-  e._stacktrace.shift();
-  /* Fire the event across all the bound functions */
-  if (Util._events[e.type]) {
-    var _iteratorNormalCompletion32 = true;
-    var _didIteratorError32 = false;
-    var _iteratorError32 = undefined;
+        try {
+          for (var _iterator31 = this._events[name][Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
+            var func = _step31.value;
 
-    try {
-      for (var _iterator32 = Util._events[e.type][Symbol.iterator](), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-        var f = _step32.value;
-
-        f(e);
-      }
-    } catch (err) {
-      _didIteratorError32 = true;
-      _iteratorError32 = err;
-    } finally {
-      try {
-        if (!_iteratorNormalCompletion32 && _iterator32.return) {
-          _iterator32.return();
-        }
-      } finally {
-        if (_didIteratorError32) {
-          throw _iteratorError32;
+            func(obj);
+            fired = true;
+          }
+        } catch (err) {
+          _didIteratorError31 = true;
+          _iteratorError31 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion31 && _iterator31.return) {
+              _iterator31.return();
+            }
+          } finally {
+            if (_didIteratorError31) {
+              throw _iteratorError31;
+            }
+          }
         }
       }
-    }
+      if (this._opts.useDOMEvents) {
+        if (!this._opts.useDOMEventsFirst) {
+          if (obj instanceof Event) {
+            document.dispatchEvent(obj);
+            if (!this._opts.useDefaultAfterDOMEvents) {
+              fired = true;
+            }
+          }
+        }
+      }
+      /* Fire the event across all default functions */
+      if (!fired) {
+        var _iteratorNormalCompletion32 = true;
+        var _didIteratorError32 = false;
+        var _iteratorError32 = undefined;
 
-    fired = true;
-  }
-  /* Allow overloading of Event objects */
-  if (e instanceof Event) {
-    document.dispatchEvent(e);
-    fired = true;
-  }
-  if (!fired && Util._events_default) {
-    Util._events_default(e);
-  }
-};
+        try {
+          for (var _iterator32 = this._default_events[Symbol.iterator](), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
+            var _func = _step32.value;
+
+            _func(obj);
+          }
+        } catch (err) {
+          _didIteratorError32 = true;
+          _iteratorError32 = err;
+        } finally {
+          try {
+            if (!_iteratorNormalCompletion32 && _iterator32.return) {
+              _iterator32.return();
+            }
+          } finally {
+            if (_didIteratorError32) {
+              throw _iteratorError32;
+            }
+          }
+        }
+      }
+    }
+  }]);
+
+  return CallbackHandler;
+}();
+
+Util._defer("CallbackHandler", function () {
+  return CallbackHandler;
+});
 
 /* End event handling 0}}} */
 
@@ -4346,6 +4429,7 @@ Util.Alert = function _Util_Alert(message) {
 
   var twapiExports = {
     "Util": Util,
+    "CallbackHandler": CallbackHandler,
     "Logging": Logging,
     "ColorParser": ColorParser,
     "tinycolor": window.tinycolor
@@ -4422,4 +4506,5 @@ Util.Alert = function _Util_Alert(message) {
 
 /* End constructing global objects 0}}} */
 
+/* exported Util CallbackHandler Logging ColorParser tinycolor */
 /* globals tinycolor module define require */
