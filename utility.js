@@ -835,6 +835,14 @@ class Logging {
     console.groupEnd();
   }
 
+  /* Severity names */
+  static get ALL() { return "ALL"; }
+  static get ERROR() { return "ERROR"; }
+  static get WARN() { return "WARN"; }
+  static get INFO() { return "INFO"; }
+  static get DEBUG() { return "DEBUG"; }
+  static get TRACE() { return "TRACE"; }
+
   /* Map severity name to severity number */
   static get SEVERITIES() {
     return {ALL: 6, ERROR: 5, WARN: 4, INFO: 3, DEBUG: 2, TRACE: 1};
@@ -876,11 +884,36 @@ class Logging {
     this._enabled = true;
   }
 
+  /* Returns whether or not logging is enabled */
+  get enabled() {
+    return this._enabled;
+  }
+
   /* Hook function(sev, stacktrace, ...args) for the given severity */
   addHook(fn, sev="ALL") {
     if (!this._assertSev(sev)) { return false; }
     this._hooks[this._sevValue(sev)].push(fn);
     return true;
+  }
+
+  /* Remove a hooked function */
+  removeHook(fn, sev="ALL") {
+    if (!this._assertSev(sev)) { return false; }
+    let sv = this._sevValue(sev);
+    this._hooks[sv] = this._hooks[sv].filter((f) => f !== fn);
+  }
+
+  /* Remove all hooks for the given severity */
+  removeHooks(sev) {
+    if (!this._assertSev(sev)) { return false; }
+    this._hooks[this._seValue(sev)] = [];
+  }
+
+  /* Remove all hooks */
+  removeAllHooks() {
+    for (let sev of Object.keys(this._hooks)) {
+      this._hooks[sev] = [];
+    }
   }
 
   /* Add a filter function for the given severity. Messages returning `false`
@@ -896,9 +929,9 @@ class Logging {
     if (!this._assertSev(sev)) { return false; }
     let func = () => false;
     if (filter_obj instanceof RegExp) {
-      func = (args) => `${args}`.match(filter_obj);
+      func = (args) => Util.Logger.stringify(...args).match(filter_obj);
     } else if (typeof(filter_obj) === "string") {
-      func = (args) => `${args}`.indexOf(filter_obj) > -1;
+      func = (args) => Util.Logger.stringify(...args).indexOf(filter_obj) > -1;
     } else {
       func = filter_obj;
     }
