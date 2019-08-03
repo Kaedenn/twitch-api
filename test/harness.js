@@ -9,8 +9,28 @@ const {JSDOM} = require("jsdom");
 const fs = require("fs");
 const path = require("path");
 
-const dom = new JSDOM(
-  `<!DOCTYPE html><head><title>twapi tests</title></head><body></body></html>`);
+const dom = new JSDOM(`
+<!DOCTYPE html>
+<head>
+<title>TWAPI Tests</title>
+<style type="text/css">
+:root {
+  --var: 1;
+  --value: var(--var);
+  --value-default: var(--var-bad, 2);
+}
+.span1 {
+  color: red;
+}
+#id1 {
+  background-color: white;
+}
+</style>
+</head>
+<body>
+  <span class="span1" id="id1">text</span>
+</body>
+</html>`);
 global.window = dom.window;
 
 /* Persist window.* into global.* */

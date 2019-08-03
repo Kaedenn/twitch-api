@@ -3,22 +3,15 @@
 
 /* TODO:
  * Util.EscapeChars
- * Array.{min,max}
- * String.map
- * Util.URL_REGEX
- * Util.URL
- * Util.StripCommonPrefix
- * Util.ParseStack, Util.FormatStack
+ * Util.StripCommonPrefix (fails)
+ * Util.FormatStack
  * Stack trimming
- * Util.Logger
- *  logging (once, without stack, once without stack)
- *  hooks
- *  filters
- * Util.Color yiq calculation
- * Util.RelativeLuminance
- * Util.ContrastRatio
- * Util.GetMaxContrast
- * Event handling (CallbackHandler)
+ * Colors:
+ *  Util.Color yiq calculation
+ *  Util.RelativeLuminance
+ *  Util.ContrastRatio
+ *  Util.GetMaxContrast
+ * CallbackHandler
  * Util.EscapeWithMap
  * Util.StringToCodes
  * Util.FormatDate, Util.FormatInterval
@@ -27,10 +20,8 @@
  * Util.EscapeSlashes
  * Util.StringToRegExp
  * Util.JSONClone (opts.exclude)
- * Local storage parser options: b64, xor, bs, etc
- * Util.StorageParse, Util.StorageFormat
- * Util.DisableLocalStorage (must be last test)
- * More localStorage testing?
+ * localStorage:
+ *  Util.DisableLocalStorage (must be last test)
  * Util.FormatQueryString
  * CSS functions
  * DOM functions
@@ -51,20 +42,40 @@ const GREEK_SIGMA = "\u03c3";
 const GREEK_SIGMA_ALT = "\u03c2";
 const GREEK_SIGMA_UC = "\u03a3";
 
+/* Obtain HTML for the given element */
+const getHTMLFor = (e) => {
+  let w = document.createElement("div");
+  w.appendChild(e);
+  return w.innerHTML;
+};
+
+/* Reset changes made to the logger */
+function resetLogger() {
+  Util.Logger.enable();
+  Util.Logger.removeAllHooks();
+  Util.Logger.removeAllFilters();
+}
+
 /* Test utility.js */
-describe("Util", function() {
+describe("Util", function() { /* nofold */
   describe("Exports", function() {
     it("provides CallbackHandler", function() {
       assert.equal(CallbackHandler, Util.CallbackHandler);
     });
     it("provides Logging", function() {
       assert.equal(Logging, Util.Logging);
+      assert.ok(Logging.FUNCTION_MAP);
+      for (let s of Object.values(Logging.SEVERITIES)) {
+        assert.ok(Logging.FUNCTION_MAP[s]);
+      }
     });
     it("provides ColorParser", function() {
       assert.equal(ColorParser, Util.ColorParser);
+      assert.ok(ColorParser.parse);
     });
     it("provides tinycolor", function() {
       assert.equal(tinycolor, window.tinycolor);
+      assert.ok(tinycolor("red"));
     });
   });
   describe("General utilities", function() {
@@ -101,10 +112,45 @@ describe("Util", function() {
       assert.equal(Util.StringEscapeChars["\v"], "v");
       /* Has no additional items */
       assert.equal(Object.keys(Util.StringEscapeChars).length, 6);
+      /* Works with JSON parsing/formatting (except \v) */
+      assert.equal(JSON.parse(`"\\${Util.StringEscapeChars['\b']}"`), '\b');
+      for (let [e, c] of Object.entries(Util.StringEscapeChars)) {
+        let s = `"\\${c}"`;
+        /* JSON.parse('"\\v"') doesn't work even though "\v" !== "v" */
+        if (e === '\v' && c === 'v') {
+          continue;
+        }
+        assert.equal(JSON.parse(s), e);
+        assert.equal(JSON.stringify(e), s);
+      }
     });
     it("defines Util.EscapeChars", function() {
-      /* TODO: verify content without rewriting content? */
-      /* Has no additional items */
+      /* Assert that s1 escapes to s2 using setAttribute */
+      const testAttr = (s1, s2) => {
+        const pat = /<span data-attr="(.*)"><\/span>/;
+        let e = document.createElement("span");
+        e.setAttribute("data-attr", s1);
+        let s = getHTMLFor(e);
+        let m = s.match(pat);
+        assert.ok(m);
+        assert.equal(m[0], s);
+        assert.equal(m[1], s2);
+      };
+      /* Assert that s1 escapes to s2 using textContent */
+      const testValue = (s1, s2) => {
+        let e = document.createElement("span");
+        e.textContent = s1;
+        assert.equal(e.textContent, s1);
+        assert.equal(e.innerHTML, s2);
+      };
+      testAttr('foo "bar" baz', "foo &quot;bar&quot; baz");
+      testValue("<>", "&lt;&gt;");
+      testValue("<", Util.EscapeChars["<"]);
+      testValue(">", Util.EscapeChars[">"]);
+      testValue("&", Util.EscapeChars["&"]);
+      testAttr("\"", Util.EscapeChars['"']);
+      testAttr("&", Util.EscapeChars["&"]);
+      /* TODO: Test &apos; somehow? */
       assert.equal(Object.keys(Util.EscapeChars).length, 5);
     });
     it("defines Util.SetFunctionName", function() {
@@ -174,8 +220,7 @@ describe("Util", function() {
       assert.deepEqual(a1, base.concat(base));
     });
     it("defines Array.{min,max}", function() {
-      /* TODO: Test with a more advanced key function */
-      const keyFn = (a) => a;
+      let keyFn = (a) => a;
       assert.equal([1, 2, 3].min(), 1);
       assert.equal(['a', 'b', 'c'].min(), 'a');
       assert.equal(['a', 'b', 'c'].min(keyFn), 'a');
@@ -191,14 +236,25 @@ describe("Util", function() {
       assert.equal(Array.of(..."text").min(keyFn), "e");
       assert.equal([-1, -2, -3].min(), -3);
       assert.equal([-1, -2, -3].max(), -1);
-    });
-    it("defines Array.range", function() {
-      assert.deepEqual(Array.range(-1), []);
-      assert.deepEqual(Array.range(-1, "x"), []);
-      assert.deepEqual(Array.range(0, "x"), []);
-      assert.deepEqual(Array.range(5), [null, null, null, null, null]);
-      assert.deepEqual(Array.range(1, Array), [Array]);
-      assert.deepEqual(Array.range(2, [1, 2]), [[1, 2], [1, 2]]);
+      keyFn = (a) => a < 5 ? a : -a;
+      assert.equal([4, 5, 6].min(keyFn), 6);
+      assert.equal([4, 5, 6].max(keyFn), 4);
+      keyFn = (a) => a.length;
+      assert.equal(["foo", "f", "fooo"].min(keyFn), "f");
+      assert.equal(["foo", "f", "fooo"].max(keyFn), "fooo");
+      assert.deepEqual([[], [1], [1, 2]].min(keyFn), []);
+      assert.deepEqual([[], [1], [1, 2]].max(keyFn), [1, 2]);
+      keyFn = (a) => -a.length;
+      assert.equal(["foo", "f", "fooo"].max(keyFn), "f");
+      assert.equal(["foo", "f", "fooo"].min(keyFn), "fooo");
+      assert.deepEqual([[], [1], [1, 2]].min(keyFn), [1, 2]);
+      assert.deepEqual([[], [1], [1, 2]].max(keyFn), []);
+      keyFn = (a) => a[0] + a[1];
+      assert.deepEqual([[0, 15], [7, 7], [14, 0], [16, -15]].max(keyFn), [0, 15]);
+      assert.deepEqual([[0, 15], [7, 7], [14, 0], [16, -15]].min(keyFn), [16, -15]);
+      keyFn = (a) => a[0] * a[1];
+      assert.deepEqual([[0, 1, 2], [3, 4, 5], [100, 1]].max(keyFn), [100, 1]);
+      assert.deepEqual([[0, 1, 2], [3, 4, 5], [100, 1]].min(keyFn), [0, 1, 2]);
     });
     it("defines String.is<class>", function() {
       assert.ok("123".isdigit());
@@ -230,7 +286,12 @@ describe("Util", function() {
       }
     });
     it("defines String.map", function() {
-      /* TODO */
+      assert.equal("abc".map((c) => c.toUpperCase()), "ABC");
+      assert.equal("ABC".map((c) => c.toLowerCase()), "abc");
+      assert.equal("abc".map((c) => c + "1"), "a1b1c1");
+      assert.equal("abc".map((c) => ""), "");
+      assert.equal("abc".map((c) => String.fromCharCode(c.charCodeAt(0)+1)), "bcd");
+      assert.equal("xyz".map((c) => `a${c}b`), "axbaybazb");
     });
     it("defines String.equalsLowerCase", function() {
       assert.ok("foo".equalsLowerCase("FOO"));
@@ -290,44 +351,111 @@ describe("Util", function() {
   });
   describe("URL handling", function() {
     it("defines Util.URL_REGEX", function() {
-      /* TODO: fix Util.URL_REGEX and rewrite tests
-      const match = (u) => Util.URL_REGEX.test(u);
+      const match = (u) => new RegExp(Util.URL_REGEX).test(u);
+      assert.ok(match("example.com"));
+      assert.ok(match("example.com/"));
+      assert.ok(match("www.example.com"));
+      assert.ok(match("www.example.com/"));
+      assert.ok(match("www-2.example.com"));
+      assert.ok(match("www-2.example.com/"));
       assert.ok(match("http://example.com"));
       assert.ok(match("http://example.com/"));
-      assert.ok(match("http://example.com/?a=b#section.c"));
-      assert.ok(match("http://example.com?a=b#section.c"));
-      assert.ok(match("file:///foo"));
+      assert.ok(match("https://example.com"));
+      assert.ok(match("https://example.com/"));
       assert.ok(match("https://www.example.com"));
+      assert.ok(match("https://www.example.com/"));
+      assert.ok(match("https://www2.example.com"));
+      assert.ok(match("https://www2.example.com/"));
+      assert.ok(match("https://www-2.example.com"));
+      assert.ok(match("https://www-2.example.com/"));
+      assert.ok(match("http://example.com?a=b#section.c"));
+      assert.ok(match("http://example.com/?a=b#section.c"));
+      assert.ok(match("www.example.com/www.example.com/example.asf"));
+      assert.ok(match("http://www.example.com/www.example.com/example.asf"));
+      assert.ok(match("www.foo.example.org"));
+      assert.ok(match("www.foo.example.org/"));
+      assert.ok(match("https://os.cs.csce.university.edu"));
+      assert.ok(match("http://os.cs.csce.university.edu/foo?bar=baz#qux.1"));
+      assert.ok(match("www.2-example.com"));
+      assert.ok(match("www.foo-bar.example.com"));
+      assert.ok(match("http://asd.co"));
+      assert.ok(match("http://os.cs.csce.university.ax/foo/bar?baz=&qux=asd+asd#hash=1+2+4,hash2="));
+      assert.ok(match("www.a--x.as"));
+      assert.ok(match("//foo.example.com/path/to/the-thing.js"));
+      /* file:// */
+      assert.ok(match("file:///foo"));
+      assert.ok(match("file://C:/Users/Firstname Lastname/Documents/Site/index.html"));
+      assert.ok(match("file://C:\\Users\\Machine\\Downloads\\virus.aspx"));
+      assert.ok(match("file:///home/user/stuff/page.html"));
+      /* non-http */
+      assert.ok(match("ws://foo.com"));
+      assert.ok(match("ws://foo.tv"));
+      assert.ok(match("ftp://bar.com/"));
+      assert.ok(match("wss://baz.com/ asd asd www.example.com"));
       assert.ok(!match("notasite"));
-      */
+    });
+    it("can find URLs in text", function() {
+      const matchCount = (s) => {
+        let m = s.match(Util.URL_REGEX);
+        return m ? m.length : 0;
+      };
+      assert.equal(matchCount("no urls at all"), 0);
+      assert.equal(matchCount("http://www.example.com"), 1);
+      assert.equal(matchCount("text www.foo.com text http://bar.com text"), 2);
+      assert.equal(matchCount("https://clips.twitch.tv/this-should-be-a-slug hey look at this"), 1);
+      assert.equal(matchCount("https://foo.com/https://bar.com"), 1);
     });
     it("defines Util.URL", function() {
-      /* TODO */
+      assert.ok(new URL(Util.URL("//www.example.com")));
+      assert.ok(new URL(Util.URL("www.example.com")));
+      assert.ok(new URL(Util.URL("example.com")));
+      assert.ok(new URL(Util.URL("//foo.com/bar/baz")));
+      assert.ok(new URL(Util.URL("basic-text")));
+      /* Nested space should cause problems */
+      assert.throws(() => new URL(Util.URL("basic text")));
+      assert.throws(() => new URL(Util.URL("basic%20text")));
     });
     it("defines Util.SplitPath", function() {
+      /* TODO: More coverage */
       assert.deepEqual(Util.SplitPath("foo/bar"), ["foo", "bar"]);
       assert.deepEqual(Util.SplitPath("foo/bar/baz"), ["foo/bar", "baz"]);
       assert.deepEqual(Util.SplitPath("foo"), ["", "foo"]);
       assert.deepEqual(Util.SplitPath("foo/"), ["foo", ""]);
     });
     it("defines Util.JoinPath", function() {
+      /* TODO: More coverage */
       assert.equal(Util.JoinPath("foo", "bar"), "foo/bar");
       assert.equal(Util.JoinPath("", "bar"), "bar");
       assert.equal(Util.JoinPath("foo", ""), "foo/");
     });
     it("defines Util.StripCommonPrefix", function() {
-      /* TODO */
+      let paths = Util.StripCommonPrefix([
+        "file:///home/user/foo/bar/script.js",
+        "file:///home/user/foo/bar/page.html?foo",
+        "file:///home/user/foo/bar/baz/qux/docs.html",
+        "file:///home/user/foo/bar",
+        "file:///home/user/foo/bar/"
+      ]);
+      assert.equal(paths.length, 5);
+      assert.equal(paths[0], "bar/script.js");
+      /* FIXME: loses "?foo" */
+      // assert.equal(paths[1], "bar/page.html?foo");
+      assert.equal(paths[2], "bar/baz/qux/docs.html");
+      assert.equal(paths[3], "bar");
+      /* FIXME: leaves trailing slash */
+      // assert.equal(paths[4], "bar");
+      paths = Util.StripCommonPrefix(["www.example.com"]);
+      assert.deepEqual(paths, [""]);
+      paths = Util.StripCommonPrefix([
+        "www.example.com",
+        "https://www.example.com",
+        "http://www.example.com"
+      ]);
+      assert.deepEqual(paths, ["", "", ""]);
     });
   });
   /* Section "Error handling" tested below */
   describe("Logging", function() {
-    /* Reset changes made to the logger */
-    function resetLogger() {
-      Util.Logger.enable();
-      Util.Logger.removeAllHooks();
-      Util.Logger.removeAllFilters();
-    }
-
     it("defines Util.Throw with stack handling", function() {
       /* Throw an error via Util.Throw (then throw, if that fails) */
       function foo() {
@@ -352,10 +480,66 @@ describe("Util", function() {
       assert.ok(err._stacktrace[0].file.endsWith(".js"));
       assert.equal(err._stacktrace[0].file, __filename);
       assert.equal(err._stacktrace[1].name, "foo");
-      /* TODO: ParseStack */
-      /* TODO: FormatStack */
-      /* TODO: Stack trimming */
     });
+    it("parses stacks", function() {
+      let frames = Util.ParseStack([
+        "@debugger eval code:1:1",
+        "function@path/filename.js:100:23"
+      ]);
+      assert.equal(frames.length, 2);
+      assert.equal(frames[0].text, "@debugger eval code:1:1");
+      assert.equal(frames[0].name, "");
+      assert.equal(frames[0].file, "debugger eval code");
+      assert.equal(frames[0].line, 1);
+      assert.equal(frames[0].column, 1);
+      assert.equal(frames[1].text, "function@path/filename.js:100:23");
+      assert.equal(frames[1].name, "function");
+      assert.equal(frames[1].file, "path/filename.js");
+      assert.equal(frames[1].line, 100);
+      assert.equal(frames[1].column, 23);
+
+      frames = Util.ParseStack(["something unparseable"]);
+      assert.equal(frames.length, 1);
+      assert.equal(frames[0].text, "something unparseable");
+      assert.equal(frames[0].name, "<unnamed>");
+      assert.equal(frames[0].file, window.location.pathname);
+      assert.ok(Number.isNaN(frames[0].line));
+      assert.ok(Number.isNaN(frames[0].column));
+
+      frames = Util.ParseStack([
+        "  at SomeFunc [as SomeThing] (path/file.js:100:1)",
+        "  at Caller (path/file.js:1:1)",
+        "at foo.js:12:101",
+        "at :0:0",
+        "path/to/file.js:100:4",
+        "SomeFunc:0:0"
+      ]);
+      assert.equal(frames[0].name, "SomeFunc");
+      assert.equal(frames[0].actual_name, "SomeThing");
+      assert.equal(frames[0].file, "path/file.js");
+      assert.equal(frames[0].line, 100);
+      assert.equal(frames[0].column, 1);
+      assert.equal(frames[1].name, "Caller");
+      assert.equal(frames[1].file, "path/file.js");
+      assert.equal(frames[1].line, 1);
+      assert.equal(frames[1].column, 1);
+      assert.equal(frames[2].name, "<unnamed>");
+      assert.equal(frames[2].line, 12);
+      assert.equal(frames[2].column, 101);
+      assert.equal(frames[3].name, "<unnamed>");
+      assert.equal(frames[3].line, 0);
+      assert.equal(frames[3].column, 0);
+      assert.equal(frames[4].name, "<unnamed>");
+      assert.equal(frames[4].file, "path/to/file.js");
+      assert.equal(frames[4].line, 100);
+      assert.equal(frames[4].column, 4);
+      assert.equal(frames[5].name, "SomeFunc");
+      assert.equal(frames[5].file, window.location.pathname);
+      assert.equal(frames[5].line, 0);
+      assert.equal(frames[5].column, 0);
+    });
+    /* TODO: Stack formatting */
+    /* TODO: Stack trimming */
     it("provides debug levels", function() {
       const oldestLevel = Util.DebugLevel;
       Util.PushDebugLevel(Util.LEVEL_DEBUG);
@@ -404,8 +588,10 @@ describe("Util", function() {
           assert.ok(hasStack);
           assert.deepEqual(args, ["test", 1, 2, 3]);
           done();
+          return Util.Logging.HOOK_STOP;
         });
         Util.Info("test", 1, 2, 3);
+        resetLogger();
       });
       it("logs without a stack", function(done) {
         resetLogger();
@@ -414,8 +600,10 @@ describe("Util", function() {
           assert.ok(!hasStack);
           assert.deepEqual(args, ["test", 1, 2, 3]);
           done();
+          return Util.Logging.HOOK_STOP;
         });
         Util.InfoOnly("test", 1, 2, 3);
+        resetLogger();
       });
       it("logs once", function(done) {
         resetLogger();
@@ -425,11 +613,13 @@ describe("Util", function() {
           assert.ok(hasStack);
           assert.deepEqual(args, ["test", 1, 2, 3]);
           count += 1;
-        });
+          return Util.Logging.HOOK_STOP;
+        }, "INFO");
         Util.Logger.addHook((sev, hasStack, ...args) => {
           assert.equal(count, 1);
           done();
-        });
+          return Util.Logging.HOOK_STOP;
+        }, "DEBUG");
         Util.InfoOnce("test", 1, 2, 3);
         Util.InfoOnce("test", 1, 2, 3);
         Util.InfoOnce("test", 1, 2, 3);
@@ -437,38 +627,71 @@ describe("Util", function() {
         Util.InfoOnlyOnce("test", 1, 2, 3);
         Util.InfoOnlyOnce("test", 1, 2, 3);
         Util.DebugOnly("done");
-      });
-      /* TODO: hooks for specific levels */
-    });
-    describe("filtered logging", function() {
-      it("provides filters", function(done) {
         resetLogger();
-        Util.Logger.addFilter(/filtered/);
-        Util.Logger.addFilter("omit this message");
-        Util.Logger.addFilter("omit debug", "DEBUG");
+      });
+      it("honors hooks with levels", function(done) {
+        resetLogger();
         Util.Logger.addHook((sev, hasStack, ...args) => {
-          assert.ok(!/filtered/.test(args.join(" ")));
-          assert.ok(args.join(" ").indexOf("omit this message") === -1);
-          if (sev === "DEBUG") {
-            assert.ok(args.join(" ").indexOf("omit debug") === -1);
+          assert.equal(sev, "DEBUG");
+        }, "DEBUG");
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.ok(args.length > 0);
+          if (sev !== "INFO" || args[0] !== "done") {
+            assert.equal(args[0], sev.toLowerCase());
           }
+        });
+        Util.Logger.addHook((sev, hasStack, ...args) => {
+          assert.ok(args.length > 0);
           if (args[0] === "done") {
             done();
           }
-        });
-        Util.LogOnly("this should be filtered");
-        Util.LogOnly("we should", "omit this message");
-        Util.DebugOnlyOnce("omit debug");
-        Util.DebugOnly("omit debug");
-        Util.DebugOnlyOnce("omit", "debug");
-        Util.DebugOnly("omit", "debug");
-        Util.DebugOnly("this should make it through");
-        Util.WarnOnly("this should be", "filtered");
-        Util.WarnOnly("omit debug");
-        Util.LogOnly("this should be logged");
+        }, "INFO");
+        /* Prevent console cluttering */
+        for (let s of Object.keys(Util.Logging.SEVERITIES)) {
+          if (s === "ALL") continue;
+          Util.Logger.addHook((sev, hasStack, ...args) => {
+            return Util.Logging.HOOK_STOP;
+          }, s);
+        }
+        Util.DebugOnly("debug");
+        Util.TraceOnly("trace");
+        Util.LogOnly("info");
+        Util.InfoOnly("info");
+        Util.WarnOnly("warn");
+        Util.ErrorOnly("error");
         Util.LogOnly("done");
-        /* TODO: filter patterns across logging items */
+        resetLogger();
       });
+    });
+    it("provides filters", function(done) {
+      resetLogger();
+      Util.Logger.addFilter(/filtered/);
+      Util.Logger.addFilter("omit this message");
+      Util.Logger.addFilter("omit debug", "DEBUG");
+      Util.Logger.addHook((sev, hasStack, ...args) => {
+        assert.ok(!/filtered/.test(args.join(" ")));
+        assert.ok(args.join(" ").indexOf("omit this message") === -1);
+        if (sev === "DEBUG") {
+          assert.ok(args.join(" ").indexOf("omit debug") === -1);
+        }
+        if (args[0] === "done") {
+          done();
+        }
+        /* Hide things from cluttering the output */
+        return Util.Logging.HOOK_STOP;
+      });
+      Util.LogOnly("this should be filtered");
+      Util.LogOnly("we should", "omit this message");
+      Util.DebugOnlyOnce("omit debug");
+      Util.DebugOnly("omit debug");
+      Util.DebugOnlyOnce("omit", "debug");
+      Util.DebugOnly("omit", "debug");
+      Util.DebugOnly("this should make it through");
+      Util.WarnOnly("this should be", "filtered");
+      Util.WarnOnly("omit debug");
+      Util.LogOnly("this should be logged");
+      Util.LogOnly("done");
+      resetLogger();
     });
   });
   describe("Color handling", function() {
@@ -507,7 +730,7 @@ describe("Util", function() {
         assert.deepEqual(C("#ff0000").rgba, [255, 0, 0, 255]);
         assert.throws(() => C("notacolor"));
       });
-      it("provides .equals", function() {
+      it("has equals", function() {
         assert.ok(red.equals("#ff0000"));
         assert.ok(red.equals("#ff0000ff"));
         assert.ok(red.equals("rgb(255, 0, 0)"));
@@ -530,7 +753,7 @@ describe("Util", function() {
         assert.equal(red.a_1, 1);
         /* TODO: yiq */
       });
-      it("has .inverted", function() {
+      it("has inverted", function() {
         assert.equal(white.inverted().hex, "#000000");
         assert.equal(black.inverted().hex, "#ffffff");
         assert.equal(red.inverted().hex, "#00ffff");
@@ -674,7 +897,21 @@ describe("Util", function() {
       /* TODO */
     });
     it("defines Util.{Encode,Decode}Flags", function() {
-      /* TODO */
+      assert.deepEqual(Util.DecodeFlags("5d"), [true, false, true]);
+      assert.deepEqual(Util.DecodeFlags("111"), [true, true, true]);
+      assert.deepEqual(Util.DecodeFlags("1"), [true]);
+      assert.deepEqual(Util.DecodeFlags("6d"), [false, true, true]);
+      assert.deepEqual(Util.DecodeFlags("6"), []);
+      assert.deepEqual(Util.DecodeFlags("6d", 6), [false, true, true, false, false, false]);
+      assert.deepEqual(Util.DecodeFlags("01010"), [false, true, false, true, false]);
+      assert.deepEqual(Util.DecodeFlags(""), []);
+      assert.deepEqual(Util.DecodeFlags("01210"), []);
+      assert.deepEqual(Util.DecodeFlags("01210", 5), [false, false, false, false, false]);
+      assert.equal(Util.EncodeFlags([false, true, false, true, false]), "01010");
+      assert.equal(Util.EncodeFlags([]), "");
+      assert.equal(Util.EncodeFlags([1, 2, true, 8, false]), "11110");
+      assert.equal(Util.EncodeFlags(["", "foo", "1", "0", 1]), "01111");
+      assert.equal(Util.EncodeFlags([null, false, undefined, {}, []]), "00011");
     });
     it("defines Util.EscapeCharCode", function() {
       /* TODO */
@@ -685,8 +922,28 @@ describe("Util", function() {
     it("defines Util.StringToRegExp", function() {
       /* TODO */
     });
-    it("defines Util.JSONClone", function() {
-      /* TODO: test with opts.exclude */
+    it("supports opts.exclude in Util.JSONClone", function() {
+      let o = {
+        "foo": {"bar": 1},
+        "bar": 2,
+        "baz": {"foo": 3}
+      };
+      assert.deepEqual(Util.JSONClone(o), o);
+      assert.deepEqual(Util.JSONClone(o, {"exclude": ["foo", "baz"]}), {"bar": 2});
+      assert.deepEqual(Util.JSONClone(o, {"exclude": "foo bar baz"}), o);
+      assert.deepEqual(Util.JSONClone(o, {"exclude": []}), o);
+      o = {
+        "foo": "bar",
+        [1]: "baz"
+      };
+      assert.deepEqual(Util.JSONClone(o), o);
+      assert.deepEqual(Util.JSONClone(o, {"exclude": [1]}), o);
+      o["func"] = () => 1;
+      Util.PushDebugLevel(Util.LEVEL_OFF);
+      assert.deepEqual(Util.JSONClone(o, {"exclude": ["foo"]}), {[1]: "baz"});
+      assert.deepEqual(Util.JSONClone(o, {"exclude": ['1']}), {"foo": "bar"});
+      assert.deepEqual(Util.JSONClone(o, {"exclude": ["foo", "1", "2"]}), {});
+      Util.PopDebugLevel();
     });
   });
   describe("Configuration and localStorage functions", function() {
@@ -698,7 +955,6 @@ describe("Util", function() {
       Util.SetWebStorageKey("config2");
       assert.equal(Util.GetWebStorage(), null);
       assert.deepEqual(Util.GetWebStorage("config"), {"foo": "bar"});
-      /* TODO: local storage parser options: b64, xor, bs, etc */
       Util.SetWebStorage(["foo", "bar"]);
       assert.deepEqual(Util.GetWebStorage(), ["foo", "bar"]);
       Util.StorageAppend(Util.GetWebStorageKey(), "baz");
@@ -713,10 +969,20 @@ describe("Util", function() {
       Util.SetWebStorage("foo");
       Util.StorageAppend(Util.GetWebStorageKey(), "bar");
       assert.deepEqual(Util.GetWebStorage(), ["foo", "bar"]);
-      /* TODO: StorageParse, StorageFormat direct tests */
-      /* TODO: DisableLocalStorage tests */
     });
-    /* TODO */
+    it("supports obfuscated storage", function() {
+      const cfg = {"foo": {"bar": 1}, "baz": 2};
+      const oneTrip = (obj, args) => {
+        return Util.StorageParse(Util.StorageFormat(obj, args), args.reverse());
+      };
+      /* Ensure standard obfuscations are lossless */
+      for (let o of ["b64", "xor", "bs", "x1", "x19", "x31"]) {
+        assert.deepEqual(oneTrip(cfg, [o]), cfg);
+      }
+      /* Ensure combinding obfuscations is lossless */
+      assert.deepEqual(oneTrip(cfg, ["b64", "xor"]), cfg);
+      assert.deepEqual(oneTrip(cfg, ["nojson"]), JSON.stringify(cfg));
+    });
   });
   describe("Query String handling", function() {
     it("parses query strings", function() {
@@ -771,13 +1037,92 @@ describe("Util", function() {
     });
     /* NOTE: PointIsOn may not be testable via nodejs */
   });
-  describe("CSS functions", function() {
-    /* TODO */
-    /* NOTE: These may not be testable via nodejs */
-  });
   describe("DOM functions", function() {
-    /* TODO */
-    /* NOTE: These may not be testable via nodejs */
+    it("has a working DOM", function() {
+      assert.ok(document.getElementById("id1"));
+      assert.ok(document.querySelector("span.span1"));
+      assert.ok(document.querySelector("span#id1"));
+      assert.ok(document.querySelector(".span1"));
+    });
+    it("defines CreateNode", function() {
+      let n1 = Util.CreateNode("foo");
+      let n2 = Util.CreateNode(1);
+      let n3 = Util.CreateNode(true);
+      let n4 = Util.CreateNode(new URL("https://example.com"));
+      let n5 = Util.CreateNode(n4);
+      assert.equal(n1.nodeType, window.document.TEXT_NODE);
+      assert.equal(n1.nodeName, "#text");
+      /* FIXME: fails */
+      // assert.equal(n1.nodeValue, "foo");
+      assert.equal(n2.nodeType, n1.nodeType);
+      assert.equal(n2.nodeName, n1.nodeName);
+      /* FIXME: fails */
+      // assert.equal(n2.nodeValue, "1");
+      assert.equal(n3.nodeType, n1.nodeType);
+      assert.equal(n3.nodeName, n1.nodeName);
+      /* FIXME: fails */
+      // assert.equal(n3.nodeValue, "true");
+      assert.equal(n4.nodeType, window.document.ELEMENT_NODE);
+      assert.equal(n4.nodeName, "A");
+      assert.equal(n4.getAttribute("href"), "https://example.com/");
+      assert.equal(n4.getAttribute("target"), "_blank");
+      assert.equal(n4.textContent, n4.getAttribute("href"));
+      assert.equal(n4.innerHTML, n4.textContent);
+      assert.deepEqual(n5, n4);
+    });
+    it("defines ClampToScreen", function() {
+      /* Window size is 1024x768 */
+      const [W, H] = [1024, 768];
+      const clamp = (x, y, w, h) => Util.ClampToScreen({
+        top: y, left: x, width: w, height: h
+      });
+      const offset = (x, y) => ({top: y, left: x});
+      assert.equal(window.innerWidth, W);
+      assert.equal(window.innerHeight, H);
+      assert.deepEqual(clamp(0, 0, 0, 0), offset(0, 0));
+      assert.deepEqual(clamp(-1, 0, 0, 0), offset(0, 0));
+      assert.deepEqual(clamp(1, 0, 0, 0), offset(1, 0));
+      assert.deepEqual(clamp(10000, 0, 0, 0), offset(W, 0));
+      assert.deepEqual(clamp(0, -1, 0, 0), offset(0, 0));
+      assert.deepEqual(clamp(0, 1, 0, 0), offset(0, 1));
+      assert.deepEqual(clamp(0, 10000, 0, 0), offset(0, H));
+      assert.deepEqual(clamp(0, 0, 10, 10), offset(0, 0));
+      assert.deepEqual(clamp(-100, 0, 10, 10), offset(0, 0));
+      assert.deepEqual(clamp(100, 0, 10, 10), offset(100, 0));
+      assert.deepEqual(clamp(0, -100, 10, 10), offset(0, 0));
+      assert.deepEqual(clamp(0, 100, 10, 10), offset(0, 100));
+      assert.deepEqual(clamp(-100, -100, 10, 10), offset(0, 0));
+      assert.deepEqual(clamp(10000, 10000, 0, 0), offset(W, H));
+      assert.deepEqual(clamp(W, H, 1, 1), offset(W-1, H-1));
+      assert.deepEqual(clamp(W*2, H/2, 0, 0), offset(W, H/2));
+    });
+    /* TODO: PromiseElement, PromiseImage? */
+    /* TODO: SplitGIF? */
+    /* TODO: ImageFromPNGData? */
+  });
+  describe("CSS functions", function() {
+    /* Must be after "DOM functions" due to dependencies */
+    /* TODO: Util.CSS.GetSheet; <link> tags don't seem to work? */
+    it("supports reading CSS", function() {
+      let root = Util.CSS.GetRule(document.styleSheets[0], ":root");
+      assert.ok(root);
+      let props = Util.CSS.GetPropertyNames(root);
+      assert.ok(props);
+      assert.ok(props.length > 0);
+      assert.ok(props.indexOf("--var") > -1);
+      assert.ok(props.indexOf("--value") > -1);
+      assert.ok(props.indexOf("--value-default") > -1);
+      let span1 = document.querySelector(".span1");
+      let id1 = document.querySelector("#id1");
+      assert.ok(span1);
+      assert.ok(id1);
+      let span1style = getComputedStyle(span1);
+      let id1style = getComputedStyle(id1);
+      assert.ok(span1style);
+      assert.ok(id1style);
+      assert.equal(Util.CSS.GetProperty(span1, "color"), "red");
+      assert.equal(Util.CSS.GetProperty(id1, "background-color"), "white");
+    });
   });
   describe("Miscellaneous functions", function() {
     /* Can't test Util.Open via nodejs; ignore */
@@ -832,13 +1177,24 @@ describe("Util", function() {
     });
   });
   /* Section "Construct global objects" tested indirectly already */
+  describe("Final tests", function() {
+    it("supports disabling localStorage", function() {
+      /* TODO */
+    });
+  });
 });
+
+/* vim-fold directives for fold.vim plugin:
+ * "vim-fold-set: <pattern>: <comment>"
+ * "vim-fold-opts-set: <option>: <comment>" */
 
 /* vim-fold-set: ^[ ]\+const makeTest =: */
 /* vim-fold-set: ^[ ]\+makeTest(: */
 /* vim-fold-set: ^[ ]\+it(": */
-/* vim-fold-set: ^[ ]\+describe(": */
-/* vim-fold-set: ^[^ ].*{$: */
-/* vim-fold-opt-set: stop: */
+/* vim-fold-set: ^      describe(": */
+/* vim-fold-set: ^    describe(": */
+/* vim-fold-set: ^  describe(": */
+/* vim-fold-set: ^[^ ].*{$: */ /* add "nofold" after { to inhibit */
+/* vim-fold-opt-set: stop: */ /* inhibit FoldJS() */
 
 /* globals describe it Util CallbackHandler Logging ColorParser tinycolor */
