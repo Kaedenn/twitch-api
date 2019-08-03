@@ -1,18 +1,11 @@
 "use strict";
 
 /* FIXME:
- * On-demand module loading fails: we can't determine our own path
- * Util.URL_REGEX doesn't match valid URLs:
- *  http://example.com
- *  https://example.com/
- * DebugLevel Util.LEVEL_OFF still shows Log messages?
+ * Ensure URL parsing (URL_REGEX) works as robustly as possible
+ *   https://regex101.com/r/25C9bj/3
  */
 
 /* TODO:
- * Rename Logger functions: "" -> "Stack", "Only" -> ""
- *  Logger.${Sev} -> Logger.${Sev}Stack
- *  Logger.${Sev}Only -> Logger.${Sev}
- *  Logger.${Sev}OnlyOnce -> Logger.${Sev}Once
  * Color replacement API (see KapChat)
  */
 
@@ -22,15 +15,16 @@
  *
  * Extensions to the standard JavaScript classes (String, Array)
  * Logging functions including stack-trace handling
- * Functions for color arithmetic
- * A random number generator that can generate version 4 UUIDs
+ * Functions for color parsing and arithmetic
+ * Random number generator that can generate version 4 UUIDs
  * Shortcut functions for a number of trivial tasks (fireEvent, formatting)
  * Functions for localStorage management
- * Functions for point-in-box calculation
- * Functions for handling location.search (query string) management
+ * Functions for point-in-box calculation and clamping
+ * Functions for reading stylesheet rules
+ * Functions for parsing/formatting the query string (location.search)
  *
  * Citations:
- *  PRNG and UUID generation
+ *  PRNG with UUID generation
  *    https://github.com/kelektiv/node-uuid.git
  *  Color calculations (RGBtoHSL, HSLtoRGB)
  *    https://gist.github.com/vahidk/05184faf3d92a0aa1b46aeaa93b07786
@@ -423,13 +417,6 @@ Array.prototype.min = function _Array_min(keyFn=null) {
   return min_elem;
 };
 
-/* Construct an empty array with a specific number of entries */
-Array.range = function _Array_range(nelem, dflt=null) {
-  let a = [];
-  for (let i = 0; i < nelem; ++i) a.push(dflt);
-  return a;
-};
-
 /* Return true if the string matches the character class */
 (function() {
   let classes = {};
@@ -576,7 +563,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* URL handling {{{0 */
 
 /* RegExp for matching URLs */
-Util.URL_REGEX = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\S]{2,}|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\S]{2,}|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[^\s]{2,}|file:\/\/[\S]+)/gim;
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -751,8 +738,8 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       text: line,
       name: "<unnamed>",
       file: null,
-      line: 0,
-      column: 0
+      line: NaN,
+      column: NaN
     };
     try {
       frame.file = window.location.pathname;
@@ -778,8 +765,13 @@ Util.ParseStack = function _Util_ParseStack(lines) {
       frame.file = m[1];
       frame.line = Util.ParseNumber(m[2]);
       frame.column = Util.ParseNumber(m[3]);
+    } else if ((m = line.match(/^[ ]*([^:]+\/[^:]+\.\w+):(\d+):(\d+)$/)) !== null) {
+      /* (file):(line):(column) */
+      frame.file = m[1];
+      frame.line = Util.ParseNumber(m[2]);
+      frame.column = Util.ParseNumber(m[3]);
     } else if ((m = line.match(/^(.*):(\d+):(\d+)$/)) !== null) {
-      /* (name and/or label):(line):(column) */
+      /* (name and/or filename and/or label):(line):(column) */
       frame.name = m[1];
       frame.line = Util.ParseNumber(m[2]);
       frame.column = Util.ParseNumber(m[3]);
@@ -859,6 +851,10 @@ class Logging {
     map[Logging.SEVERITIES.TRACE] = console.debug;
     return map;
   }
+
+  /* Actions hooked functions can return */
+  static get HOOK_STOP() { return "stop"; }
+  static get HOOK_CONTINUE() { return null; }
 
   /* Get the numeric value for the severity given */
   _sevValue(sev) {
@@ -996,9 +992,11 @@ class Logging {
   /* Log `argobj` with severity `sev`, optionally including a stacktrace */
   doLog(sev, argobj, stacktrace=false, log_once=false) {
     const SEV_ALL = Logging.SEVERITIES.ALL;
+    /* Check debug level and filtering */
     let val = this._sevValue(sev);
     if (!this.severityEnabled(sev)) { return; }
     if (this.shouldFilter(argobj, sev)) { return; }
+    /* Check against logged messages */
     if (log_once) {
       let argstr = JSON.stringify(argobj);
       let msg_key = JSON.stringify([val, argstr]);
@@ -1008,16 +1006,19 @@ class Logging {
         this._logged_messages[msg_key] = 1;
       }
     }
-    let hooksToCall = [];
-    /* Add hooks for severity "ALL" */
-    let hooks = this._hooks[val].concat(this._hooks[SEV_ALL]);
+    /* Call all the hooked functions; call hooks for "ALL" first */
+    let hooks = [];
+    hooks.extend(this._hooks[SEV_ALL]);
+    hooks.extend(this._hooks[val]);
     for (let hook of hooks) {
       let args = [sev, stacktrace].concat(Util.ArgsToArray(argobj));
-      hooksToCall.push([hook, args]);
+      let result = hook.apply(hook, args);
+      if (result === Util.Logging.HOOK_STOP) {
+        /* Hook requested we halt */
+        return;
+      }
     }
-    for (let [hook, args] of hooksToCall) {
-      hook.apply(hook, args);
-    }
+    /* Finally, log the argobj */
     let func = Logging.FUNCTION_MAP[val];
     if (stacktrace) {
       Util.PushStackTrimBegin(Math.max(Util.GetStackTrimBegin(), 1));
@@ -1998,7 +1999,11 @@ Util.JSONClone = function _Util_JSONClone(obj, opts=null) {
       if (Util.IsArray(opts.exclude) && opts.exclude.indexOf(k) > -1) {
         continue;
       }
-      result[k] = JSON.parse(JSON.stringify(v));
+      try {
+        result[k] = JSON.parse(JSON.stringify(v));
+      } catch (e) {
+        Util.Error(`Failed JSONClone of key '${k}': ${e}`);
+      }
     }
     return result;
   } else {
