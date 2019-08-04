@@ -57,7 +57,7 @@ class TwitchEvent {
     if (!parsed) {
       /* Construct from essentially nothing */
       this._parsed = {};
-    } else if (parsed instanceof Event) {
+    } else if (parsed instanceof window.Event) {
       /* Construct from an event */
       this._parsed = {
         event: parsed,
@@ -1934,7 +1934,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
 
   /* GET url, without headers, using callbacks */
   function doGetSimpleCB(url, callback, errorcb=null) {
-    let req = new XMLHttpRequest();
+    let req = new window.XMLHttpRequest();
     req.onreadystatechange = function _XHR_onreadystatechange() {
       if (this.readyState === 4) {
         if (this.status === 200) {
@@ -1955,7 +1955,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
 
   /* GET url, optionally adding private headers, using callbacks */
   function doGetCB(url, callback, headers=null, add_private=false, errorcb=null) {
-    let req = new XMLHttpRequest();
+    let req = new window.XMLHttpRequest();
     let callerStack = Util.GetStack();
     req.onreadystatechange = function _XHR_onreadystatechange() {
       if (this.readyState === 4) {
