@@ -1,11 +1,7 @@
 "use strict";
 
-/* FIXME:
- * Ensure URL parsing (URL_REGEX) works as robustly as possible
- *   https://regex101.com/r/25C9bj/3
- */
-
 /* TODO:
+ * sRGB transformation in Util.Color (color.srgb, c2cx functions)
  * Color replacement API (see KapChat)
  */
 
@@ -2459,30 +2455,6 @@ Util.Color = function () {
       return [r, g, b];
     }
 
-    /* Convert (y, i, q) (0~255) to (r, g, b) (0~255) */
-
-  }, {
-    key: "YIQToRGB",
-    value: function YIQToRGB(y, i, q) {
-      var mat = [[1, 0.956, 0.619], [1, -0.272, -0.647], [1, -1.106, 1.703]];
-      var r = mat[0][0] * y + mat[0][1] * i + mat[0][2] * q;
-      var g = mat[1][0] * y + mat[1][1] * i + mat[1][2] * q;
-      var b = mat[2][0] * y + mat[2][1] * i + mat[2][2] * q;
-      return [r, g, b];
-    }
-
-    /* Convert (r, g, b) (0~255) to (y, i, q) (0~255) */
-
-  }, {
-    key: "RGBToYIQ",
-    value: function RGBToYIQ(r, g, b) {
-      var mat = [[0.299, 0.587, 0.144], [0.5959, -0.2746, -0.3213], [0.2155, -0.5227, 0.3112]];
-      var y = mat[0][0] * r + mat[0][1] * g + mat[0][2] * b;
-      var i = mat[1][0] * r + mat[1][1] * g + mat[1][2] * b;
-      var q = mat[2][0] * r + mat[2][1] * g + mat[2][2] * b;
-      return [y, i, q];
-    }
-
     /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
 
   }, {
@@ -2551,20 +2523,6 @@ Util.Color = function () {
           b = _Util$Color$HSLToRGB4[2];
 
       return new Util.Color(r, g, b, a);
-    }
-
-    /* Create a Color object from the YIQ values given */
-
-  }, {
-    key: "FromYIQ",
-    value: function FromYIQ(y, i, q) {
-      var _Util$Color$YIQToRGB = Util.Color.YIQToRGB(y, i, q),
-          _Util$Color$YIQToRGB2 = _slicedToArray(_Util$Color$YIQToRGB, 3),
-          r = _Util$Color$YIQToRGB2[0],
-          g = _Util$Color$YIQToRGB2[1],
-          b = _Util$Color$YIQToRGB2[2];
-
-      return new Util.Color(r, g, b);
     }
 
     /* Overloads
@@ -2906,28 +2864,6 @@ Util.Color = function () {
       this.g = _Util$Color$HSLToRGB14[1];
       this.b = _Util$Color$HSLToRGB14[2];
     }
-
-    /* Attribute: [y, i, q] */
-
-  }, {
-    key: "yiq",
-    get: function get() {
-      return Util.Color.RGBToYIQ(this.r, this.g, this.b);
-    },
-    set: function set(yiq) {
-      var _yiq = _slicedToArray(yiq, 3),
-          y = _yiq[0],
-          i = _yiq[1],
-          q = _yiq[2];
-
-      var _Util$Color$YIQToRGB3 = Util.Color.YIQToRGB(y, i, q);
-
-      var _Util$Color$YIQToRGB4 = _slicedToArray(_Util$Color$YIQToRGB3, 3);
-
-      this.r = _Util$Color$YIQToRGB4[0];
-      this.g = _Util$Color$YIQToRGB4[1];
-      this.b = _Util$Color$YIQToRGB4[2];
-    }
   }]);
 
   return _Util_Color;
@@ -2944,6 +2880,7 @@ Util.RelativeLuminance = function _Util_RelativeLuminance() {
   }
 
   var color = new (Function.prototype.bind.apply(Util.Color, [null].concat(args)))().rgb_1;
+  /* sRGB reverse transformation */
   function c2cx(c) {
     if (c < 0.03928) {
       return c / 12.92;
@@ -3368,7 +3305,7 @@ var CallbackHandler = function () {
       obj._stacktrace.shift();
       if (this._opts.useDOMEvents) {
         if (this._opts.useDOMEventsFirst) {
-          if (obj instanceof Event) {
+          if (obj instanceof window.Event) {
             document.dispatchEvent(obj);
             if (!this._opts.useDefaultAfterDOMEvents) {
               fired = true;
@@ -3406,7 +3343,7 @@ var CallbackHandler = function () {
       }
       if (this._opts.useDOMEvents) {
         if (!this._opts.useDOMEventsFirst) {
-          if (obj instanceof Event) {
+          if (obj instanceof window.Event) {
             document.dispatchEvent(obj);
             if (!this._opts.useDefaultAfterDOMEvents) {
               fired = true;
@@ -3539,7 +3476,17 @@ Util.FormatDate = function _Util_FormatDate(date) {
   var pad2 = function pad2(n) {
     return Util.Pad(n, 2);
   };
-  var _ref8 = [date.getFullYear(), date.getMonth(), date.getDay()],
+  /* Date API: (api: min, max)
+   *  getFullYear: 0000, 9999
+   *  getMonth: 0, 11
+   *  getDate: 1, 31
+   *  getHours: 0, 23
+   *  getMinutes: 0, 59
+   *  getSeconds: 0, 59
+   *  getDay: 0, 7 (day of week)
+   */
+  /* getMonth starts at 0, but we start at 1 */
+  var _ref8 = [date.getFullYear(), date.getMonth() + 1, date.getDate()],
       y = _ref8[0],
       m = _ref8[1],
       d = _ref8[2];
@@ -3557,12 +3504,15 @@ Util.FormatDate = function _Util_FormatDate(date) {
 /* Format an interval in seconds to "Xh Ym Zs" */
 Util.FormatInterval = function _Util_FormatInterval(seconds) {
   var parts = [];
+  var isNeg = false;
   var time = Math.round(seconds);
   if (time < 0) {
-    parts.push("-");
+    isNeg = true;
     time *= -1;
   }
-  if (time % 60 !== 0) {
+  if (time === 0) {
+    parts.unshift("0s");
+  } else if (time % 60 !== 0) {
     parts.unshift(time % 60 + "s");
   }
   time = Math.floor(time / 60);
@@ -3575,7 +3525,7 @@ Util.FormatInterval = function _Util_FormatInterval(seconds) {
   if (time > 0) {
     parts.unshift(time + "h");
   }
-  return parts.join(" ");
+  return (isNeg ? "-" : "") + parts.join(" ");
 };
 
 /* Decode flags ("0101" or "5d" little endian) into an array of bits */
@@ -3629,16 +3579,6 @@ Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   }).join("");
 };
 
-/* Build a character escape sequence for the character given */
-Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
-  // Handle certain special escape sequences
-  if (Util.StringEscapeChars.hasOwnProperty(char)) {
-    return "\\" + Util.StringEscapeChars[char];
-  } else {
-    return "\\x" + char.toString(16).padStart(2, "0");
-  }
-};
-
 /* Strip escape characters from a string */
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   var result = "";
@@ -3655,8 +3595,10 @@ Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
       var cn = _ref11[0];
       var ch = _ref11[1];
 
-      if (cn < 0x20) {
-        result = result.concat(Util.EscapeCharCode(cn));
+      if (Util.StringEscapeChars.hasOwnProperty(ch)) {
+        result = result.concat("\\" + Util.StringEscapeChars[ch]);
+      } else if (cn < 0x20) {
+        result = result.concat("\\x" + cn.toString(16).padStart(2, "0"));
       } else if (ch === "\\") {
         result = result.concat("\\\\");
       } else {
@@ -3998,7 +3940,7 @@ Util.ParseQueryString = function _Util_ParseQueryString() {
         var _iteratorError40 = undefined;
 
         try {
-          for (var _iterator40 = Object.entries(Util.ParseQueryString(atob(val)))[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
+          for (var _iterator40 = Object.entries(Util.ParseQueryString(window.atob(val)))[Symbol.iterator](), _step40; !(_iteratorNormalCompletion40 = (_step40 = _iterator40.next()).done); _iteratorNormalCompletion40 = true) {
             var _ref14 = _step40.value;
 
             var _ref15 = _slicedToArray(_ref14, 2);
@@ -4255,10 +4197,10 @@ Util.CSS.GetProperty = function _Util_CSS_GetProperty() {
     e = arguments.length <= 0 ? undefined : arguments[0];
     p = arguments.length <= 1 ? undefined : arguments[1];
   }
-  return getComputedStyle(e).getPropertyValue(p).trim();
+  return window.getComputedStyle(e).getPropertyValue(p).trim();
 };
 
-/* Set the property to the value giveni
+/* Set the property to the value given
  * Overloads
  *  Util.CSS.SetProperty(prop, value)
  *  Util.CSS.SetProperty(elem, prop, value) */
@@ -4280,10 +4222,10 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
 
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
-  if (obj instanceof Element) {
+  if (obj instanceof window.Element) {
     return obj;
   } else if (["string", "number", "boolean"].indexOf(typeof obj === "undefined" ? "undefined" : _typeof(obj)) > -1) {
-    return new Text("" + obj);
+    return new window.Text("" + obj);
   } else if (obj instanceof URL) {
     var a = document.createElement("a");
     a.setAttribute("href", obj.href);
@@ -4292,7 +4234,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
     return a;
   } else {
     Util.Warn("Not sure how to create a node from", obj);
-    return new Text(JSON.stringify(obj));
+    return new window.Text(JSON.stringify(obj));
   }
 };
 

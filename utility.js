@@ -1,11 +1,7 @@
 "use strict";
 
-/* FIXME:
- * Ensure URL parsing (URL_REGEX) works as robustly as possible
- *   https://regex101.com/r/25C9bj/3
- */
-
 /* TODO:
+ * sRGB transformation in Util.Color (color.srgb, c2cx functions)
  * Color replacement API (see KapChat)
  */
 
@@ -39,6 +35,7 @@
 /* General Utilities {{{0 */
 let Util = {
   [Symbol.toStringTag]: "Util",
+  /* WebStorage values */
   __wskey: null,
   __wscfg: "kae-twapi-local-key",
   /* Functions to run at the bottom of this script */
@@ -151,9 +148,7 @@ Util._deferFirst(() => {
       let s = document.createElement("script");
       s.setAttribute("type", "text/javascript");
       s.setAttribute("src", Util.Path.TWAPI + "/" + Util.Path.TinyColorJS);
-      s.onload = function() {
-        Util._tinycolor = window.tinycolor;
-      };
+      s.onload = () => { Util._tinycolor = window.tinycolor; };
       document.querySelector("head").appendChild(s);
     } else {
       Util._tinycolor = window.tinycolor = require("tinycolor2");
@@ -1284,28 +1279,6 @@ Util.Color = class _Util_Color {
     return [r, g, b];
   }
 
-  /* Convert (y, i, q) (0~255) to (r, g, b) (0~255) */
-  static YIQToRGB(y, i, q) {
-    let mat = [[1, 0.956, 0.619],
-               [1, -0.272, -0.647],
-               [1, -1.106, 1.703]];
-    let r = mat[0][0] * y + mat[0][1] * i + mat[0][2] * q;
-    let g = mat[1][0] * y + mat[1][1] * i + mat[1][2] * q;
-    let b = mat[2][0] * y + mat[2][1] * i + mat[2][2] * q;
-    return [r, g, b];
-  }
-
-  /* Convert (r, g, b) (0~255) to (y, i, q) (0~255) */
-  static RGBToYIQ(r, g, b) {
-    let mat = [[0.299, 0.587, 0.144],
-               [0.5959, -0.2746, -0.3213],
-               [0.2155, -0.5227, 0.3112]];
-    let y = mat[0][0] * r + mat[0][1] * g + mat[0][2] * b;
-    let i = mat[1][0] * r + mat[1][1] * g + mat[1][2] * b;
-    let q = mat[2][0] * r + mat[2][1] * g + mat[2][2] * b;
-    return [y, i, q];
-  }
-
   /* Renormalize (r, g, b[, a]) from 0~1 to 0~255 */
   static Renorm1(...args) {
     let [r, g, b, a] = args;
@@ -1336,12 +1309,6 @@ Util.Color = class _Util_Color {
   static FromHSLA(h, s, l, a) {
     let [r, g, b] = Util.Color.HSLToRGB(h, s, l);
     return new Util.Color(r, g, b, a);
-  }
-
-  /* Create a Color object from the YIQ values given */
-  static FromYIQ(y, i, q) {
-    let [r, g, b] = Util.Color.YIQToRGB(y, i, q);
-    return new Util.Color(r, g, b);
   }
 
   /* Overloads
@@ -1474,13 +1441,6 @@ Util.Color = class _Util_Color {
     [this.r, this.g, this.b] = Util.Color.HSLToRGB(h, s, l);
   }
 
-  /* Attribute: [y, i, q] */
-  get yiq() { return Util.Color.RGBToYIQ(this.r, this.g, this.b); }
-  set yiq(yiq) {
-    let [y, i, q] = yiq;
-    [this.r, this.g, this.b] = Util.Color.YIQToRGB(y, i, q);
-  }
-
   /* Calculate the Relative Luminance */
   getRelativeLuminance() {
     let [r, g, b] = this.rgb_1;
@@ -1522,6 +1482,7 @@ Util.Color = class _Util_Color {
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
   let color = (new Util.Color(...args)).rgb_1;
+  /* sRGB reverse transformation */
   function c2cx(c) {
     if (c < 0.03928) {
       return c / 12.92;
@@ -1783,7 +1744,7 @@ class CallbackHandler {
     obj._stacktrace.shift();
     if (this._opts.useDOMEvents) {
       if (this._opts.useDOMEventsFirst) {
-        if (obj instanceof Event) {
+        if (obj instanceof window.Event) {
           document.dispatchEvent(obj);
           if (!this._opts.useDefaultAfterDOMEvents) {
             fired = true;
@@ -1800,7 +1761,7 @@ class CallbackHandler {
     }
     if (this._opts.useDOMEvents) {
       if (!this._opts.useDOMEventsFirst) {
-        if (obj instanceof Event) {
+        if (obj instanceof window.Event) {
           document.dispatchEvent(obj);
           if (!this._opts.useDefaultAfterDOMEvents) {
             fired = true;
@@ -1897,8 +1858,18 @@ Util.StringToCodes = function _Util_StringToCodes(str) {
 
 /* Format a date object to "%Y-%m-%d %H:%M:%S.<ms>" */
 Util.FormatDate = function _Util_FormatDate(date) {
-  let pad2 = (n) => Util.Pad(n, 2);
-  let [y, m, d] = [date.getFullYear(), date.getMonth(), date.getDay()];
+  const pad2 = (n) => Util.Pad(n, 2);
+  /* Date API: (api: min, max)
+   *  getFullYear: 0000, 9999
+   *  getMonth: 0, 11
+   *  getDate: 1, 31
+   *  getHours: 0, 23
+   *  getMinutes: 0, 59
+   *  getSeconds: 0, 59
+   *  getDay: 0, 7 (day of week)
+   */
+  /* getMonth starts at 0, but we start at 1 */
+  let [y, m, d] = [date.getFullYear(), date.getMonth()+1, date.getDate()];
   let [h, mi, s] = [date.getHours(), date.getMinutes(), date.getSeconds()];
   let ms = date.getMilliseconds();
   let ymd = `${y}-${pad2(m)}-${pad2(d)}`;
@@ -1909,12 +1880,15 @@ Util.FormatDate = function _Util_FormatDate(date) {
 /* Format an interval in seconds to "Xh Ym Zs" */
 Util.FormatInterval = function _Util_FormatInterval(seconds) {
   let parts = [];
+  let isNeg = false;
   let time = Math.round(seconds);
   if (time < 0) {
-    parts.push("-");
+    isNeg = true;
     time *= -1;
   }
-  if (time % 60 !== 0) {
+  if (time === 0) {
+    parts.unshift("0s");
+  } else if (time % 60 !== 0) {
     parts.unshift(`${time % 60}s`);
   }
   time = Math.floor(time / 60);
@@ -1927,7 +1901,7 @@ Util.FormatInterval = function _Util_FormatInterval(seconds) {
   if (time > 0) {
     parts.unshift(`${time}h`);
   }
-  return parts.join(" ");
+  return (isNeg ? "-" : "") + parts.join(" ");
 };
 
 /* Decode flags ("0101" or "5d" little endian) into an array of bits */
@@ -1956,22 +1930,14 @@ Util.EncodeFlags = function _Util_EncodeFlags(bits) {
   return bits.map((b) => (b ? "1" : "0")).join("");
 };
 
-/* Build a character escape sequence for the character given */
-Util.EscapeCharCode = function _Util_EscapeCharCode(char) {
-  // Handle certain special escape sequences
-  if (Util.StringEscapeChars.hasOwnProperty(char)) {
-    return `\\${Util.StringEscapeChars[char]}`;
-  } else {
-    return `\\x${char.toString(16).padStart(2, "0")}`;
-  }
-};
-
 /* Strip escape characters from a string */
 Util.EscapeSlashes = function _Util_EscapeSlashes(str) {
   let result = "";
   for (let [cn, ch] of Util.Zip(Util.StringToCodes(str), str)) {
-    if (cn < 0x20) {
-      result = result.concat(Util.EscapeCharCode(cn));
+    if (Util.StringEscapeChars.hasOwnProperty(ch)) {
+      result = result.concat("\\" + Util.StringEscapeChars[ch]);
+    } else if (cn < 0x20) {
+      result = result.concat(`\\x${cn.toString(16).padStart(2, "0")}`);
     } else if (ch === "\\") {
       result = result.concat("\\\\");
     } else {
@@ -2202,7 +2168,7 @@ Util.ParseQueryString = function _Util_ParseQueryString(queryString=null) {
     let [k, v] = split(part);
     if (k === "base64") {
       let val = split(part)[1];
-      for (let [k2, v2] of Object.entries(Util.ParseQueryString(atob(val)))) {
+      for (let [k2, v2] of Object.entries(Util.ParseQueryString(window.atob(val)))) {
         obj[k2] = v2;
       }
     } else if (v.length === 0) {
@@ -2310,10 +2276,10 @@ Util.CSS.GetProperty = function _Util_CSS_GetProperty(...args) {
     e = args[0];
     p = args[1];
   }
-  return getComputedStyle(e).getPropertyValue(p).trim();
+  return window.getComputedStyle(e).getPropertyValue(p).trim();
 };
 
-/* Set the property to the value giveni
+/* Set the property to the value given
  * Overloads
  *  Util.CSS.SetProperty(prop, value)
  *  Util.CSS.SetProperty(elem, prop, value) */
@@ -2335,10 +2301,10 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
-  if (obj instanceof Element) {
+  if (obj instanceof window.Element) {
     return obj;
   } else if (["string", "number", "boolean"].indexOf(typeof(obj)) > -1) {
-    return new Text(`${obj}`);
+    return new window.Text(`${obj}`);
   } else if (obj instanceof URL) {
     let a = document.createElement("a");
     a.setAttribute("href", obj.href);
@@ -2347,7 +2313,7 @@ Util.CreateNode = function _Util_CreateNode(obj) {
     return a;
   } else {
     Util.Warn("Not sure how to create a node from", obj);
-    return new Text(JSON.stringify(obj));
+    return new window.Text(JSON.stringify(obj));
   }
 };
 
