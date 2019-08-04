@@ -55,8 +55,6 @@ loadHarness("client");
  *    Twitch ignores messages from unauthed clients
  */
 
-var assert = require("assert");
-
 /* Keep track of all known clients */
 var allClients = [];
 
@@ -82,8 +80,8 @@ const NewClient = (opts=null) => {
 
 /* Test client.js TwitchClient object */
 describe("Client", function() { /* nofold */
-  /* Generic function to handle client setup/teardown and errors */
   const makeTest = (desc, config) => {
+    /* Generic function to handle client setup/teardown and errors */
     (config.only ? it.only : it)(desc, function(done) {
       const c = NewClient();
       /* Store the test description in the client for debugging */
@@ -128,8 +126,6 @@ describe("Client", function() { /* nofold */
       c.Connect();
     });
   };
-
-  /* Begin tests */
   it("defines static attributes", function() {
     assert.ok(TwitchClient.CAPABILITIES.length > 0);
     assert.ok(TwitchClient.CHANNEL_ROOMS);
@@ -144,8 +140,6 @@ describe("Client", function() { /* nofold */
     assert.ok(TwitchClient.ESET_PRIME);
     assert.equal(NewClient().toString(), "[object TwitchClient]");
   });
-
-  /* Test connecting to Twitch */
   describe("Connection", function() {
     this.slow(5000); /* All of these tests are slower than usual */
     makeTest("should connect just fine", {
@@ -294,8 +288,6 @@ describe("Client", function() { /* nofold */
       done();
     });
   });
-
-  /* Ensure everyone closed */
   describe("cleanup", function() {
     it("closed all clients", function() {
       assert.ok(allClients.length > 0);
@@ -312,7 +304,7 @@ describe("Client", function() { /* nofold */
   });
 });
 
-/* globals describe it loadHarness */
+/* globals describe it loadHarness assert */
 /* globals TestTMIUser TestChannel TestClientID BuildMessage BuildEvent */
 
 /* vim: set ts=2 sts=2 sw=2: */

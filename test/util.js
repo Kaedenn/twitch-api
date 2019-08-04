@@ -26,8 +26,6 @@
  * Util.CreateNode (Text node creation fails?)
  */
 
-var assert = require("assert");
-
 const TWUtil = require("../utility.js");
 for (let [k, v] of Object.entries(TWUtil)) {
   global[k] = v;
@@ -1370,7 +1368,8 @@ describe("Util", function() { /* nofold */
 /* vim-fold-set: ^      describe(": */
 /* vim-fold-set: ^    describe(": */
 /* vim-fold-set: ^  describe(": */
-/* vim-fold-set: ^[^ ].*{$: */ /* add "nofold" after { to inhibit */
+/* vim-fold-set: ^[^ ].*{$: */ /* add text after { to inhibit */
 /* vim-fold-opt-set: stop: */ /* inhibit FoldJS() */
 
 /* globals describe it Util CallbackHandler Logging ColorParser tinycolor */
+/* globals assert */

@@ -4429,7 +4429,7 @@ try {
   module.exports.TwitchSubEvent = TwitchSubEvent;
   module.exports.TwitchClient = TwitchClient;
   module.exports.Twitch = Twitch;
-} catch (e) {} /* eslint:no-empty */
+} catch (e) {} /* not running in node; ignore */
 
 /* exported TwitchEvent TwitchChatEvent TwitchSubEvent TwitchClient Twitch */
 /* globals CallbackHandler */

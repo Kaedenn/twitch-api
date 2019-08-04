@@ -52,13 +52,13 @@ function _init(export_func) {
         if (err) {
           reject(err);
         } else {
-          const resp = eval(data);
-          resolve(resp);
+          resolve(eval(data));
         }
       });
     });
   }
 
+  export_func("assert", require("assert"));
   export_func("crypto", require("crypto"));
   export_func("window", dom.window);
   export_func("document", dom.window.document);

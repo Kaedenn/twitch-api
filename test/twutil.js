@@ -19,8 +19,6 @@ loadHarness("client");
  *  Twitch.ScanEmotes
  */
 
-var assert = require("assert");
-
 /* Test client.js Twitch object */
 describe("Twitch Utility API", function() {
   describe("Twitch Utility functions", function() {
@@ -67,7 +65,7 @@ describe("Twitch Utility API", function() {
   });
 });
 
-/* globals describe it loadHarness */
+/* globals describe it loadHarness assert */
 /* globals TestTMIUser TestChannel TestClientID */
 
 /* vim: set ts=2 sts=2 sw=2: */
