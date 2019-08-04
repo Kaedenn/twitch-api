@@ -304,8 +304,7 @@ describe("Client", function() { /* nofold */
           assert.ok(!c.hasSocket);
         }
         catch (err) {
-          Util.Error("Client still open:", c);
-          Util.Error("Client description:", c.get("desc"));
+          Util.Error("Client still open:", c.get("desc"));
           throw err;
         }
       }

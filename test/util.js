@@ -2,30 +2,28 @@
 "use strict";
 
 /* TODO:
- * Util.EscapeChars
- * Util.StripCommonPrefix (fails)
  * Util.FormatStack
  * Stack trimming
- * Colors:
- *  Util.Color yiq calculation
- *  Util.RelativeLuminance
- *  Util.ContrastRatio
- *  Util.GetMaxContrast
+ * Util.GetMaxContrast
  * CallbackHandler
+ *  stacktrace testing?
+ *  useDOMEventsFirst (not sure how to test? remove?)
+ *  useDefaultAfterDOMEvents
+ * Util.ParseNumber (ensure all paths are covered)
  * Util.EscapeWithMap
- * Util.StringToCodes
- * Util.FormatDate, Util.FormatInterval
- * Util.EncodeFlags, Util.DecodeFlags
- * Util.EscapeCharCode
- * Util.EscapeSlashes
- * Util.StringToRegExp
- * Util.JSONClone (opts.exclude)
- * localStorage:
- *  Util.DisableLocalStorage (must be last test)
+ * Util.FormatDate (more coverage)
  * Util.FormatQueryString
- * CSS functions
- * DOM functions
+ * Util.PromiseElement
+ * Util.PromiseImage
+ * Util.SplitGIF
+ * Util.ImageFromPNGData
  * Util.StyleToObject
+ * Util.DisableLocalStorage (must be last test)
+ *
+ * FIXME:
+ * Util.StripCommonPrefix (fails)
+ * Util.CSS.GetSheet (<link> tag doesn't work?)
+ * Util.CreateNode (Text node creation fails?)
  */
 
 var assert = require("assert");
@@ -43,17 +41,37 @@ const GREEK_SIGMA_ALT = "\u03c2";
 const GREEK_SIGMA_UC = "\u03a3";
 
 /* Obtain HTML for the given element */
-const getHTMLFor = (e) => {
+function getHTMLFor(e) {
   let w = document.createElement("div");
   w.appendChild(e);
   return w.innerHTML;
-};
+}
 
 /* Reset changes made to the logger */
 function resetLogger() {
   Util.Logger.enable();
   Util.Logger.removeAllHooks();
   Util.Logger.removeAllFilters();
+}
+
+/* Return true if the two numbers are approximately equal */
+function approxEqual(n1, n2) {
+  /* Exactly equal */
+  if (n1 === n2) return true;
+  /* Differ by less than epsilon */
+  if (Math.abs(n1 - n2) < Number.EPSILON) return true;
+  /* Number of digits after the decimal */
+  const decDigits = (n) => {
+    let s = `${n}`;
+    if (s.indexOf(".") === -1) {
+      return 0;
+    } else {
+      return s.substr(s.indexOf(".")+1).length;
+    }
+  };
+  let d = Math.min(decDigits(n1), decDigits(n2));
+  /* Within rounding of the last digit */
+  return Math.round(n1 * Math.pow(10, d)) === Math.round(n2 * Math.pow(10, d));
 }
 
 /* Test utility.js */
@@ -751,7 +769,6 @@ describe("Util", function() { /* nofold */
         assert.equal(red.g_1, 0);
         assert.equal(red.b_1, 0);
         assert.equal(red.a_1, 1);
-        /* TODO: yiq */
       });
       it("has inverted", function() {
         assert.equal(white.inverted().hex, "#000000");
@@ -781,7 +798,6 @@ describe("Util", function() { /* nofold */
       assert.equal(c.hex, "#ffffff");
     });
     it("can calculate relative luminances", function() {
-      /* TODO: more relative luminance coverage */
       assert.equal(white.getRelativeLuminance(), 1);
       assert.equal(black.getRelativeLuminance(), 0);
       assert.equal(Util.RelativeLuminance(white), 1);
@@ -792,8 +808,26 @@ describe("Util", function() { /* nofold */
       assert.equal(Util.RelativeLuminance("hsl(0, 1, 1)"), 1);
     });
     it("can calculate contrast ratios", function() {
-      /* TODO: contrast ratio */
-      /* TODO */
+      function assertRatio(c1, c2, ex) {
+        let cr = Util.ContrastRatio(new Util.Color(c1), new Util.Color(c2));
+        try {
+          assert.ok(approxEqual(cr, ex));
+        }
+        catch (e) {
+          Util.Error("Failure:", cr, ex, "not equal");
+          throw e;
+        }
+      }
+      /* Values taken from Wikipedia Template:Color_contrast_ratio */
+      assert.equal(Util.ContrastRatio(black, white), 21);
+      assertRatio("#000080", "#DDDDDD", 11.787);
+      assertRatio("#7B0000", "#FF9900", 5.324);
+      assertRatio("#004800", "#AAAAAA", 4.691);
+      assertRatio("red", "white", 3.998);
+      assertRatio("#FF0000", "#FF9999", 1.955);
+      assertRatio("#BADFEE", "black", 14.878);
+      assertRatio("red", "black", 5.252);
+      assertRatio("#FFFF00", "#00FFFF", 1.168);
     });
     it("can maximize contrast", function() {
       /* TODO */
@@ -831,7 +865,102 @@ describe("Util", function() { /* nofold */
     });
   });
   describe("Event handling", function() {
-    /* TODO */
+    const C = class C extends CallbackHandler { };
+    it("supports CallbackHandler", function() {
+      let testCounter = 0;
+      let defaultCounter = 0;
+      let c = new C();
+      c.bind("test1", function() { testCounter += 1; });
+      c.bindDefault(function() { defaultCounter += 1; });
+      c.fire("test1", {}); /* increments counter */
+      c.fire("test2", {}); /* increments default counter */
+      c.unbind("test1");
+      c.fire("test1", {}); /* increments default counter */
+      assert.equal(testCounter, 1);
+      assert.equal(defaultCounter, 2);
+      c.unbindDefault(function() { });
+      c.fire("test2", {}); /* increments default counter */
+      assert.equal(defaultCounter, 3);
+      c.unbindDefault();
+      c.fire("test2", {}); /* should do nothing */
+      assert.equal(defaultCounter, 3);
+      c.fire("test1", {}); /* should do nothing */
+      assert.equal(testCounter, 1);
+      c.bind("test", function() { testCounter += 1; });
+      c.fire("test", {}); /* increments counter */
+      assert.equal(testCounter, 2);
+      c.unbindNamed("test");
+      c.fire("test", {}); /* should do nothing */
+      assert.equal(testCounter, 2);
+
+      let [f1Count, f2Count] = [0, 0];
+      let f1 = function() { f1Count += 1; };
+      let f2 = function() { f2Count += 1; };
+      c.bindDefault(f1);
+      c.bindDefault(f2);
+      c.fire("test", {}); /* increments f1, f2 */
+      assert.equal(f1Count, 1);
+      assert.equal(f2Count, 1);
+      c.unbindDefault(f1);
+      c.fire("test", {}); /* increments f2 */
+      assert.equal(f1Count, 1);
+      assert.equal(f2Count, 2);
+      c.bind("test", f1);
+      c.fire("test", {}); /* increments f1 */
+      assert.equal(f1Count, 2);
+      assert.equal(f2Count, 2);
+      c.unbind("test", f1);
+      c.fire("test", {}); /* increments f2 */
+      assert.equal(f1Count, 2);
+      assert.equal(f2Count, 3);
+      c.unbind("test", f1);
+      c.fire("test", {}); /* increments f2 */
+      assert.equal(f1Count, 2);
+      assert.equal(f2Count, 4);
+    });
+    it("supports useDOMEvents", function(done) {
+      this.slow(200);
+      let counter = {};
+      const inc = (name) => {
+        counter[name] = (counter[name] || 0) + 1;
+      };
+      const event = (m) => {
+        let e = new window.Event(m);
+        e.message = m;
+        return e;
+      };
+      let c = new C({useDOMEvents: true});
+      const fn = function(e) { inc("ev_" + e.message); };
+      document.addEventListener("test", fn);
+      c.bindDefault(function() { inc("default"); });
+      c.bind("test", function(e) { inc("cb_" + e.message); });
+      c.fire("test", {"message": "test2"}); /* cb_test2 */
+      c.fire("test", event("test")); /* ev_test */
+      c.fire("foo", event("foo")); /* nothing; foo not bound */
+      c.fire("bar", event("bar")); /* cb_test */
+      c.fire("done", {}); /* default */
+      c.fire("test", {"message": "test3"}); /* cb_test3 */
+      document.removeEventListener("test", fn);
+      c.fire("test", event("test")); /* cb_test */
+      window.setTimeout(function() {
+        try {
+          assert.equal(counter.cb_test, 2);
+          assert.equal(counter.cb_test2, 1);
+          assert.equal(counter.cb_test3, 1);
+          assert.equal(counter.ev_test, 1);
+          assert.equal(counter.default, 1);
+          done();
+        }
+        catch (e) {
+          Util.Error("Test failure; counters:", counter);
+          done(e);
+        }
+      }, 50);
+      /* TODO:
+       * useDOMEventsFirst
+       * useDefaultAfterDOMEvents
+       */
+    });
   });
   describe("Parsing, formatting, and string functions", function() {
     it("defines Util.IsNumber", function() {
@@ -857,6 +986,7 @@ describe("Util", function() { /* nofold */
       assert.ok(Util.IsNumber("1.2e4"));
     });
     it("defines Util.ParseNumber", function() {
+      /* TODO: ensure every branch is tested */
       const tests = {
         "1": 1,
         "0": 0,
@@ -888,13 +1018,40 @@ describe("Util", function() { /* nofold */
       assert.equal(Util.Pad(0, 2, "-"), "-0");
     });
     it("defines Util.StringToCodes", function() {
-      /* TODO */
+      assert.deepEqual(Util.StringToCodes(" "), [32]);
+      assert.deepEqual(Util.StringToCodes("\x00\x01\x02\x03"), [0, 1, 2, 3]);
+      assert.deepEqual(Util.StringToCodes("abc"), [97, 98, 99]);
+      assert.deepEqual(Util.StringToCodes("\r\n\v\t"), [13, 10, 11, 9]);
+      for (let c of Util.ASCII) {
+        assert.deepEqual(Util.StringToCodes(c), [Util.ASCII.indexOf(c)]);
+      }
     });
     it("defines Util.FormatDate", function() {
-      /* TODO */
+      assert.equal(Util.FormatDate(new Date("Jan 1 2000")), "2000-01-01 00:00:00.000");
+      let dt = new Date("Jan 12 2000");
+      assert.equal(Util.FormatDate(dt), "2000-01-12 00:00:00.000");
+      dt.setFullYear(2001);
+      dt.setMonth(2);
+      dt.setDate(12);
+      dt.setHours(1);
+      dt.setMinutes(2);
+      dt.setSeconds(3);
+      dt.setMilliseconds(0);
+      assert.equal(Util.FormatDate(dt), "2001-03-12 01:02:03.000");
+      dt.setHours(14);
+      assert.equal(Util.FormatDate(dt), "2001-03-12 14:02:03.000");
+      /* TODO: more coverage */
     });
     it("defines Util.FormatInterval", function() {
-      /* TODO */
+      assert.equal(Util.FormatInterval(4), "4s");
+      assert.equal(Util.FormatInterval(-4), "-4s");
+      assert.equal(Util.FormatInterval(-4.99), "-5s");
+      assert.equal(Util.FormatInterval(60), "1m");
+      assert.equal(Util.FormatInterval(61), "1m 1s");
+      assert.equal(Util.FormatInterval(119), "1m 59s");
+      assert.equal(Util.FormatInterval(-119), "-1m 59s");
+      assert.equal(Util.FormatInterval(Number.NaN), "NaNs");
+      assert.equal(Util.FormatInterval(0), "0s");
     });
     it("defines Util.{Encode,Decode}Flags", function() {
       assert.deepEqual(Util.DecodeFlags("5d"), [true, false, true]);
@@ -913,16 +1070,23 @@ describe("Util", function() { /* nofold */
       assert.equal(Util.EncodeFlags(["", "foo", "1", "0", 1]), "01111");
       assert.equal(Util.EncodeFlags([null, false, undefined, {}, []]), "00011");
     });
-    it("defines Util.EscapeCharCode", function() {
-      /* TODO */
-    });
     it("defines Util.EscapeSlashes", function() {
-      /* TODO */
+      assert.equal(Util.EscapeSlashes("foo\nbar\nbaz"), "foo\\nbar\\nbaz");
+      assert.equal(Util.EscapeSlashes("1\t2\t3"), "1\\t2\\t3");
+      assert.equal(Util.EscapeSlashes("\\t"), "\\\\t");
+      assert.equal(Util.EscapeSlashes("\x01a\x02b\x03c"), "\\x01a\\x02b\\x03c");
     });
     it("defines Util.StringToRegExp", function() {
-      /* TODO */
+      assert.deepEqual(/foo/, new RegExp("foo"));
+      assert.deepEqual(/foo/gim, new RegExp("foo", "gim"));
+      assert.deepEqual(Util.StringToRegExp("foo"), /\bfoo\b/);
+      assert.deepEqual(Util.StringToRegExp("foo", "gim"), /\bfoo\b/gim);
+      assert.deepEqual(Util.StringToRegExp("/foo/m", "gi"), /foo/m);
+      assert.deepEqual(Util.StringToRegExp("/foo[a-z]/m", "mg"), /foo[a-z]/m);
+      assert.deepEqual(Util.StringToRegExp("f[^ ]+oo"), /\bf\[\^ \]\+oo\b/);
+      assert.deepEqual(Util.StringToRegExp("f[^ ]+oo", "g"), /\bf\[\^ \]\+oo\b/g);
     });
-    it("supports opts.exclude in Util.JSONClone", function() {
+    it("defines Util.JSONClone with opts.exclude", function() {
       let o = {
         "foo": {"bar": 1},
         "bar": 2,
@@ -1001,17 +1165,17 @@ describe("Util", function() { /* nofold */
         "?foo=bar=baz": {"foo": "bar=baz"}
       };
       /* base64: simple */
-      tests[`?base64=${btoa("?foo=bar")}`] = {"foo": "bar"};
+      tests[`?base64=${window.btoa("?foo=bar")}`] = {"foo": "bar"};
       /* base64: with non-base64 value */
-      tests[`?bar=baz&base64=${btoa("?foo=bar")}`] = {"foo": "bar", "bar": "baz"};
+      tests[`?bar=baz&base64=${window.btoa("?foo=bar")}`] = {"foo": "bar", "bar": "baz"};
       /* base64: overriding */
-      tests[`?foo=baz&base64=${btoa("?foo=bar")}`] = {"foo": "bar"};
-      tests[`?base64=${btoa("?foo=bar")}&foo=baz`] = {"foo": "baz"};
+      tests[`?foo=baz&base64=${window.btoa("?foo=bar")}`] = {"foo": "bar"};
+      tests[`?base64=${window.btoa("?foo=bar")}&foo=baz`] = {"foo": "baz"};
       for (let [qs, obj] of Object.entries(tests)) {
         assert.deepEqual(Util.ParseQueryString(qs), obj);
         assert.deepEqual(Util.ParseQueryString(qs.substr(1)), obj);
         /* possibly nested base64 */
-        assert.deepEqual(Util.ParseQueryString(`?base64=${btoa(qs)}`), obj);
+        assert.deepEqual(Util.ParseQueryString(`?base64=${window.btoa(qs)}`), obj);
       }
     });
     it("formats query strings", function() {
@@ -1101,7 +1265,7 @@ describe("Util", function() { /* nofold */
     /* TODO: ImageFromPNGData? */
   });
   describe("CSS functions", function() {
-    /* Must be after "DOM functions" due to dependencies */
+    /* After "DOM functions" due to dependencies */
     /* TODO: Util.CSS.GetSheet; <link> tags don't seem to work? */
     it("supports reading CSS", function() {
       let root = Util.CSS.GetRule(document.styleSheets[0], ":root");
@@ -1113,15 +1277,27 @@ describe("Util", function() { /* nofold */
       assert.ok(props.indexOf("--value") > -1);
       assert.ok(props.indexOf("--value-default") > -1);
       let span1 = document.querySelector(".span1");
-      let id1 = document.querySelector("#id1");
       assert.ok(span1);
-      assert.ok(id1);
-      let span1style = getComputedStyle(span1);
-      let id1style = getComputedStyle(id1);
+      let span1style = window.getComputedStyle(span1);
       assert.ok(span1style);
-      assert.ok(id1style);
       assert.equal(Util.CSS.GetProperty(span1, "color"), "red");
+      let id1 = document.querySelector("#id1");
+      assert.ok(id1);
+      let id1style = window.getComputedStyle(id1);
+      assert.ok(id1style);
       assert.equal(Util.CSS.GetProperty(id1, "background-color"), "white");
+    });
+    it("supports writing CSS", function() {
+      let span1 = document.querySelector(".span1");
+      assert.ok(span1);
+      Util.CSS.SetProperty(span1, "color", "green");
+      assert.equal(Util.CSS.GetProperty(span1, "color"), "green");
+      let id1 = document.querySelector("#id1");
+      assert.ok(id1);
+      Util.CSS.SetProperty(id1, "color", "blue");
+      Util.CSS.SetProperty(id1, "background-color", "cyan");
+      assert.equal(Util.CSS.GetProperty(id1, "color"), "blue");
+      assert.equal(Util.CSS.GetProperty(id1, "background-color"), "cyan");
     });
   });
   describe("Miscellaneous functions", function() {
