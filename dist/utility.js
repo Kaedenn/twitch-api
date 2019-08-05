@@ -1,7 +1,8 @@
 "use strict";
 
 /* TODO:
- * sRGB transformation in Util.Color (color.srgb, c2cx functions)
+ * Fix misuse of "sRGB" term
+ * Maximize contrast via https://stackoverflow.com/questions/1855884
  * Color replacement API (see KapChat)
  */
 
@@ -1040,7 +1041,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* URL handling {{{0 */
 
 /* RegExp for matching URLs */
-Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\S]{2,}|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\S]{2,}|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[^\s]{2,}|file:\/\/[\S]+)/gim;
+Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[\w]{2,}[\w.]*|file:\/\/[\S]+)/gim;
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -2525,6 +2526,30 @@ Util.Color = function () {
       return new Util.Color(r, g, b, a);
     }
 
+    /* sRGB gamma correction: forward transformation */
+
+  }, {
+    key: "LinearToSRGB",
+    value: function LinearToSRGB(c) {
+      if (c < 0.0031308) {
+        return 12.92 * c;
+      } else {
+        return Math.pow(1.055 * c, 1 / 2.4) - 0.055;
+      }
+    }
+
+    /* sRGB gamma correction: reverse transformation */
+
+  }, {
+    key: "SRGBToLinear",
+    value: function SRGBToLinear(c) {
+      if (c < 0.04045) {
+        return c / 12.92;
+      } else {
+        return Math.pow((c + 0.055) / 1.055, 2.4);
+      }
+    }
+
     /* Overloads
      *  Color()
      *  Color(Color)
@@ -2610,19 +2635,12 @@ Util.Color = function () {
 
     /* Calculate the Relative Luminance */
     value: function getRelativeLuminance() {
-      var _rgb_ = _slicedToArray(this.rgb_1, 3),
-          r = _rgb_[0],
-          g = _rgb_[1],
-          b = _rgb_[2];
+      var _srgb = _slicedToArray(this.srgb, 3),
+          r = _srgb[0],
+          g = _srgb[1],
+          b = _srgb[2];
 
-      function c2cx(c) {
-        if (c < 0.03928) {
-          return c / 12.92;
-        } else {
-          return Math.pow((c + 0.055) / 1.055, 2.4);
-        }
-      }
-      return 0.2126 * c2cx(r) + 0.7152 * c2cx(g) + 0.0722 * c2cx(b);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
     }
 
     /* Calculate the contrast ratio against the given color */
@@ -2738,6 +2756,14 @@ Util.Color = function () {
     get: function get() {
       var c = new Util.Color(this.r, this.g, this.b, this.a);
       return [c.r / 255, c.g / 255, c.b / 255, c.a / 255];
+    }
+
+    /* Attribute: sRGB [r, g, b] */
+
+  }, {
+    key: "srgb",
+    get: function get() {
+      return [Util.Color.SRGBToLinear(this.r_1), Util.Color.SRGBToLinear(this.g_1), Util.Color.SRGBToLinear(this.b_1)];
     }
 
     /* Attribute: [h, s, l] */
@@ -2879,18 +2905,10 @@ Util.RelativeLuminance = function _Util_RelativeLuminance() {
     args[_key31] = arguments[_key31];
   }
 
-  var color = new (Function.prototype.bind.apply(Util.Color, [null].concat(args)))().rgb_1;
-  /* sRGB reverse transformation */
-  function c2cx(c) {
-    if (c < 0.03928) {
-      return c / 12.92;
-    } else {
-      return Math.pow((c + 0.055) / 1.055, 2.4);
-    }
-  }
-  var l_red = 0.2126 * c2cx(color[0]);
-  var l_green = 0.7152 * c2cx(color[1]);
-  var l_blue = 0.0722 * c2cx(color[2]);
+  var color = new (Function.prototype.bind.apply(Util.Color, [null].concat(args)))().srgb;
+  var l_red = 0.2126 * color[0];
+  var l_green = 0.7152 * color[1];
+  var l_blue = 0.0722 * color[2];
   return l_red + l_green + l_blue;
 };
 

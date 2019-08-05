@@ -1,7 +1,8 @@
 "use strict";
 
 /* TODO:
- * sRGB transformation in Util.Color (color.srgb, c2cx functions)
+ * Fix misuse of "sRGB" term
+ * Maximize contrast via https://stackoverflow.com/questions/1855884
  * Color replacement API (see KapChat)
  */
 
@@ -558,7 +559,7 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* URL handling {{{0 */
 
 /* RegExp for matching URLs */
-Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\S]{2,}|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\S]{2,}|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[^\s]{2,}|file:\/\/[\S]+)/gim;
+Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[\w]{2,}[\w.]*|file:\/\/[\S]+)/gim;
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -1311,6 +1312,24 @@ Util.Color = class _Util_Color {
     return new Util.Color(r, g, b, a);
   }
 
+  /* sRGB gamma correction: forward transformation */
+  static LinearToSRGB(c) {
+    if (c < 0.0031308) {
+      return 12.92 * c;
+    } else {
+      return Math.pow(1.055 * c, 1/2.4) - 0.055;
+    }
+  }
+
+  /* sRGB gamma correction: reverse transformation */
+  static SRGBToLinear(c) {
+    if (c < 0.04045) {
+      return c / 12.92;
+    } else {
+      return Math.pow((c + 0.055) / 1.055, 2.4);
+    }
+  }
+
   /* Overloads
    *  Color()
    *  Color(Color)
@@ -1399,6 +1418,15 @@ Util.Color = class _Util_Color {
     return [c.r / 255, c.g / 255, c.b / 255, c.a / 255];
   }
 
+  /* Attribute: sRGB [r, g, b] */
+  get srgb() {
+    return [
+      Util.Color.SRGBToLinear(this.r_1),
+      Util.Color.SRGBToLinear(this.g_1),
+      Util.Color.SRGBToLinear(this.b_1)
+    ];
+  }
+
   /* Attribute: [h, s, l] */
   get hsl() { return Util.Color.RGBToHSL(this.r, this.g, this.b); }
   set hsl(hsl) {
@@ -1443,15 +1471,8 @@ Util.Color = class _Util_Color {
 
   /* Calculate the Relative Luminance */
   getRelativeLuminance() {
-    let [r, g, b] = this.rgb_1;
-    function c2cx(c) {
-      if (c < 0.03928) {
-        return c / 12.92;
-      } else {
-        return Math.pow((c + 0.055) / 1.055, 2.4);
-      }
-    }
-    return 0.2126 * c2cx(r) + 0.7152 * c2cx(g) + 0.0722 * c2cx(b);
+    let [r, g, b] = this.srgb;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
   }
 
   /* Calculate the contrast ratio against the given color */
@@ -1481,18 +1502,10 @@ Util.Color = class _Util_Color {
  *  Util.RelativeLuminance([r, g, b[, a]])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance(...args) {
-  let color = (new Util.Color(...args)).rgb_1;
-  /* sRGB reverse transformation */
-  function c2cx(c) {
-    if (c < 0.03928) {
-      return c / 12.92;
-    } else {
-      return Math.pow((c + 0.055) / 1.055, 2.4);
-    }
-  }
-  let l_red = 0.2126 * c2cx(color[0]);
-  let l_green = 0.7152 * c2cx(color[1]);
-  let l_blue = 0.0722 * c2cx(color[2]);
+  let color = (new Util.Color(...args)).srgb;
+  let l_red = 0.2126 * color[0];
+  let l_green = 0.7152 * color[1];
+  let l_blue = 0.0722 * color[2];
   return l_red + l_green + l_blue;
 };
 
