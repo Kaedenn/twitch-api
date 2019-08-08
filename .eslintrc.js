@@ -40,7 +40,7 @@ module.exports = {
     },
     "overrides": [
         {
-            "files": ["utility.js"],
+            "files": ["utility.js", "test/util.js"],
             "rules": {
                 "no-console": "off"
             }

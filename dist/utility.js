@@ -1041,7 +1041,22 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* URL handling {{{0 */
 
 /* RegExp for matching URLs */
-Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[\w]{2,}[\w.]*|file:\/\/[\S]+)/gim;
+Util.URL_REGEX = function () {
+  /* start of string, word boundary, non-word character */
+  var delim = "(?:^|\\b|\\W)";
+  /* http[s], ws[s], ftp */
+  var schema = "(?:http[s]?|ws[s]?|ftp):\\/\\/";
+  /* ALPHA | DIGIT | "-" | "." | "_" | "~" */
+  var unreserved = "[\\w\\d.~-]";
+  /* "%" HEXDIG HEXDIG */
+  var pctencode = "%[0-9A-Fa-f][0-9A-Fa-f]";
+  /* "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "=" */
+  var subdelims = "[!$&'()\\*+,;=]";
+  /* unreserved | pct-encode | sub-delims | ":" | "@" */
+  var pchar = [unreserved, pctencode, subdelims, "[\\/?]"].join("|");
+  /* final regex */
+  return new RegExp(delim + "(" + schema + ")?[\\w]+[-\\w]*(\\.[-\\w]+)*(\\.\\w{2,})(\\/\\S*)?(\\?(" + pchar + ")*)?(#(" + pchar + ")*)?", "g");
+}();
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -4240,15 +4255,17 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty() {
 
 /* Convert a string, number, boolean, URL, or Element to an Element */
 Util.CreateNode = function _Util_CreateNode(obj) {
+  var withText = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+
   if (obj instanceof window.Element) {
     return obj;
   } else if (["string", "number", "boolean"].indexOf(typeof obj === "undefined" ? "undefined" : _typeof(obj)) > -1) {
-    return new window.Text("" + obj);
+    return new window.Text("" + (withText || obj));
   } else if (obj instanceof URL) {
     var a = document.createElement("a");
     a.setAttribute("href", obj.href);
     a.setAttribute("target", "_blank");
-    a.textContent = obj.href;
+    a.textContent = withText || obj.href;
     return a;
   } else {
     Util.Warn("Not sure how to create a node from", obj);

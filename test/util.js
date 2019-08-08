@@ -368,7 +368,19 @@ describe("Util", function() { /* nofold */
   });
   describe("URL handling", function() {
     it("defines Util.URL_REGEX", function() {
-      const match = (u) => new RegExp(Util.URL_REGEX).test(u);
+      function match(u, fail=false) {
+        const m = u.match(new RegExp(Util.URL_REGEX));
+        if (fail) {
+          if (m) {
+            Util.LogOnly("unexpected match for", u, ":", m);
+          }
+          return !m;
+        } else {
+          assert.ok(m);
+          assert.equal(m[0], u);
+          return true;
+        }
+      }
       assert.ok(match("example.com"));
       assert.ok(match("example.com/"));
       assert.ok(match("www.example.com"));
@@ -385,6 +397,7 @@ describe("Util", function() { /* nofold */
       assert.ok(match("https://www2.example.com/"));
       assert.ok(match("https://www-2.example.com"));
       assert.ok(match("https://www-2.example.com/"));
+      assert.ok(match("http://example.com?a=b"));
       assert.ok(match("http://example.com?a=b#section.c"));
       assert.ok(match("http://example.com/?a=b#section.c"));
       assert.ok(match("www.example.com/www.example.com/example.asf"));
@@ -398,22 +411,16 @@ describe("Util", function() { /* nofold */
       assert.ok(match("http://asd.co"));
       assert.ok(match("http://os.cs.csce.university.ax/foo/bar?baz=&qux=asd+asd#hash=1+2+4,hash2="));
       assert.ok(match("www.a--x.as"));
-      assert.ok(match("//foo.example.com/path/to/the-thing.js"));
-      /* file:// */
-      assert.ok(match("file:///foo"));
-      assert.ok(match("file://C:/Users/Firstname Lastname/Documents/Site/index.html"));
-      assert.ok(match("file://C:\\Users\\Machine\\Downloads\\virus.aspx"));
-      assert.ok(match("file:///home/user/stuff/page.html"));
+      //assert.ok(match("//foo.example.com/path/to/the-thing.js"));
       /* non-http */
       assert.ok(match("ws://foo.com"));
       assert.ok(match("ws://foo.tv"));
       assert.ok(match("ftp://bar.com/"));
-      assert.ok(match("wss://baz.com/ asd asd www.example.com"));
-      assert.ok(!match("notasite"));
+      assert.ok(match("notasite", true));
       /* bugs found after delivery */
       assert.ok(match("www.foo.co.uk/bar/baz"));
-      assert.ok(!match("foo..."));
-      assert.ok(!match("foo.,,"));
+      assert.ok(match("foo...", true));
+      assert.ok(match("foo.,,", true));
     });
     it("can find URLs in text", function() {
       const matchCount = (s) => {
@@ -424,8 +431,7 @@ describe("Util", function() { /* nofold */
       assert.equal(matchCount("http://www.example.com"), 1);
       assert.equal(matchCount("text www.foo.com text http://bar.com text"), 2);
       assert.equal(matchCount("https://clips.twitch.tv/this-should-be-a-slug hey look at this"), 1);
-      /* FIXME: fails */
-      /* assert.equal(matchCount("https://foo.com/https://bar.com"), 1); */
+      assert.equal(matchCount("https://foo.com/https://bar.com"), 1);
     });
     it("defines Util.URL", function() {
       assert.ok(new URL(Util.URL("//www.example.com")));

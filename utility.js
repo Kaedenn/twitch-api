@@ -559,7 +559,22 @@ Util.ArgsToArray = function _Util_ArgsToArray(argobj) {
 /* URL handling {{{0 */
 
 /* RegExp for matching URLs */
-Util.URL_REGEX = /((?:(?:https?|ftp|wss?):\/\/)?(?:www(?:-[\d])?\.|(?!www))[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|www(?:-[\d])?\.[\w][\w-]+[\w]\.[\w]{2,}[\w.]*|(?:https?|ftp|wss?):\/\/(?:www(?:-[\d])?\.|(?!www))[\w]+\.[\w]{2,}[\w.]*|file:\/\/[\S]+)/gim;
+Util.URL_REGEX = (function() {
+  /* start of string, word boundary, non-word character */
+  const delim = "(?:^|\\b|\\W)";
+  /* http[s], ws[s], ftp */
+  const schema = "(?:http[s]?|ws[s]?|ftp):\\/\\/";
+  /* ALPHA | DIGIT | "-" | "." | "_" | "~" */
+  const unreserved = "[\\w\\d.~-]";
+  /* "%" HEXDIG HEXDIG */
+  const pctencode = "%[0-9A-Fa-f][0-9A-Fa-f]";
+  /* "!" | "$" | "&" | "'" | "(" | ")" | "*" | "+" | "," | ";" | "=" */
+  const subdelims = "[!$&'()\\*+,;=]";
+  /* unreserved | pct-encode | sub-delims | ":" | "@" */
+  const pchar = [unreserved, pctencode, subdelims, "[\\/?]"].join("|");
+  /* final regex */
+  return new RegExp(`${delim}(${schema})?[\\w]+[-\\w]*(\\.[-\\w]+)*(\\.\\w{2,})(\\/\\S*)?(\\?(${pchar})*)?(#(${pchar})*)?`, "g");
+})();
 
 /* Ensure a URL is formatted properly */
 Util.URL = function _Util_URL(url) {
@@ -2313,16 +2328,16 @@ Util.CSS.SetProperty = function _Util_CSS_SetProperty(...args) {
 /* DOM functions {{{0 */
 
 /* Convert a string, number, boolean, URL, or Element to an Element */
-Util.CreateNode = function _Util_CreateNode(obj) {
+Util.CreateNode = function _Util_CreateNode(obj, withText=null) {
   if (obj instanceof window.Element) {
     return obj;
   } else if (["string", "number", "boolean"].indexOf(typeof(obj)) > -1) {
-    return new window.Text(`${obj}`);
+    return new window.Text(`${withText || obj}`);
   } else if (obj instanceof URL) {
     let a = document.createElement("a");
     a.setAttribute("href", obj.href);
     a.setAttribute("target", "_blank");
-    a.textContent = obj.href;
+    a.textContent = withText || obj.href;
     return a;
   } else {
     Util.Warn("Not sure how to create a node from", obj);
