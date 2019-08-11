@@ -43,6 +43,11 @@ let Util = {
   _deferred: []
 };
 
+/* Used to split a string across multiple lines */
+Util.T = function _Util_T(...args) {
+  return args.join(" ");
+};
+
 /* Append a function to run, optionally storing the value in a Util key */
 Util._defer = function _Util_defer(...args) {
   if (args.length === 1) {

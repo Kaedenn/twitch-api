@@ -51,10 +51,19 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 
 var Util = (_Util = {}, _defineProperty(_Util, Symbol.toStringTag, "Util"), _defineProperty(_Util, "__wskey", null), _defineProperty(_Util, "__wscfg", "kae-twapi-local-key"), _defineProperty(_Util, "_deferred", []), _Util);
 
-/* Append a function to run, optionally storing the value in a Util key */
-Util._defer = function _Util_defer() {
+/* Used to split a string across multiple lines */
+Util.T = function _Util_T() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
     args[_key] = arguments[_key];
+  }
+
+  return args.join(" ");
+};
+
+/* Append a function to run, optionally storing the value in a Util key */
+Util._defer = function _Util_defer() {
+  for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+    args[_key2] = arguments[_key2];
   }
 
   if (args.length === 1) {
@@ -68,8 +77,8 @@ Util._defer = function _Util_defer() {
 
 /* As above, but insert the function before others */
 Util._deferFirst = function _Util_deferFirst() {
-  for (var _len2 = arguments.length, args = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-    args[_key2] = arguments[_key2];
+  for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+    args[_key3] = arguments[_key3];
   }
 
   if (args.length === 1) {
@@ -489,8 +498,8 @@ Util.Defined = function _Util_Defined(identifier) {
       }
     }
 
-    for (var _len3 = arguments.length, args = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-      args[_key3] = arguments[_key3];
+    for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+      args[_key4] = arguments[_key4];
     }
 
     var _iteratorNormalCompletion5 = true;
@@ -574,8 +583,8 @@ Util.Defined = function _Util_Defined(identifier) {
 
 /* Append one or more arrays, in-place */
 Array.prototype.extend = function _Array_extend() {
-  for (var _len4 = arguments.length, args = Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-    args[_key4] = arguments[_key4];
+  for (var _len5 = arguments.length, args = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
+    args[_key5] = arguments[_key5];
   }
 
   var _iteratorNormalCompletion7 = true;
@@ -957,8 +966,8 @@ Util.Zip = function _Util_Zip() {
   var max_len = 0;
   /* Make sure everything's an array, calculate the max length */
 
-  for (var _len5 = arguments.length, sequences = Array(_len5), _key5 = 0; _key5 < _len5; _key5++) {
-    sequences[_key5] = arguments[_key5];
+  for (var _len6 = arguments.length, sequences = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
+    sequences[_key6] = arguments[_key6];
   }
 
   var _iteratorNormalCompletion15 = true;
@@ -1845,8 +1854,8 @@ var Logging = function () {
     value: function stringify() {
       var result = [];
 
-      for (var _len6 = arguments.length, args = Array(_len6), _key6 = 0; _key6 < _len6; _key6++) {
-        args[_key6] = arguments[_key6];
+      for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
+        args[_key7] = arguments[_key7];
       }
 
       var _iteratorNormalCompletion28 = true;
@@ -1886,8 +1895,8 @@ var Logging = function () {
   }, {
     key: "Trace",
     value: function Trace() {
-      for (var _len7 = arguments.length, args = Array(_len7), _key7 = 0; _key7 < _len7; _key7++) {
-        args[_key7] = arguments[_key7];
+      for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
+        args[_key8] = arguments[_key8];
       }
 
       this.doLog("TRACE", args, true, false);
@@ -1895,8 +1904,8 @@ var Logging = function () {
   }, {
     key: "Debug",
     value: function Debug() {
-      for (var _len8 = arguments.length, args = Array(_len8), _key8 = 0; _key8 < _len8; _key8++) {
-        args[_key8] = arguments[_key8];
+      for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
+        args[_key9] = arguments[_key9];
       }
 
       this.doLog("DEBUG", args, true, false);
@@ -1904,8 +1913,8 @@ var Logging = function () {
   }, {
     key: "Info",
     value: function Info() {
-      for (var _len9 = arguments.length, args = Array(_len9), _key9 = 0; _key9 < _len9; _key9++) {
-        args[_key9] = arguments[_key9];
+      for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
+        args[_key10] = arguments[_key10];
       }
 
       this.doLog("INFO", args, true, false);
@@ -1913,8 +1922,8 @@ var Logging = function () {
   }, {
     key: "Warn",
     value: function Warn() {
-      for (var _len10 = arguments.length, args = Array(_len10), _key10 = 0; _key10 < _len10; _key10++) {
-        args[_key10] = arguments[_key10];
+      for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
+        args[_key11] = arguments[_key11];
       }
 
       this.doLog("WARN", args, true, false);
@@ -1922,8 +1931,8 @@ var Logging = function () {
   }, {
     key: "Error",
     value: function Error() {
-      for (var _len11 = arguments.length, args = Array(_len11), _key11 = 0; _key11 < _len11; _key11++) {
-        args[_key11] = arguments[_key11];
+      for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
+        args[_key12] = arguments[_key12];
       }
 
       this.doLog("ERROR", args, true, false);
@@ -1934,8 +1943,8 @@ var Logging = function () {
   }, {
     key: "TraceOnly",
     value: function TraceOnly() {
-      for (var _len12 = arguments.length, args = Array(_len12), _key12 = 0; _key12 < _len12; _key12++) {
-        args[_key12] = arguments[_key12];
+      for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
+        args[_key13] = arguments[_key13];
       }
 
       this.doLog("TRACE", args, false, false);
@@ -1943,8 +1952,8 @@ var Logging = function () {
   }, {
     key: "DebugOnly",
     value: function DebugOnly() {
-      for (var _len13 = arguments.length, args = Array(_len13), _key13 = 0; _key13 < _len13; _key13++) {
-        args[_key13] = arguments[_key13];
+      for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
+        args[_key14] = arguments[_key14];
       }
 
       this.doLog("DEBUG", args, false, false);
@@ -1952,8 +1961,8 @@ var Logging = function () {
   }, {
     key: "InfoOnly",
     value: function InfoOnly() {
-      for (var _len14 = arguments.length, args = Array(_len14), _key14 = 0; _key14 < _len14; _key14++) {
-        args[_key14] = arguments[_key14];
+      for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
+        args[_key15] = arguments[_key15];
       }
 
       this.doLog("INFO", args, false, false);
@@ -1961,8 +1970,8 @@ var Logging = function () {
   }, {
     key: "WarnOnly",
     value: function WarnOnly() {
-      for (var _len15 = arguments.length, args = Array(_len15), _key15 = 0; _key15 < _len15; _key15++) {
-        args[_key15] = arguments[_key15];
+      for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
+        args[_key16] = arguments[_key16];
       }
 
       this.doLog("WARN", args, false, false);
@@ -1970,8 +1979,8 @@ var Logging = function () {
   }, {
     key: "ErrorOnly",
     value: function ErrorOnly() {
-      for (var _len16 = arguments.length, args = Array(_len16), _key16 = 0; _key16 < _len16; _key16++) {
-        args[_key16] = arguments[_key16];
+      for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
+        args[_key17] = arguments[_key17];
       }
 
       this.doLog("ERROR", args, false, false);
@@ -1982,8 +1991,8 @@ var Logging = function () {
   }, {
     key: "TraceOnce",
     value: function TraceOnce() {
-      for (var _len17 = arguments.length, args = Array(_len17), _key17 = 0; _key17 < _len17; _key17++) {
-        args[_key17] = arguments[_key17];
+      for (var _len18 = arguments.length, args = Array(_len18), _key18 = 0; _key18 < _len18; _key18++) {
+        args[_key18] = arguments[_key18];
       }
 
       this.doLog("TRACE", args, true, true);
@@ -1991,8 +2000,8 @@ var Logging = function () {
   }, {
     key: "DebugOnce",
     value: function DebugOnce() {
-      for (var _len18 = arguments.length, args = Array(_len18), _key18 = 0; _key18 < _len18; _key18++) {
-        args[_key18] = arguments[_key18];
+      for (var _len19 = arguments.length, args = Array(_len19), _key19 = 0; _key19 < _len19; _key19++) {
+        args[_key19] = arguments[_key19];
       }
 
       this.doLog("DEBUG", args, true, true);
@@ -2000,8 +2009,8 @@ var Logging = function () {
   }, {
     key: "InfoOnce",
     value: function InfoOnce() {
-      for (var _len19 = arguments.length, args = Array(_len19), _key19 = 0; _key19 < _len19; _key19++) {
-        args[_key19] = arguments[_key19];
+      for (var _len20 = arguments.length, args = Array(_len20), _key20 = 0; _key20 < _len20; _key20++) {
+        args[_key20] = arguments[_key20];
       }
 
       this.doLog("INFO", args, true, true);
@@ -2009,8 +2018,8 @@ var Logging = function () {
   }, {
     key: "WarnOnce",
     value: function WarnOnce() {
-      for (var _len20 = arguments.length, args = Array(_len20), _key20 = 0; _key20 < _len20; _key20++) {
-        args[_key20] = arguments[_key20];
+      for (var _len21 = arguments.length, args = Array(_len21), _key21 = 0; _key21 < _len21; _key21++) {
+        args[_key21] = arguments[_key21];
       }
 
       this.doLog("WARN", args, true, true);
@@ -2018,8 +2027,8 @@ var Logging = function () {
   }, {
     key: "ErrorOnce",
     value: function ErrorOnce() {
-      for (var _len21 = arguments.length, args = Array(_len21), _key21 = 0; _key21 < _len21; _key21++) {
-        args[_key21] = arguments[_key21];
+      for (var _len22 = arguments.length, args = Array(_len22), _key22 = 0; _key22 < _len22; _key22++) {
+        args[_key22] = arguments[_key22];
       }
 
       this.doLog("ERROR", args, true, true);
@@ -2030,8 +2039,8 @@ var Logging = function () {
   }, {
     key: "TraceOnlyOnce",
     value: function TraceOnlyOnce() {
-      for (var _len22 = arguments.length, args = Array(_len22), _key22 = 0; _key22 < _len22; _key22++) {
-        args[_key22] = arguments[_key22];
+      for (var _len23 = arguments.length, args = Array(_len23), _key23 = 0; _key23 < _len23; _key23++) {
+        args[_key23] = arguments[_key23];
       }
 
       this.doLog("TRACE", args, false, true);
@@ -2039,8 +2048,8 @@ var Logging = function () {
   }, {
     key: "DebugOnlyOnce",
     value: function DebugOnlyOnce() {
-      for (var _len23 = arguments.length, args = Array(_len23), _key23 = 0; _key23 < _len23; _key23++) {
-        args[_key23] = arguments[_key23];
+      for (var _len24 = arguments.length, args = Array(_len24), _key24 = 0; _key24 < _len24; _key24++) {
+        args[_key24] = arguments[_key24];
       }
 
       this.doLog("DEBUG", args, false, true);
@@ -2048,8 +2057,8 @@ var Logging = function () {
   }, {
     key: "InfoOnlyOnce",
     value: function InfoOnlyOnce() {
-      for (var _len24 = arguments.length, args = Array(_len24), _key24 = 0; _key24 < _len24; _key24++) {
-        args[_key24] = arguments[_key24];
+      for (var _len25 = arguments.length, args = Array(_len25), _key25 = 0; _key25 < _len25; _key25++) {
+        args[_key25] = arguments[_key25];
       }
 
       this.doLog("INFO", args, false, true);
@@ -2057,8 +2066,8 @@ var Logging = function () {
   }, {
     key: "WarnOnlyOnce",
     value: function WarnOnlyOnce() {
-      for (var _len25 = arguments.length, args = Array(_len25), _key25 = 0; _key25 < _len25; _key25++) {
-        args[_key25] = arguments[_key25];
+      for (var _len26 = arguments.length, args = Array(_len26), _key26 = 0; _key26 < _len26; _key26++) {
+        args[_key26] = arguments[_key26];
       }
 
       this.doLog("WARN", args, false, true);
@@ -2066,8 +2075,8 @@ var Logging = function () {
   }, {
     key: "ErrorOnlyOnce",
     value: function ErrorOnlyOnce() {
-      for (var _len26 = arguments.length, args = Array(_len26), _key26 = 0; _key26 < _len26; _key26++) {
-        args[_key26] = arguments[_key26];
+      for (var _len27 = arguments.length, args = Array(_len27), _key27 = 0; _key27 < _len27; _key27++) {
+        args[_key27] = arguments[_key27];
       }
 
       this.doLog("ERROR", args, false, true);
@@ -2382,8 +2391,8 @@ var ColorParser = function () {
   }, {
     key: "addColors",
     value: function addColors() {
-      for (var _len27 = arguments.length, colors = Array(_len27), _key27 = 0; _key27 < _len27; _key27++) {
-        colors[_key27] = arguments[_key27];
+      for (var _len28 = arguments.length, colors = Array(_len28), _key28 = 0; _key28 < _len28; _key28++) {
+        colors[_key28] = arguments[_key28];
       }
 
       var _iteratorNormalCompletion29 = true;
@@ -2476,8 +2485,8 @@ Util.Color = function () {
   }, {
     key: "Renorm1",
     value: function Renorm1() {
-      for (var _len28 = arguments.length, args = Array(_len28), _key28 = 0; _key28 < _len28; _key28++) {
-        args[_key28] = arguments[_key28];
+      for (var _len29 = arguments.length, args = Array(_len29), _key29 = 0; _key29 < _len29; _key29++) {
+        args[_key29] = arguments[_key29];
       }
 
       var r = args[0],
@@ -2497,8 +2506,8 @@ Util.Color = function () {
   }, {
     key: "Renorm255",
     value: function Renorm255() {
-      for (var _len29 = arguments.length, args = Array(_len29), _key29 = 0; _key29 < _len29; _key29++) {
-        args[_key29] = arguments[_key29];
+      for (var _len30 = arguments.length, args = Array(_len30), _key30 = 0; _key30 < _len30; _key30++) {
+        args[_key30] = arguments[_key30];
       }
 
       var r = args[0],
@@ -2584,8 +2593,8 @@ Util.Color = function () {
     this.b = 0;
     this.a = 255;
 
-    for (var _len30 = arguments.length, argList = Array(_len30), _key30 = 0; _key30 < _len30; _key30++) {
-      argList[_key30] = arguments[_key30];
+    for (var _len31 = arguments.length, argList = Array(_len31), _key31 = 0; _key31 < _len31; _key31++) {
+      argList[_key31] = arguments[_key31];
     }
 
     var args = argList;
@@ -2916,8 +2925,8 @@ Util.Color = function () {
  *  Util.RelativeLuminance([r, g, b[, a]])
  *  Util.RelativeLuminance(r, g, b[, a]) */
 Util.RelativeLuminance = function _Util_RelativeLuminance() {
-  for (var _len31 = arguments.length, args = Array(_len31), _key31 = 0; _key31 < _len31; _key31++) {
-    args[_key31] = arguments[_key31];
+  for (var _len32 = arguments.length, args = Array(_len32), _key32 = 0; _key32 < _len32; _key32++) {
+    args[_key32] = arguments[_key32];
   }
 
   var color = new (Function.prototype.bind.apply(Util.Color, [null].concat(args)))().srgb;
@@ -2942,8 +2951,8 @@ Util.GetMaxContrast = function _Util_GetMaxContrast(c1) {
   var best_color = null;
   var best_contrast = null;
 
-  for (var _len32 = arguments.length, colors = Array(_len32 > 1 ? _len32 - 1 : 0), _key32 = 1; _key32 < _len32; _key32++) {
-    colors[_key32 - 1] = arguments[_key32];
+  for (var _len33 = arguments.length, colors = Array(_len33 > 1 ? _len33 - 1 : 0), _key33 = 1; _key33 < _len33; _key33++) {
+    colors[_key33 - 1] = arguments[_key33];
   }
 
   var clist = colors;
