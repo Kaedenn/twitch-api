@@ -1325,8 +1325,10 @@ class TwitchClient extends CallbackHandler {
           this._self_emote_sets[setnr] = [];
         }
         for (let edef of edefs) {
-          this._self_emote_sets[setnr].push(edef.id);
-          this._self_emotes[edef.id] = edef.code;
+          if (!this._self_emote_sets[setnr].includes(edef.id)) {
+            this._self_emote_sets[setnr].push(edef.id);
+            this._self_emotes[edef.id] = edef.code;
+          }
         }
       }
       this._fire(new TwitchEvent("ASSETLOADED", "", {
@@ -1807,8 +1809,10 @@ class TwitchClient extends CallbackHandler {
     /* Obtain emotes the client is able to use */
     if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
-        let esets = result.flags["emote-sets"].map((e) => `${e}`).join(",");
-        this.AddEmoteSet(esets);
+        /* Add the sets one at a time in case a set gives an error */
+        for (let eset of result.flags["emote-sets"].map((e) => `${e}`)) {
+          this.AddEmoteSet(eset);
+        }
       }
     }
 
