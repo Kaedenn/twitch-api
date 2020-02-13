@@ -10,15 +10,17 @@
  * Emotes like ":-D" show more than one emote (turbo 1, turbo 2, global)
  */
 
-/* TODO:
+/* TODO/FIXME:
+ * Remove _getRooms and room support altogether
  * Change APIs from Kraken to Helix
- *  Twitch.URL.Rooms(channelid)
  *  Twitch.URL.Stream(channelid)
  *    `${Twitch.Helix}/streams?user_id=${channelid}`
  *  Twitch.URL.GlobalCheers()
  *  Twitch.URL.Cheers(channelid)
  *  Twitch.URL.EmoteSet(emoteset)
- * Rewrite GetEmote API
+ */
+
+/* TODO (IMPROVEMENT): Rewrite GetEmote API
  *  Abbreviations:
  *    e_url :== string, emote URL
  *    e_name :== string, emote's name
@@ -1313,29 +1315,51 @@ class TwitchClient extends CallbackHandler {
     return emotes;
   }
 
+  /* Return true if the given emote set has emotes loaded */
+  isEmoteSetLoaded(eset) {
+    if (Object.keys(this._self_emote_sets).includes(eset)) {
+      if (this._self_emote_sets[eset].length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /* Load the specified emote set(s); eset can be either a number or a
-   * comma-separated sequence of numbers */
+   * comma-separated sequence of numbers
+   * FIXME: Duplicates emotes present in more than one emote set.
+   * Emotes in higher emote set take precedence over lower emote sets? */
   AddEmoteSet(eset) {
-    /* FIXME: Duplicates emotes present in more than one emote set.
-     * Emotes in higher emote set take precedence over lower emote sets? */
-    let eset_url = Twitch.URL.EmoteSet(eset);
-    this._api.Get(eset_url, (json) => {
-      for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
-        if (!this._self_emote_sets[setnr]) {
-          this._self_emote_sets[setnr] = [];
-        }
-        for (let edef of edefs) {
-          if (!this._self_emote_sets[setnr].includes(edef.id)) {
-            this._self_emote_sets[setnr].push(edef.id);
-            this._self_emotes[edef.id] = edef.code;
+    /* Don't Get() if all emote set IDs are already loaded */
+    let load = false;
+    for (let i of `${eset}`.split(",")) {
+      if (!this.isEmoteSetLoaded(i)) {
+        load = true;
+        break;
+      }
+    }
+    if (load) {
+      let eset_url = Twitch.URL.EmoteSet(eset);
+      this._api.Get(eset_url, (json) => {
+        for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
+          if (!this._self_emote_sets[setnr]) {
+            this._self_emote_sets[setnr] = [];
+          }
+          for (let edef of edefs) {
+            if (!this._self_emote_sets[setnr].includes(edef.id)) {
+              this._self_emote_sets[setnr].push(edef.id);
+              this._self_emotes[edef.id] = edef.code;
+            }
           }
         }
-      }
-      this._fire(new TwitchEvent("ASSETLOADED", "", {
-        kind: "emote_set",
-        eset: eset
-      }));
-    });
+        this._fire(new TwitchEvent("ASSETLOADED", "", {
+          kind: "emote_set",
+          eset: eset
+        }));
+      });
+    } else {
+      Util.DebugOnly("Not loading emote sets " + eset + "; already loaded");
+    }
   }
 
   /* Return the loaded emote sets */
@@ -1807,7 +1831,7 @@ class TwitchClient extends CallbackHandler {
     }
 
     /* Obtain emotes the client is able to use */
-    if (result.cmd === "USERSTATE" || result.cmd === "GLOBALUSERSTATE") {
+    if (result.cmd === "GLOBALUSERSTATE") {
       if (result.flags && result.flags["emote-sets"]) {
         /* Add the sets one at a time in case a set gives an error */
         for (let eset of result.flags["emote-sets"].map((e) => `${e}`)) {
@@ -1913,7 +1937,7 @@ Twitch.URL = {
   Game: (id) => `${Twitch.Helix}/games?id=${id}`,
 
   ChannelBadges: (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`,
-  AllBadges: () => `https://badges.twitch.tv/v1/badges/global/display`,
+  AllBadges: () => `${Twitch.Badges}/global/display`,
   GlobalCheers: () => `${Twitch.Kraken}/bits/actions`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
   Emote: (eid, size="1.0") => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
