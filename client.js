@@ -49,6 +49,9 @@
 /* Container for Twitch utilities */
 let Twitch = {};
 
+/* Blacklisted emoteset IDs (loading these give HTTP 503) */
+Twitch.BAD_EMOTESET_IDS = ['1825876091', '1590490520', '798691873'];
+
 /* Event classes {{{0 */
 
 /* Base Event object for Twitch events */
@@ -1337,6 +1340,11 @@ class TwitchClient extends CallbackHandler {
         load = true;
         break;
       }
+    }
+    /* Don't load blacklisted emotesets (which give 503s) */
+    if (Twitch.BAD_EMOTESET_IDS.includes(`${eset}`)) {
+      Util.DebugOnly(`Not loading eset ${eset}; set is blacklisted`);
+      return;
     }
     if (load) {
       let eset_url = Twitch.URL.EmoteSet(eset);

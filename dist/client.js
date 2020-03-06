@@ -60,6 +60,9 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var Twitch = {};
 
+/* Blacklisted emoteset IDs (loading these give HTTP 503) */
+Twitch.BAD_EMOTESET_IDS = ['1825876091', '1590490520', '798691873'];
+
 /* Event classes {{{0 */
 
 /* Base Event object for Twitch events */
@@ -84,7 +87,7 @@ var TwitchEvent = function () {
       this._parsed = parsed;
     }
     if (TwitchEvent.COMMAND_LIST.indexOf(this._cmd) === -1) {
-      Util.Error("Command \"" + this._cmd + "\" not enumerated in this.COMMANDS");
+      Util.Error('Command "' + this._cmd + '" not enumerated in this.COMMANDS');
     }
     /* Ensure certain flags have expected types */
     if (!this._parsed.message) {
@@ -105,7 +108,7 @@ var TwitchEvent = function () {
 
 
   _createClass(TwitchEvent, [{
-    key: "flag",
+    key: 'flag',
 
 
     /* Obtain the named flag */
@@ -119,7 +122,7 @@ var TwitchEvent = function () {
     /* Obtain a "msg-param-" value */
 
   }, {
-    key: "param",
+    key: 'param',
     value: function param(name) {
       return this.flag("msg-param-" + name);
     }
@@ -127,7 +130,7 @@ var TwitchEvent = function () {
     /* Obtain the first non-falsy value of the listed flags */
 
   }, {
-    key: "firstFlag",
+    key: 'firstFlag',
     value: function firstFlag() {
       for (var _len = arguments.length, flags = Array(_len), _key = 0; _key < _len; _key++) {
         flags[_key] = arguments[_key];
@@ -166,7 +169,7 @@ var TwitchEvent = function () {
     /* Return the msg-id, if one is present */
 
   }, {
-    key: "repr",
+    key: 'repr',
 
 
     /* Object.prototype.toSource convenience function (for debugging) */
@@ -174,55 +177,55 @@ var TwitchEvent = function () {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
       var args = [this._cmd, this._raw, this._parsed];
-      return "new " + cls + "(" + JSON.stringify(args) + ")";
+      return 'new ' + cls + '(' + JSON.stringify(args) + ')';
     }
   }, {
-    key: "type",
+    key: 'type',
     get: function get() {
       return "twitch-" + this._cmd.toLowerCase();
     }
   }, {
-    key: "command",
+    key: 'command',
     get: function get() {
       return this._cmd;
     }
   }, {
-    key: "raw",
+    key: 'raw',
     get: function get() {
       return this._raw;
     }
   }, {
-    key: "values",
+    key: 'values',
     get: function get() {
       return this._parsed;
     }
   }, {
-    key: "userValue",
+    key: 'userValue',
     get: function get() {
       return this.values.user;
     }
   }, {
-    key: "nameValue",
+    key: 'nameValue',
     get: function get() {
       return this.flags["display-name"];
     }
   }, {
-    key: "channel",
+    key: 'channel',
     get: function get() {
       return this.values.channel;
     }
   }, {
-    key: "channelString",
+    key: 'channelString',
     get: function get() {
       return Twitch.FormatChannel(this.channel);
     }
   }, {
-    key: "message",
+    key: 'message',
     get: function get() {
       return this.values.message;
     }
   }, {
-    key: "flags",
+    key: 'flags',
     get: function get() {
       return this.values.flags;
     }
@@ -230,7 +233,7 @@ var TwitchEvent = function () {
     /* Prefer username over display name */
 
   }, {
-    key: "user",
+    key: 'user',
     get: function get() {
       return this.userValue || this.nameValue;
     }
@@ -238,12 +241,12 @@ var TwitchEvent = function () {
     /* Prefer display name over username */
 
   }, {
-    key: "name",
+    key: 'name',
     get: function get() {
       return this.nameValue || this.userValue;
     }
   }, {
-    key: "noticeMsgId",
+    key: 'noticeMsgId',
     get: function get() {
       if (this._cmd === "NOTICE" && this.flags) {
         if (typeof this.flags["msg-id"] === "string") {
@@ -256,7 +259,7 @@ var TwitchEvent = function () {
     /* Return the class of the msg-id, if one is present */
 
   }, {
-    key: "noticeClass",
+    key: 'noticeClass',
     get: function get() {
       var msgid = this.noticeMsgId;
       if (typeof msgid === "string") {
@@ -267,10 +270,10 @@ var TwitchEvent = function () {
   }, {
     key: Symbol.toStringTag,
     get: function get() {
-      return "TwitchEvent<" + this._cmd + ">";
+      return 'TwitchEvent<' + this._cmd + '>';
     }
   }], [{
-    key: "COMMAND_LIST",
+    key: 'COMMAND_LIST',
     get: function get() {
       return ["CHAT", /* (s) Received a message from another user */
       "PING", /* Twitch is checking to see if we're still here */
@@ -317,7 +320,7 @@ var TwitchEvent = function () {
     /* Object for the commands above */
 
   }, {
-    key: "COMMANDS",
+    key: 'COMMANDS',
     get: function get() {
       var result = {};
       var _iteratorNormalCompletion2 = true;
@@ -368,7 +371,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
   }
 
   _createClass(TwitchChatEvent, [{
-    key: "hasBadge",
+    key: 'hasBadge',
     value: function hasBadge(badge) {
       var rev = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
       var _iteratorNormalCompletion3 = true;
@@ -407,51 +410,51 @@ var TwitchChatEvent = function (_TwitchEvent) {
       return false;
     }
   }, {
-    key: "repr",
+    key: 'repr',
     value: function repr() {
       /* Return a value similar to Object.toSource() */
       var cls = Object.getPrototypeOf(this).constructor.name;
       var raw = JSON.stringify(this._raw);
       var parsed = JSON.stringify(this._parsed);
-      return "new " + cls + "(" + raw + "," + parsed + ")";
+      return 'new ' + cls + '(' + raw + ',' + parsed + ')';
     }
   }, {
-    key: "id",
+    key: 'id',
     get: function get() {
       return this._id;
     }
   }, {
-    key: "iscaster",
+    key: 'iscaster',
     get: function get() {
       return this.hasBadge("broadcaster");
     }
   }, {
-    key: "ismod",
+    key: 'ismod',
     get: function get() {
       return this.hasBadge("moderator") || this.flags.mod || this.iscaster;
     }
   }, {
-    key: "issub",
+    key: 'issub',
     get: function get() {
       return this.hasBadge("subscriber") || this.flags.subscriber;
     }
   }, {
-    key: "isstaff",
+    key: 'isstaff',
     get: function get() {
       return this.hasBadge("staff") || this.flags.staff;
     }
   }, {
-    key: "isvip",
+    key: 'isvip',
     get: function get() {
       return this.hasBadge("vip");
     }
   }, {
-    key: "badges",
+    key: 'badges',
     get: function get() {
       return this.flags.badges || [];
     }
   }, {
-    key: "subMonths",
+    key: 'subMonths',
     get: function get() {
       if (this.flags["badge-info"]) {
         var _iteratorNormalCompletion4 = true;
@@ -489,7 +492,7 @@ var TwitchChatEvent = function (_TwitchEvent) {
       return 0;
     }
   }, {
-    key: "bits",
+    key: 'bits',
     get: function get() {
       return typeof this.flags.bits === "number" ? this.flags.bits : 0;
     }
@@ -511,7 +514,7 @@ var TwitchSubEvent = function (_TwitchEvent2) {
 
     _this2._sub_kind = sub_kind;
     if (TwitchSubEvent.KINDS.indexOf(sub_kind) === -1) {
-      Util.Error("Invalid sub kind " + sub_kind + "; defaulting to \"SUB\"");
+      Util.Error('Invalid sub kind ' + sub_kind + '; defaulting to "SUB"');
       _this2._sub_kind = TwitchSubEvent.KIND_SUB;
     }
     return _this2;
@@ -521,7 +524,7 @@ var TwitchSubEvent = function (_TwitchEvent2) {
 
 
   _createClass(TwitchSubEvent, [{
-    key: "kind",
+    key: 'kind',
 
 
     /* Methods below apply to all sub kinds */
@@ -529,37 +532,37 @@ var TwitchSubEvent = function (_TwitchEvent2) {
       return this._sub_kind;
     }
   }, {
-    key: "user",
+    key: 'user',
     get: function get() {
       return this.param("login") || this.name;
     }
   }, {
-    key: "plan",
+    key: 'plan',
     get: function get() {
       return this.param("sub-plan-name");
     }
   }, {
-    key: "plan_id",
+    key: 'plan_id',
     get: function get() {
       return this.param("sub-plan");
     }
   }, {
-    key: "months",
+    key: 'months',
     get: function get() {
       return this.param("months") || 0;
     }
   }, {
-    key: "total_months",
+    key: 'total_months',
     get: function get() {
       return this.param("cumulative-months") || 0;
     }
   }, {
-    key: "share_streak",
+    key: 'share_streak',
     get: function get() {
       return this.param("should-share-streak");
     }
   }, {
-    key: "streak_months",
+    key: 'streak_months',
     get: function get() {
       return this.param("streak-months") || 0;
     }
@@ -567,27 +570,27 @@ var TwitchSubEvent = function (_TwitchEvent2) {
     /* Methods below only apply only to gift subs */
 
   }, {
-    key: "anonymous",
+    key: 'anonymous',
     get: function get() {
       return this.kind === TwitchSubEvent.KIND_ANONGIFTSUB;
     }
   }, {
-    key: "recipient",
+    key: 'recipient',
     get: function get() {
       return this.param("recipient-user-name");
     }
   }, {
-    key: "recipient_id",
+    key: 'recipient_id',
     get: function get() {
       return this.param("recipient-id");
     }
   }, {
-    key: "recipient_name",
+    key: 'recipient_name',
     get: function get() {
       return this.param("recipient-display-name");
     }
   }], [{
-    key: "IsKind",
+    key: 'IsKind',
     value: function IsKind(k) {
       return TwitchSubEvent.KINDS.indexOf(k) > -1;
     }
@@ -595,12 +598,12 @@ var TwitchSubEvent = function (_TwitchEvent2) {
     /* Known subscription tiers */
 
   }, {
-    key: "IsPlan",
+    key: 'IsPlan',
     value: function IsPlan(p) {
       return TwitchSubEvent.PLANS.indexOf(p) > -1;
     }
   }, {
-    key: "KindFromMsgID",
+    key: 'KindFromMsgID',
     value: function KindFromMsgID(msgid) {
       if (msgid === "sub") return TwitchSubEvent.KIND_SUB;
       if (msgid === "resub") return TwitchSubEvent.KIND_RESUB;
@@ -609,9 +612,9 @@ var TwitchSubEvent = function (_TwitchEvent2) {
       return null;
     }
   }, {
-    key: "PlanName",
+    key: 'PlanName',
     value: function PlanName(plan_id) {
-      var plan = "" + plan_id;
+      var plan = '' + plan_id;
       if (plan === TwitchSubEvent.PLAN_PRIME) {
         return "Twitch Prime";
       } else if (plan === TwitchSubEvent.PLAN_TIER1) {
@@ -621,56 +624,56 @@ var TwitchSubEvent = function (_TwitchEvent2) {
       } else if (plan === TwitchSubEvent.PLAN_TIER3) {
         return "Tier 3";
       } else {
-        return "\"" + plan + "\"";
+        return '"' + plan + '"';
       }
     }
   }, {
-    key: "KINDS",
+    key: 'KINDS',
     get: function get() {
       return ["SUB", "RESUB", "GIFTSUB", "ANONGIFTSUB"];
     }
   }, {
-    key: "KIND_SUB",
+    key: 'KIND_SUB',
     get: function get() {
       return "SUB";
     }
   }, {
-    key: "KIND_RESUB",
+    key: 'KIND_RESUB',
     get: function get() {
       return "RESUB";
     }
   }, {
-    key: "KIND_GIFTSUB",
+    key: 'KIND_GIFTSUB',
     get: function get() {
       return "GIFTSUB";
     }
   }, {
-    key: "KIND_ANONGIFTSUB",
+    key: 'KIND_ANONGIFTSUB',
     get: function get() {
       return "ANONGIFTSUB";
     }
   }, {
-    key: "PLANS",
+    key: 'PLANS',
     get: function get() {
       return ["Prime", "1000", "2000", "3000"];
     }
   }, {
-    key: "PLAN_PRIME",
+    key: 'PLAN_PRIME',
     get: function get() {
       return "Prime";
     }
   }, {
-    key: "PLAN_TIER1",
+    key: 'PLAN_TIER1',
     get: function get() {
       return "1000";
     }
   }, {
-    key: "PLAN_TIER2",
+    key: 'PLAN_TIER2',
     get: function get() {
       return "2000";
     }
   }, {
-    key: "PLAN_TIER3",
+    key: 'PLAN_TIER3',
     get: function get() {
       return "3000";
     }
@@ -688,12 +691,12 @@ var TwitchClient = function (_CallbackHandler) {
   _inherits(TwitchClient, _CallbackHandler);
 
   _createClass(TwitchClient, null, [{
-    key: "DEFAULT_HISTORY_SIZE",
+    key: 'DEFAULT_HISTORY_SIZE',
     get: function get() {
       return 300;
     }
   }, {
-    key: "DEFAULT_MAX_MESSAGES",
+    key: 'DEFAULT_MAX_MESSAGES',
     get: function get() {
       return 100;
     }
@@ -701,7 +704,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Emote set number for global emotes */
 
   }, {
-    key: "ESET_GLOBAL",
+    key: 'ESET_GLOBAL',
     get: function get() {
       return 0;
     }
@@ -709,22 +712,22 @@ var TwitchClient = function (_CallbackHandler) {
     /* Emote set numbers for Turbo (sets 1, 2, 3, and 4) */
 
   }, {
-    key: "ESET_TURBO_1",
+    key: 'ESET_TURBO_1',
     get: function get() {
       return 33;
     }
   }, {
-    key: "ESET_TURBO_2",
+    key: 'ESET_TURBO_2',
     get: function get() {
       return 42;
     }
   }, {
-    key: "ESET_TURBO_3",
+    key: 'ESET_TURBO_3',
     get: function get() {
       return 457;
     }
   }, {
-    key: "ESET_TURBO_4",
+    key: 'ESET_TURBO_4',
     get: function get() {
       return 793;
     }
@@ -732,7 +735,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Emote set number for Twitch Prime emotes */
 
   }, {
-    key: "ESET_PRIME",
+    key: 'ESET_PRIME',
     get: function get() {
       return 19194;
     }
@@ -740,7 +743,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Default emote size */
 
   }, {
-    key: "DEFAULT_EMOTE_SIZE",
+    key: 'DEFAULT_EMOTE_SIZE',
     get: function get() {
       return "1.0";
     }
@@ -748,7 +751,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* "Rooms" channel */
 
   }, {
-    key: "CHANNEL_ROOMS",
+    key: 'CHANNEL_ROOMS',
     get: function get() {
       return "#chatrooms";
     }
@@ -756,7 +759,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Requested capabilities */
 
   }, {
-    key: "CAPABILITIES",
+    key: 'CAPABILITIES',
     get: function get() {
       return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"];
     }
@@ -842,8 +845,8 @@ var TwitchClient = function (_CallbackHandler) {
         oauth_header = void 0;
     if (_this3._authed) {
       if (cfg_pass.indexOf("oauth:") !== 0) {
-        oauth = "oauth:" + cfg_pass;
-        oauth_header = "OAuth " + cfg_pass;
+        oauth = 'oauth:' + cfg_pass;
+        oauth_header = 'OAuth ' + cfg_pass;
       } else {
         oauth = cfg_pass;
         oauth_header = cfg_pass.replace(/^oauth:/, "OAuth ");
@@ -957,7 +960,7 @@ var TwitchClient = function (_CallbackHandler) {
 
 
   _createClass(TwitchClient, [{
-    key: "_ws_onmessage",
+    key: '_ws_onmessage',
     value: function _ws_onmessage(event) {
       try {
         var data = Twitch.StripCredentials(JSON.stringify(event.data));
@@ -972,7 +975,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* ws.onerror = _ws_onerror.bind(this) */
 
   }, {
-    key: "_ws_onerror",
+    key: '_ws_onerror',
     value: function _ws_onerror(event) {
       try {
         Util.LogOnly("ws error>", event);
@@ -987,7 +990,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* ws.onclose = _ws_onclose.bind(this) */
 
   }, {
-    key: "_ws_onclose",
+    key: '_ws_onclose',
     value: function _ws_onclose(event) {
       try {
         Util.TraceOnly("ws close: ", event);
@@ -1004,7 +1007,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: fire a TwitchEvent instance */
 
   }, {
-    key: "_fire",
+    key: '_fire',
     value: function _fire(event) {
       this.fire(event.type, event);
     }
@@ -1016,7 +1019,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Return the channel's userstate value for the given key */
 
   }, {
-    key: "_selfUserState",
+    key: '_selfUserState',
     value: function _selfUserState(channel, value) {
       var ch = Twitch.FormatChannel(channel);
       if (this._self_userstate) {
@@ -1030,7 +1033,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Return whether or not the client has the specified badge */
 
   }, {
-    key: "_hasBadge",
+    key: '_hasBadge',
     value: function _hasBadge(channel, badge_name) {
       var badges = this._selfUserState(channel, "badges");
       if (badges) {
@@ -1067,7 +1070,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Ensure the user specified is in reduced form */
 
   }, {
-    key: "_ensureUser",
+    key: '_ensureUser',
     value: function _ensureUser(user) {
       if (user.indexOf("!") > -1) {
         return Twitch.ParseUser(user);
@@ -1079,7 +1082,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Ensure the given channel is defined in this._rooms */
 
   }, {
-    key: "_ensureRoom",
+    key: '_ensureRoom',
     value: function _ensureRoom(channel) {
       var cobj = this.ParseChannel(channel);
       var cname = cobj.channel;
@@ -1102,7 +1105,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Called when a user joins a channel */
 
   }, {
-    key: "_onJoin",
+    key: '_onJoin',
     value: function _onJoin(channel, userName) {
       var user = this._ensureUser(userName);
       var cobj = this.ParseChannel(channel);
@@ -1124,7 +1127,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Called when a user parts a channel */
 
   }, {
-    key: "_onPart",
+    key: '_onPart',
     value: function _onPart(channel, userName) {
       var cobj = this.ParseChannel(channel);
       var user = this._ensureUser(userName);
@@ -1139,7 +1142,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Called when the client receives a MODE +o event */
 
   }, {
-    key: "_onOp",
+    key: '_onOp',
     value: function _onOp(channel, userName) {
       var cobj = this.ParseChannel(channel);
       var user = this._ensureUser(userName);
@@ -1153,7 +1156,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Called when the client receives a MODE -o event */
 
   }, {
-    key: "_onDeOp",
+    key: '_onDeOp',
     value: function _onDeOp(channel, userName) {
       var cobj = this.ParseChannel(channel);
       var user = this._ensureUser(userName);
@@ -1168,7 +1171,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the extra chatrooms a streamer may or may not have */
 
   }, {
-    key: "_getRooms",
+    key: '_getRooms',
     value: function _getRooms(cname, cid) {
       var _this5 = this;
 
@@ -1213,7 +1216,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the channel badges for a given channel name and ID */
 
   }, {
-    key: "_getChannelBadges",
+    key: '_getChannelBadges',
     value: function _getChannelBadges(cname, cid) {
       var _this6 = this;
 
@@ -1301,7 +1304,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the channel cheermotes for a given channel name and ID */
 
   }, {
-    key: "_getChannelCheers",
+    key: '_getChannelCheers',
     value: function _getChannelCheers(cname, cid) {
       var _this7 = this;
 
@@ -1345,7 +1348,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load the global cheermotes */
 
   }, {
-    key: "_getGlobalCheers",
+    key: '_getGlobalCheers',
     value: function _getGlobalCheers() {
       var _this8 = this;
 
@@ -1386,7 +1389,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the global and per-channel FFZ emotes */
 
   }, {
-    key: "_getFFZEmotes",
+    key: '_getFFZEmotes',
     value: function _getFFZEmotes(cname, cid) {
       var _this9 = this;
 
@@ -1504,7 +1507,7 @@ var TwitchClient = function (_CallbackHandler) {
         }));
       }, function (resp) {
         if (resp.status === 404) {
-          Util.LogOnly("Channel " + cname + ":" + cid + " has no FFZ emotes");
+          Util.LogOnly('Channel ' + cname + ':' + cid + ' has no FFZ emotes');
         }
       });
     }
@@ -1512,7 +1515,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the per-channel BTTV emotes */
 
   }, {
-    key: "_getBTTVEmotes",
+    key: '_getBTTVEmotes',
     value: function _getBTTVEmotes(cname, cid) {
       var _this10 = this;
 
@@ -1557,7 +1560,7 @@ var TwitchClient = function (_CallbackHandler) {
         }));
       }, function (resp) {
         if (resp.status === 404) {
-          Util.LogOnly("Channel " + cname + ":" + cid + " has no BTTV emotes");
+          Util.LogOnly('Channel ' + cname + ':' + cid + ' has no BTTV emotes');
         }
       });
     }
@@ -1565,7 +1568,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the global BTTV emotes */
 
   }, {
-    key: "_getGlobalBTTVEmotes",
+    key: '_getGlobalBTTVEmotes',
     value: function _getGlobalBTTVEmotes() {
       var _this11 = this;
 
@@ -1612,7 +1615,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Load in the global badges  */
 
   }, {
-    key: "_getGlobalBadges",
+    key: '_getGlobalBadges',
     value: function _getGlobalBadges() {
       var _this12 = this;
 
@@ -1715,7 +1718,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Private: Build a faux PRIVMSG event from the chat message given */
 
   }, {
-    key: "_buildChatEvent",
+    key: '_buildChatEvent',
     value: function _buildChatEvent(chobj, message) {
       var flags = {};
       var emote_obj = Twitch.ScanEmotes(message, Object.entries(this._self_emotes));
@@ -1744,16 +1747,16 @@ var TwitchClient = function (_CallbackHandler) {
       /* Construct the formatted flags string */
       var flag_arr = [];
       var addFlag = function addFlag(n, v) {
-        var val = "" + v;
+        var val = '' + v;
         if (typeof v === "undefined" || v === null) {
           val = "";
         }
-        flag_arr.push(n + "=" + val);
+        flag_arr.push(n + '=' + val);
       };
 
       /* Build and add the rest of the flags */
       addFlag("badges", flags["badges"].map(function (b, r) {
-        return b + "/" + r;
+        return b + '/' + r;
       }).join(","));
       addFlag("color", flags["color"]);
       addFlag("display-name", flags["display-name"]);
@@ -1778,10 +1781,10 @@ var TwitchClient = function (_CallbackHandler) {
 
       /* Build the raw and parsed objects */
       var user = userstate["display-name"].toLowerCase();
-      var useruri = ":" + user + "!" + user + "@" + user + ".tmi.twitch.tv";
+      var useruri = ':' + user + '!' + user + '@' + user + '.tmi.twitch.tv';
       var channel = Twitch.FormatChannel(chobj);
       /* @<flags> <useruri> PRIVMSG <channel> :<message> */
-      var raw_line = "@" + flag_str + " " + useruri + " PRIVMSG " + channel + " :";
+      var raw_line = '@' + flag_str + ' ' + useruri + ' PRIVMSG ' + channel + ' :';
 
       /* Handle /me */
       if (msg.startsWith("/me ")) {
@@ -1827,7 +1830,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Forcibly close the socket */
 
   }, {
-    key: "close",
+    key: 'close',
     value: function close() {
       if (this._ws) {
         this._ws.close();
@@ -1838,7 +1841,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return whether or not the client has a websocket */
 
   }, {
-    key: "GetName",
+    key: 'GetName',
 
 
     /* Get the client's current username */
@@ -1846,7 +1849,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._username;
     }
   }, {
-    key: "ConnectionStatus",
+    key: 'ConnectionStatus',
 
 
     /* Obtain connection status information */
@@ -1861,7 +1864,7 @@ var TwitchClient = function (_CallbackHandler) {
       };
     }
   }, {
-    key: "IsConnecting",
+    key: 'IsConnecting',
 
 
     /* Return whether or not the client is currently trying to connect */
@@ -1869,7 +1872,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._connecting;
     }
   }, {
-    key: "Connected",
+    key: 'Connected',
 
 
     /* Return whether or not we're connected to Twitch */
@@ -1877,7 +1880,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._connected;
     }
   }, {
-    key: "IsAuthed",
+    key: 'IsAuthed',
 
 
     /* Return whether or not the client is authenticated with an AuthID */
@@ -1885,7 +1888,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._authed;
     }
   }, {
-    key: "FFZEnabled",
+    key: 'FFZEnabled',
 
 
     /* Return whether or not FFZ support is enabled */
@@ -1893,7 +1896,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._enable_ffz;
     }
   }, {
-    key: "BTTVEnabled",
+    key: 'BTTVEnabled',
 
 
     /* Return whether or not BTTV support is enabled */
@@ -1901,7 +1904,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._enable_bttv;
     }
   }, {
-    key: "SelfUserState",
+    key: 'SelfUserState',
 
 
     /* Return a copy of the client's userstate */
@@ -1911,7 +1914,7 @@ var TwitchClient = function (_CallbackHandler) {
       return obj;
     }
   }, {
-    key: "HasCapability",
+    key: 'HasCapability',
 
 
     /* Return true if the client has been granted the capability specified. Values
@@ -1951,7 +1954,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return whether or not the numeric user ID refers to the client itself */
 
   }, {
-    key: "IsUIDSelf",
+    key: 'IsUIDSelf',
     value: function IsUIDSelf(userid) {
       return userid === this._self_userid;
     }
@@ -1963,7 +1966,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the client is a subscriber in the channel given */
 
   }, {
-    key: "IsSub",
+    key: 'IsSub',
     value: function IsSub(channel) {
       if (this._selfUserState(channel, "sub")) return true;
       if (this._hasBadge(channel, "subscriber")) return true;
@@ -1973,7 +1976,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the client is a VIP in the channel given */
 
   }, {
-    key: "IsVIP",
+    key: 'IsVIP',
     value: function IsVIP(channel) {
       if (this._selfUserState(channel, "vip")) return true;
       if (this._hasBadge(channel, "vip")) return true;
@@ -1983,7 +1986,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the client is a moderator in the channel given */
 
   }, {
-    key: "IsMod",
+    key: 'IsMod',
     value: function IsMod(channel) {
       if (this._selfUserState(channel, "mod")) return true;
       if (this._hasBadge(channel, "moderator")) return true;
@@ -1993,7 +1996,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the client is the broadcaster for the channel given */
 
   }, {
-    key: "IsCaster",
+    key: 'IsCaster',
     value: function IsCaster(channel) {
       if (this._selfUserState(channel, "broadcaster")) return true;
       if (this._hasBadge(channel, "broadcaster")) return true;
@@ -2003,7 +2006,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Timeout the specific user in the specified channel */
 
   }, {
-    key: "Timeout",
+    key: 'Timeout',
     value: function Timeout(channel, user) {
       var duration = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "600s";
       var reason = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : null;
@@ -2011,40 +2014,40 @@ var TwitchClient = function (_CallbackHandler) {
       var msg = reason;
       if (!reason) {
         var cname = Twitch.FormatChannel(this.ParseChannel(channel));
-        msg = "Timed out by " + this._username + " from " + cname + " for " + duration;
+        msg = 'Timed out by ' + this._username + ' from ' + cname + ' for ' + duration;
       }
-      this.SendMessage(channel, "/timeout " + user + " " + duration + " \"" + msg + "\"");
+      this.SendMessage(channel, '/timeout ' + user + ' ' + duration + ' "' + msg + '"');
     }
 
     /* Un-timeout the specific user in the specified channel */
 
   }, {
-    key: "UnTimeout",
+    key: 'UnTimeout',
     value: function UnTimeout(channel, user) {
-      this.SendMessage(channel, "/untimeout " + user);
+      this.SendMessage(channel, '/untimeout ' + user);
     }
 
     /* Ban the specific user from the specified channel */
 
   }, {
-    key: "Ban",
+    key: 'Ban',
     value: function Ban(channel, user) {
       var reason = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
       var msg = reason;
       if (!reason) {
         var cname = Twitch.FormatChannel(this.ParseChannel(channel));
-        msg = "Banned from " + cname + " by " + this._username;
+        msg = 'Banned from ' + cname + ' by ' + this._username;
       }
-      this.SendMessage(channel, "/ban " + user + " " + msg);
+      this.SendMessage(channel, '/ban ' + user + ' ' + msg);
     }
 
     /* Unban the specific user from the specified channel */
 
   }, {
-    key: "UnBan",
+    key: 'UnBan',
     value: function UnBan(channel, user) {
-      this.SendMessage(channel, "/unban " + user);
+      this.SendMessage(channel, '/unban ' + user);
     }
 
     /* End of role and moderation functions 0}}} */
@@ -2054,7 +2057,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Parse a channel into a channel object */
 
   }, {
-    key: "ParseChannel",
+    key: 'ParseChannel',
     value: function ParseChannel(channel) {
       var chobj = Twitch.ParseChannel(channel);
       if (chobj.room && chobj.channel !== TwitchClient.CHANNEL_ROOMS) {
@@ -2069,7 +2072,7 @@ var TwitchClient = function (_CallbackHandler) {
           chobj.room = roomdef.id;
           chobj.roomuid = roomdef.rooms[rname].uid;
         } else {
-          Util.Warn("Unable to parse room for " + JSON.stringify(channel));
+          Util.Warn('Unable to parse room for ' + JSON.stringify(channel));
         }
       }
       return chobj;
@@ -2078,7 +2081,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Request the client to join the channel specified */
 
   }, {
-    key: "JoinChannel",
+    key: 'JoinChannel',
     value: function JoinChannel(channel) {
       var _this13 = this;
 
@@ -2087,17 +2090,17 @@ var TwitchClient = function (_CallbackHandler) {
       var user = chobj.channel.replace(/^#/, "");
       if (this._is_open) {
         if (this._channels.indexOf(cname) === -1) {
-          this.send("JOIN " + cname);
+          this.send('JOIN ' + cname);
           this._channels.push(cname);
           /* Determine if the channel to join is a real channel */
           this._api.Get(Twitch.URL.User(user), function (r) {
             if (!r || !r.data || r.data.length === 0) {
-              Util.Warn(cname + " doesn't seem to be a real channel; leaving");
+              Util.Warn(cname + ' doesn\'t seem to be a real channel; leaving');
               _this13.LeaveChannel(channel);
             }
           });
         } else {
-          Util.Warn("JoinChannel: Already in " + cname);
+          Util.Warn('JoinChannel: Already in ' + cname);
         }
       } else if (this._pending_channels.indexOf(cname) === -1) {
         this._pending_channels.push(cname);
@@ -2107,17 +2110,17 @@ var TwitchClient = function (_CallbackHandler) {
     /* Request the client to leave the channel specified */
 
   }, {
-    key: "LeaveChannel",
+    key: 'LeaveChannel',
     value: function LeaveChannel(channel) {
       var cname = Twitch.FormatChannel(this.ParseChannel(channel));
       if (this._is_open) {
         var idx = this._channels.indexOf(cname);
         if (idx > -1) {
-          this.send("PART " + cname);
+          this.send('PART ' + cname);
           this._channels.splice(idx, 1);
           delete this._rooms[cname]; /* harmless if fails */
         } else {
-          Util.Warn("LeaveChannel: Not in channel " + cname);
+          Util.Warn('LeaveChannel: Not in channel ' + cname);
         }
       }
     }
@@ -2125,7 +2128,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return whether or not the client is in the channel specified */
 
   }, {
-    key: "IsInChannel",
+    key: 'IsInChannel',
     value: function IsInChannel(channel) {
       var cname = Twitch.FormatChannel(this.ParseChannel(channel));
       return this._is_open && this._channels.indexOf(cname) > -1;
@@ -2134,12 +2137,12 @@ var TwitchClient = function (_CallbackHandler) {
     /* Get the list of currently-joined channels */
 
   }, {
-    key: "GetJoinedChannels",
+    key: 'GetJoinedChannels',
     value: function GetJoinedChannels() {
       return this._channels;
     }
   }, {
-    key: "GetChannelInfo",
+    key: 'GetChannelInfo',
 
 
     /* Get information regarding the channel specified */
@@ -2151,7 +2154,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Get a channel information by streamer ID */
 
   }, {
-    key: "GetChannelById",
+    key: 'GetChannelById',
     value: function GetChannelById(cid) {
       var _iteratorNormalCompletion21 = true;
       var _didIteratorError21 = false;
@@ -2190,7 +2193,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return whether or not the given word is a cheer for the given channel */
 
   }, {
-    key: "IsCheer",
+    key: 'IsCheer',
     value: function IsCheer(channel, word) {
       var cname = this.ParseChannel(channel).channel;
       if (this._channel_cheers.hasOwnProperty(cname)) {
@@ -2227,7 +2230,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return all of the cheers found in the message */
 
   }, {
-    key: "FindCheers",
+    key: 'FindCheers',
     value: function FindCheers(channel, message) {
       var matches = [];
       var parts = message.split(" ");
@@ -2310,7 +2313,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return whether or not global cheers have been loaded */
 
   }, {
-    key: "AreCheersLoaded",
+    key: 'AreCheersLoaded',
     value: function AreCheersLoaded() {
       if (this._global_cheers["Cheer"]) {
         return true;
@@ -2319,7 +2322,7 @@ var TwitchClient = function (_CallbackHandler) {
       }
     }
   }, {
-    key: "GetCheer",
+    key: 'GetCheer',
 
 
     /* Obtain information about a given cheermote. Overloads:
@@ -2361,7 +2364,7 @@ var TwitchClient = function (_CallbackHandler) {
      * client.GetCheer("GLOBAL", cheerName) */
 
   }, {
-    key: "GetGlobalCheer",
+    key: 'GetGlobalCheer',
     value: function GetGlobalCheer(name) {
       return this.GetCheer("GLOBAL", name);
     }
@@ -2369,7 +2372,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain all cheermotes */
 
   }, {
-    key: "GetCheers",
+    key: 'GetCheers',
     value: function GetCheers() {
       var cheers = { "GLOBAL": this._global_cheers };
       var _iteratorNormalCompletion25 = true;
@@ -2408,7 +2411,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the emotes the client is allowed to use */
 
   }, {
-    key: "GetEmotes",
+    key: 'GetEmotes',
     value: function GetEmotes() {
       var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : TwitchClient.DEFAULT_EMOTE_SIZE;
 
@@ -2449,7 +2452,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the URLs to all of the global emotes */
 
   }, {
-    key: "GetGlobalEmotes",
+    key: 'GetGlobalEmotes',
     value: function GetGlobalEmotes() {
       var size = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : TwitchClient.DEFAULT_EMOTE_SIZE;
 
@@ -2463,7 +2466,7 @@ var TwitchClient = function (_CallbackHandler) {
           for (var _iterator27 = this._self_emote_sets[TwitchClient.ESET_GLOBAL][Symbol.iterator](), _step27; !(_iteratorNormalCompletion27 = (_step27 = _iterator27.next()).done); _iteratorNormalCompletion27 = true) {
             var eid = _step27.value;
 
-            var ename = this._self_emotes[eid] || "" + eid;
+            var ename = this._self_emotes[eid] || '' + eid;
             emotes[ename] = this.GetEmote(eid, size);
           }
         } catch (err) {
@@ -2489,7 +2492,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the given emote set has emotes loaded */
 
   }, {
-    key: "isEmoteSetLoaded",
+    key: 'isEmoteSetLoaded',
     value: function isEmoteSetLoaded(eset) {
       if (Object.keys(this._self_emote_sets).includes(eset)) {
         if (this._self_emote_sets[eset].length > 0) {
@@ -2505,7 +2508,7 @@ var TwitchClient = function (_CallbackHandler) {
      * Emotes in higher emote set take precedence over lower emote sets? */
 
   }, {
-    key: "AddEmoteSet",
+    key: 'AddEmoteSet',
     value: function AddEmoteSet(eset) {
       var _this14 = this;
 
@@ -2516,7 +2519,7 @@ var TwitchClient = function (_CallbackHandler) {
       var _iteratorError28 = undefined;
 
       try {
-        for (var _iterator28 = ("" + eset).split(",")[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
+        for (var _iterator28 = ('' + eset).split(",")[Symbol.iterator](), _step28; !(_iteratorNormalCompletion28 = (_step28 = _iterator28.next()).done); _iteratorNormalCompletion28 = true) {
           var i = _step28.value;
 
           if (!this.isEmoteSetLoaded(i)) {
@@ -2524,6 +2527,7 @@ var TwitchClient = function (_CallbackHandler) {
             break;
           }
         }
+        /* Don't load blacklisted emotesets (which give 503s) */
       } catch (err) {
         _didIteratorError28 = true;
         _iteratorError28 = err;
@@ -2539,6 +2543,10 @@ var TwitchClient = function (_CallbackHandler) {
         }
       }
 
+      if (Twitch.BAD_EMOTESET_IDS.includes('' + eset)) {
+        Util.DebugOnly('Not loading eset ' + eset + '; set is blacklisted');
+        return;
+      }
       if (load) {
         var eset_url = Twitch.URL.EmoteSet(eset);
         this._api.Get(eset_url, function (json) {
@@ -2614,7 +2622,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the loaded emote sets */
 
   }, {
-    key: "GetEmoteSets",
+    key: 'GetEmoteSets',
     value: function GetEmoteSets() {
       return Util.JSONClone(this._self_emote_sets);
     }
@@ -2622,13 +2630,13 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the emotes in the given emote set */
 
   }, {
-    key: "GetEmoteSetEmotes",
+    key: 'GetEmoteSetEmotes',
     value: function GetEmoteSetEmotes(eset) {
       var emotes = {};
       if (this._self_emote_sets[eset]) {
         emotes = Util.JSONClone(this._self_emote_sets[eset]);
       } else {
-        Util.Warn("No such emote set " + eset);
+        Util.Warn('No such emote set ' + eset);
       }
       return emotes;
     }
@@ -2636,7 +2644,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return a promise for the given Twitch emote as an <img> element */
 
   }, {
-    key: "PromiseEmote",
+    key: 'PromiseEmote',
     value: function PromiseEmote(ename) {
       var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TwitchClient.DEFAULT_EMOTE_SIZE;
 
@@ -2646,7 +2654,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the name of the given emote ID */
 
   }, {
-    key: "GetEmoteName",
+    key: 'GetEmoteName',
     value: function GetEmoteName(emote_id) {
       if (this._self_emotes[emote_id]) {
         return this._self_emotes[emote_id];
@@ -2658,7 +2666,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the ID of the given emote by name */
 
   }, {
-    key: "GetEmoteID",
+    key: 'GetEmoteID',
     value: function GetEmoteID(emote_name) {
       var _iteratorNormalCompletion31 = true;
       var _didIteratorError31 = false;
@@ -2698,11 +2706,11 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return the URL to the image for the emote and size specified (id or name) */
 
   }, {
-    key: "GetEmote",
+    key: 'GetEmote',
     value: function GetEmote(emote_id) {
       var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TwitchClient.DEFAULT_EMOTE_SIZE;
 
-      if (typeof emote_id === "number" || ("" + emote_id).match(/^[0-9]+$/)) {
+      if (typeof emote_id === "number" || ('' + emote_id).match(/^[0-9]+$/)) {
         return Twitch.URL.Emote(emote_id, size);
       } else {
         var _iteratorNormalCompletion32 = true;
@@ -2743,7 +2751,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain the FFZ emotes for a channel */
 
   }, {
-    key: "GetFFZEmotes",
+    key: 'GetFFZEmotes',
     value: function GetFFZEmotes(channel) {
       return this._ffz_channel_emotes[Twitch.FormatChannel(channel)];
     }
@@ -2751,7 +2759,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain global BTTV emotes */
 
   }, {
-    key: "GetGlobalBTTVEmotes",
+    key: 'GetGlobalBTTVEmotes',
     value: function GetGlobalBTTVEmotes() {
       return this._bttv_global_emotes;
     }
@@ -2759,7 +2767,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain the BTTV emotes for the channel specified */
 
   }, {
-    key: "GetBTTVEmotes",
+    key: 'GetBTTVEmotes',
     value: function GetBTTVEmotes(channel) {
       var ch = Twitch.FormatChannel(channel);
       if (this._bttv_channel_emotes[ch]) {
@@ -2777,7 +2785,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Send a message to the channel specified */
 
   }, {
-    key: "SendMessage",
+    key: 'SendMessage',
     value: function SendMessage(channel, message) {
       var bypassFaux = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
@@ -2785,24 +2793,24 @@ var TwitchClient = function (_CallbackHandler) {
       var cname = Twitch.FormatChannel(cobj);
       var msg = message.trim();
       if (this._connected && this._authed) {
-        this.send("PRIVMSG " + cobj.channel + " :" + msg);
+        this.send('PRIVMSG ' + cobj.channel + ' :' + msg);
         /* Dispatch a faux "Message Received" event */
         if (!bypassFaux) {
           if (this._self_userstate[Twitch.FormatChannel(cobj)]) {
             this._fire(this._buildChatEvent(cobj, msg));
           } else {
-            Util.Error("No USERSTATE given for channel " + cname);
+            Util.Error('No USERSTATE given for channel ' + cname);
           }
         }
       } else {
-        Util.Warn("Unable to send \"" + msg + "\" to " + cname + ": not connected or not authed");
+        Util.Warn('Unable to send "' + msg + '" to ' + cname + ': not connected or not authed');
       }
     }
 
     /* Alias for client.SendMessage */
 
   }, {
-    key: "Send",
+    key: 'Send',
     value: function Send(channel, message) {
       var bypassFaux = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
@@ -2812,7 +2820,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Send a message to every connected channel */
 
   }, {
-    key: "SendMessageToAll",
+    key: 'SendMessageToAll',
     value: function SendMessageToAll(message) {
       var bypassFaux = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 
@@ -2842,14 +2850,14 @@ var TwitchClient = function (_CallbackHandler) {
           }
         }
       } else {
-        Util.Warn("Unable to send \"" + message + "\" to all channels: not connected");
+        Util.Warn('Unable to send "' + message + '" to all channels: not connected');
       }
     }
 
     /* Alias for client.SendMessageToAll */
 
   }, {
-    key: "SendToAll",
+    key: 'SendToAll',
     value: function SendToAll(message) {
       var bypassFaux = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
 
@@ -2859,7 +2867,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Send text to the Twitch servers, bypassing any special logic */
 
   }, {
-    key: "SendRaw",
+    key: 'SendRaw',
     value: function SendRaw(raw_msg) {
       this.send(raw_msg.trimEnd() + "\r\n");
     }
@@ -2871,7 +2879,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Add a message to the history of sent messages */
 
   }, {
-    key: "AddHistory",
+    key: 'AddHistory',
     value: function AddHistory(message) {
       /* Prevent sequential duplicates */
       if (this._history.length === 0 || message !== this._history[0]) {
@@ -2885,12 +2893,12 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain the history of sent messages */
 
   }, {
-    key: "GetHistory",
+    key: 'GetHistory',
     value: function GetHistory() {
       return Util.JSONClone(this._history);
     }
   }, {
-    key: "GetHistoryItem",
+    key: 'GetHistoryItem',
 
 
     /* Obtain the nth most recently sent message */
@@ -2904,12 +2912,12 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain the maximum number of history items */
 
   }, {
-    key: "GetHistoryMax",
+    key: 'GetHistoryMax',
     value: function GetHistoryMax() {
       return this._hist_max;
     }
   }, {
-    key: "GetHistoryLength",
+    key: 'GetHistoryLength',
 
 
     /* Obtain the current number of history items */
@@ -2917,7 +2925,7 @@ var TwitchClient = function (_CallbackHandler) {
       return this._history.length;
     }
   }, {
-    key: "GetClip",
+    key: 'GetClip',
 
 
     /* End of history functions 0}}} */
@@ -2940,7 +2948,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return information on the given game ID */
 
   }, {
-    key: "GetGame",
+    key: 'GetGame',
     value: function GetGame(game_id) {
       return new Promise(function _getgame_promise(resolve, reject) {
         this._api.Get(Twitch.URL.Game(game_id), function _getgame_clip(resp) {
@@ -2956,7 +2964,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the badge specified is a global badge */
 
   }, {
-    key: "IsGlobalBadge",
+    key: 'IsGlobalBadge',
     value: function IsGlobalBadge(badge_name) {
       var badge_version = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
@@ -2975,7 +2983,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Return true if the badge specified exists as a channel badge */
 
   }, {
-    key: "IsChannelBadge",
+    key: 'IsChannelBadge',
     value: function IsChannelBadge(channel, badge_name) {
       var badge_num = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
@@ -2995,7 +3003,7 @@ var TwitchClient = function (_CallbackHandler) {
      * badge_num is null */
 
   }, {
-    key: "GetGlobalBadge",
+    key: 'GetGlobalBadge',
     value: function GetGlobalBadge(badge_name) {
       var badge_version = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
 
@@ -3015,7 +3023,7 @@ var TwitchClient = function (_CallbackHandler) {
      * badge_num is null */
 
   }, {
-    key: "GetChannelBadge",
+    key: 'GetChannelBadge',
     value: function GetChannelBadge(channel, badge_name) {
       var badge_num = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
@@ -3035,7 +3043,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain all of the global badges */
 
   }, {
-    key: "GetGlobalBadges",
+    key: 'GetGlobalBadges',
     value: function GetGlobalBadges() {
       return Util.JSONClone(this._global_badges);
     }
@@ -3043,7 +3051,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Obtain all of the channel badges for the specified channel */
 
   }, {
-    key: "GetChannelBadges",
+    key: 'GetChannelBadges',
     value: function GetChannelBadges(channel) {
       var cobj = this.ParseChannel(channel);
       if (this._channel_badges.hasOwnProperty(cobj.channel)) {
@@ -3059,7 +3067,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Called on each (non-empty) line received through the websocket */
 
   }, {
-    key: "_onWebsocketLine",
+    key: '_onWebsocketLine',
     value: function _onWebsocketLine(line) {
       var _this15 = this;
 
@@ -3093,7 +3101,7 @@ var TwitchClient = function (_CallbackHandler) {
       /* Handle each command that could be returned */
       switch (result.cmd) {
         case "PING":
-          this.send("PONG :" + result.server);
+          this.send('PONG :' + result.server);
           break;
         case "ACK":
           this._connected = true;
@@ -3342,7 +3350,7 @@ var TwitchClient = function (_CallbackHandler) {
 
           try {
             for (var _iterator37 = result.flags["emote-sets"].map(function (e) {
-              return "" + e;
+              return '' + e;
             })[Symbol.iterator](), _step37; !(_iteratorNormalCompletion37 = (_step37 = _iterator37.next()).done); _iteratorNormalCompletion37 = true) {
               var eset = _step37.value;
 
@@ -3372,19 +3380,19 @@ var TwitchClient = function (_CallbackHandler) {
     /* Callback: called when the websocket opens */
 
   }, {
-    key: "_onWebsocketOpen",
+    key: '_onWebsocketOpen',
     value: function _onWebsocketOpen(name, pass) {
-      this.send("CAP REQ :" + TwitchClient.CAPABILITIES.join(" "));
+      this.send('CAP REQ :' + TwitchClient.CAPABILITIES.join(" "));
       if (name && pass) {
         this._username = name;
       } else {
-        this._username = "justinfan" + Math.floor(Math.random() * 999999);
+        this._username = 'justinfan' + Math.floor(Math.random() * 999999);
       }
       if (pass) {
-        this.send("PASS " + (pass.indexOf("oauth:") === 0 ? "" : "oauth:") + pass);
-        this.send("NICK " + name);
+        this.send('PASS ' + (pass.indexOf("oauth:") === 0 ? "" : "oauth:") + pass);
+        this.send('NICK ' + name);
       } else {
-        this.send("NICK " + this._username);
+        this.send('NICK ' + this._username);
       }
       var _iteratorNormalCompletion38 = true;
       var _didIteratorError38 = false;
@@ -3419,7 +3427,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Callback: called when the websocket receives a message */
 
   }, {
-    key: "_onWebsocketMessage",
+    key: '_onWebsocketMessage',
     value: function _onWebsocketMessage(event) {
       /* Strip and split the message into lines, discarding empty lines */
       var lines = event.data.trim().split("\r\n").filter(function (l) {
@@ -3427,7 +3435,7 @@ var TwitchClient = function (_CallbackHandler) {
       });
       /* Log the lines to the debug console */
       if (lines.length === 1) {
-        Util.DebugOnly("ws recv> \"" + lines[0] + "\"");
+        Util.DebugOnly('ws recv> "' + lines[0] + '"');
       } else {
         var _iteratorNormalCompletion39 = true;
         var _didIteratorError39 = false;
@@ -3443,7 +3451,7 @@ var TwitchClient = function (_CallbackHandler) {
             var l = _ref34[1];
 
             var n = Number.parseInt(i) + 1;
-            if (l.trim().length > 0) Util.DebugOnly("ws recv/" + n + "> \"" + l + "\"");
+            if (l.trim().length > 0) Util.DebugOnly('ws recv/' + n + '> "' + l + '"');
           }
         } catch (err) {
           _didIteratorError39 = true;
@@ -3490,7 +3498,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Callback: called when the websocket receives an error */
 
   }, {
-    key: "_onWebsocketError",
+    key: '_onWebsocketError',
     value: function _onWebsocketError(event) {
       Util.Error(event);
       this._fire(new TwitchEvent("ERROR", "", event));
@@ -3499,7 +3507,7 @@ var TwitchClient = function (_CallbackHandler) {
     /* Callback: called when the websocket is closed */
 
   }, {
-    key: "_onWebsocketClose",
+    key: '_onWebsocketClose',
     value: function _onWebsocketClose(event) {
       var _iteratorNormalCompletion41 = true;
       var _didIteratorError41 = false;
@@ -3536,72 +3544,72 @@ var TwitchClient = function (_CallbackHandler) {
     /* End websocket callbacks 0}}} */
 
   }, {
-    key: "hasSocket",
+    key: 'hasSocket',
     get: function get() {
       return this._ws !== null;
     }
   }, {
-    key: "name",
+    key: 'name',
     get: function get() {
       return this.GetName();
     }
   }, {
-    key: "status",
+    key: 'status',
     get: function get() {
       return this.ConnectionStatus();
     }
   }, {
-    key: "connecting",
+    key: 'connecting',
     get: function get() {
       return this.IsConnecting();
     }
   }, {
-    key: "connected",
+    key: 'connected',
     get: function get() {
       return this.Connected();
     }
   }, {
-    key: "authed",
+    key: 'authed',
     get: function get() {
       return this._authed;
     }
   }, {
-    key: "ffzEnabled",
+    key: 'ffzEnabled',
     get: function get() {
       return this.FFZEnabled();
     }
   }, {
-    key: "bttvEnabled",
+    key: 'bttvEnabled',
     get: function get() {
       return this.BTTVEnabled;
     }
   }, {
-    key: "userState",
+    key: 'userState',
     get: function get() {
       return this.SelfUserState();
     }
   }, {
-    key: "channels",
+    key: 'channels',
     get: function get() {
       return this.GetJoinedChannels();
     }
   }, {
-    key: "cheersLoaded",
+    key: 'cheersLoaded',
     get: function get() {
       return this.AreCheersLoaded();
     }
   }, {
-    key: "history",
+    key: 'history',
     get: function get() {
       return this.GetHistory();
     }
   }, {
-    key: "historyMaxSize",
+    key: 'historyMaxSize',
     get: function get() {
       return this.GetHistoryMax();
     }
   }, {
-    key: "historyLength",
+    key: 'historyLength',
     get: function get() {
       return this.GetHistoryLength();
     }
@@ -3635,65 +3643,65 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
   User: function User(uname) {
-    return Twitch.Helix + "/users?login=" + uname;
+    return Twitch.Helix + '/users?login=' + uname;
   },
   Rooms: function Rooms(cid) {
-    return Twitch.Kraken + "/chat/" + cid + "/rooms";
+    return Twitch.Kraken + '/chat/' + cid + '/rooms';
   },
   Stream: function Stream(cid) {
-    return Twitch.Kraken + "/streams?channel=" + cid;
+    return Twitch.Kraken + '/streams?channel=' + cid;
   },
   Clip: function Clip(slug) {
-    return Twitch.Helix + "/clips?id=" + slug;
+    return Twitch.Helix + '/clips?id=' + slug;
   },
   Game: function Game(id) {
-    return Twitch.Helix + "/games?id=" + id;
+    return Twitch.Helix + '/games?id=' + id;
   },
 
   ChannelBadges: function ChannelBadges(cid) {
-    return Twitch.Badges + "/channels/" + cid + "/display?language=en";
+    return Twitch.Badges + '/channels/' + cid + '/display?language=en';
   },
   AllBadges: function AllBadges() {
-    return Twitch.Badges + "/global/display";
+    return Twitch.Badges + '/global/display';
   },
   GlobalCheers: function GlobalCheers() {
-    return Twitch.Kraken + "/bits/actions";
+    return Twitch.Kraken + '/bits/actions';
   },
   Cheers: function Cheers(cid) {
-    return Twitch.Kraken + "/bits/actions?channel_id=" + cid;
+    return Twitch.Kraken + '/bits/actions?channel_id=' + cid;
   },
   Emote: function Emote(eid) {
     var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
-    return Twitch.JTVNW + "/emoticons/v1/" + eid + "/" + size;
+    return Twitch.JTVNW + '/emoticons/v1/' + eid + '/' + size;
   },
   EmoteSet: function EmoteSet(eset) {
-    return Twitch.Kraken + "/chat/emoticon_images?emotesets=" + eset;
+    return Twitch.Kraken + '/chat/emoticon_images?emotesets=' + eset;
   },
 
   FFZAllEmotes: function FFZAllEmotes() {
-    return Twitch.FFZ + "/emoticons";
+    return Twitch.FFZ + '/emoticons';
   },
   FFZEmotes: function FFZEmotes(cid) {
-    return Twitch.FFZ + "/room/id/" + cid;
+    return Twitch.FFZ + '/room/id/' + cid;
   },
   FFZEmote: function FFZEmote(eid) {
-    return Twitch.FFZ + "/emote/" + eid;
+    return Twitch.FFZ + '/emote/' + eid;
   },
   FFZBadges: function FFZBadges() {
-    return Twitch.FFZ + "/_badges";
+    return Twitch.FFZ + '/_badges';
   },
   FFZBadgeUsers: function FFZBadgeUsers() {
-    return Twitch.FFZ + "/badges";
+    return Twitch.FFZ + '/badges';
   },
 
   BTTVAllEmotes: function BTTVAllEmotes() {
-    return Twitch.BTTV + "/emotes";
+    return Twitch.BTTV + '/emotes';
   },
   BTTVEmotes: function BTTVEmotes(cname) {
-    return Twitch.BTTV + "/channels/" + cname;
+    return Twitch.BTTV + '/channels/' + cname;
   },
   BTTVEmote: function BTTVEmote(eid) {
-    return Twitch.BTTV + "/emote/" + eid + "/1x";
+    return Twitch.BTTV + '/emote/' + eid + '/1x';
   }
 };
 
@@ -3745,7 +3753,7 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
         } else if (this._onerror) {
           this._onerror(this);
         } else {
-          Util.WarnOnly("Failed to get \"" + url + "\" stack=", callerStack);
+          Util.WarnOnly('Failed to get "' + url + '" stack=', callerStack);
           Util.WarnOnly(url, this);
         }
       }
@@ -3883,7 +3891,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       chobj.room = parts[1];
       chobj.roomuid = parts[2];
     } else {
-      Util.Warn("ParseChannel: " + channel + " not in expected format");
+      Util.Warn('ParseChannel: ' + channel + ' not in expected format');
       chobj.channel = parts[0];
     }
     if (chobj.channel !== "GLOBAL") {
@@ -3923,7 +3931,7 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
     return Twitch.FormatChannel(channel.channel, channel.room, channel.roomuid);
   } else {
     Util.Warn("FormatChannel: don't know how to format", channel, room, roomuid);
-    return "" + channel;
+    return '' + channel;
   }
 };
 
@@ -3934,7 +3942,7 @@ Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
 
 /* Format a room with the channel and room IDs given */
 Twitch.FormatRoom = function _Twitch_FormatRoom(cid, rid) {
-  return "#chatrooms:" + cid + ":" + rid;
+  return '#chatrooms:' + cid + ':' + rid;
 };
 
 /* Parse Twitch flag escape sequences */
@@ -4172,7 +4180,7 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
       var emote = _step51.value;
 
       if (emote.id !== null) {
-        specs.push(emote.id + ":" + emote.start + "-" + emote.end);
+        specs.push(emote.id + ':' + emote.start + '-' + emote.end);
       }
     }
   } catch (err) {
@@ -4202,7 +4210,7 @@ Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
 /* Generate a regex from a cheer prefix */
 Twitch.CheerToRegex = function _Twitch_CheerToRegex(prefix) {
   var p = RegExp.escape(prefix);
-  return new RegExp("(?:\\b[\\s]|^)(" + p + ")([1-9][0-9]*)(?:\\b|[\\s]|$)", "ig");
+  return new RegExp('(?:\\b[\\s]|^)(' + p + ')([1-9][0-9]*)(?:\\b|[\\s]|$)', "ig");
 };
 
 /* Generate emote specifications for the given emotes [eid, ename] */
@@ -4474,7 +4482,7 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
       var pat = _ref36[1];
 
       if (result.match(pat)) {
-        result = result.replace(pat, name + "<removed>");
+        result = result.replace(pat, name + '<removed>');
       }
     }
   } catch (err) {
