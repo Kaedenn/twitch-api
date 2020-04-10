@@ -50,7 +50,7 @@
 let Twitch = {};
 
 /* Blacklisted emoteset IDs (loading these give HTTP 503) */
-Twitch.BAD_EMOTESET_IDS = ['1825876091', '1590490520', '798691873'];
+Twitch.BAD_EMOTESET_IDS = ['1825876091', '1590490520', '798691873', '1285844906'];
 
 /* Event classes {{{0 */
 
