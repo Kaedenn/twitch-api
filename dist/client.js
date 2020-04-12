@@ -781,6 +781,8 @@ var TwitchClient = function (_CallbackHandler) {
     _this3._username = null;
     _this3._connecting = false;
 
+    /* WebSocket endpoint */
+    _this3._endpoint = opts.WSURI || "wss://irc-ws.chat.twitch.tv";
     /* List of channels/rooms presently joined */
     _this3._channels = [];
     /* List of channels/rooms about to join once connected to Twitch */
@@ -915,7 +917,6 @@ var TwitchClient = function (_CallbackHandler) {
         _this4._connected = false;
 
         /* Construct the websocket and bind to its events */
-        _this4._endpoint = "wss://irc-ws.chat.twitch.tv";
         _this4._ws = new WebSocket(_this4._endpoint);
         _this4._ws.client = _this4;
         _this4._ws.onopen = function (event) {

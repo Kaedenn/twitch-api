@@ -369,6 +369,8 @@ class TwitchClient extends CallbackHandler {
     this._username = null;
     this._connecting = false;
 
+    /* WebSocket endpoint */
+    this._endpoint = opts.WSURI || "wss://irc-ws.chat.twitch.tv";
     /* List of channels/rooms presently joined */
     this._channels = [];
     /* List of channels/rooms about to join once connected to Twitch */
@@ -472,7 +474,6 @@ class TwitchClient extends CallbackHandler {
         this._connected = false;
 
         /* Construct the websocket and bind to its events */
-        this._endpoint = "wss://irc-ws.chat.twitch.tv";
         this._ws = new WebSocket(this._endpoint);
         this._ws.client = this;
         this._ws.onopen = (event) => {
