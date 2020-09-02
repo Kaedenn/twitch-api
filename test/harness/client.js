@@ -99,3 +99,4 @@ global.TestChannel = TestChannel;
 global.TestClientID = TestClientID;
 global.BuildMessage = BuildMessage;
 global.BuildEvent = BuildEvent;
+

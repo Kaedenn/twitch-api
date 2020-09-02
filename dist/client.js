@@ -1560,8 +1560,15 @@ var TwitchClient = function (_CallbackHandler) {
           kind: "bttv_channel_emotes"
         }));
       }, function (resp) {
+        /* Received an error */
         if (resp.status === 404) {
           Util.LogOnly('Channel ' + cname + ':' + cid + ' has no BTTV emotes');
+        } else {
+          var rtext = "response: (null)";
+          if (resp.response !== null && '' + resp.response !== "") {
+            rtext = resp.response;
+          }
+          Util.WarnOnly('Failed to get BTTV emotes for channel ' + cname + ':' + cid + ': ' + rtext);
         }
       });
     }
@@ -1610,6 +1617,13 @@ var TwitchClient = function (_CallbackHandler) {
         _this11._fire(new TwitchEvent("ASSETLOADED", "", {
           kind: "bttv_emotes"
         }));
+      }, function (resp) {
+        /* Received an error */
+        if (resp.response !== null && '' + resp.response !== "") {
+          Util.WarnOnly('Failed to get global BTTV emotes: ' + resp.response);
+        } else {
+          Util.WarnOnly('Failed to get global BTTV emotes: null response (see console)');
+        }
       });
     }
 
@@ -1897,18 +1911,34 @@ var TwitchClient = function (_CallbackHandler) {
       return this._enable_ffz;
     }
   }, {
-    key: 'BTTVEnabled',
+    key: 'disableFFZ',
 
+
+    /* Provide API to disable FFZ support entirely */
+    value: function disableFFZ() {
+      this._enable_ffz = false;
+    }
 
     /* Return whether or not BTTV support is enabled */
+
+  }, {
+    key: 'BTTVEnabled',
     value: function BTTVEnabled() {
       return this._enable_bttv;
     }
   }, {
-    key: 'SelfUserState',
+    key: 'disableBTTV',
 
+
+    /* Provide API to disable BTTV support entirely */
+    value: function disableBTTV() {
+      this._enable_bttv = false;
+    }
 
     /* Return a copy of the client's userstate */
+
+  }, {
+    key: 'SelfUserState',
     value: function SelfUserState() {
       var obj = Util.JSONClone(this._self_userstate);
       obj.userid = this._self_userid;
@@ -2095,11 +2125,11 @@ var TwitchClient = function (_CallbackHandler) {
           this._channels.push(cname);
           /* Determine if the channel to join is a real channel */
           this._api.Get(Twitch.URL.User(user), function (r) {
-            if (!r || !r.data || r.data.length === 0) {
+            if (!r || !r.users || r.users.length === 0) {
               Util.Warn(cname + ' doesn\'t seem to be a real channel; leaving');
               _this13.LeaveChannel(channel);
             }
-          });
+          }, /*headers*/null, /*add_private*/true);
         } else {
           Util.Warn('JoinChannel: Already in ' + cname);
         }
@@ -3112,7 +3142,9 @@ var TwitchClient = function (_CallbackHandler) {
           /* Obtain global cheermotes */
           this._getGlobalCheers();
           /* Obtain global BTTV emotes */
-          this._getGlobalBTTVEmotes();
+          if (this._enable_bttv) {
+            this._getGlobalBTTVEmotes();
+          }
           break;
         case "TOPIC":
           /* No special processing needed */
@@ -3644,7 +3676,7 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
   User: function User(uname) {
-    return Twitch.Helix + '/users?login=' + uname;
+    return Twitch.Kraken + '/users?login=' + uname;
   },
   Rooms: function Rooms(cid) {
     return Twitch.Kraken + '/chat/' + cid + '/rooms';
@@ -3728,7 +3760,12 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
         } else if (this._onerror) {
           this._onerror(this);
         } else {
-          Util.Warn(this);
+          if (this.response !== null && '' + this.response !== "") {
+            Util.WarnOnly('Failed to get "' + url + '"; response="' + this.response + '"');
+          } else {
+            Util.WarnOnly('Failed to get "' + url + '"; response=(null)');
+          }
+          Util.WarnOnly(this);
         }
       }
     };
@@ -3754,7 +3791,11 @@ Twitch.API = function _Twitch_API(global_headers, private_headers) {
         } else if (this._onerror) {
           this._onerror(this);
         } else {
-          Util.WarnOnly('Failed to get "' + url + '" stack=', callerStack);
+          if (this.response !== null && '' + this.response !== "") {
+            Util.WarnOnly('Failed to get "' + url + '"; response="' + this.response + '"; stack=', callerStack);
+          } else {
+            Util.WarnOnly('Failed to get "' + url + '"; response=(null); stack=', callerStack);
+          }
           Util.WarnOnly(url, this);
         }
       }

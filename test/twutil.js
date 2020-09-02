@@ -1,7 +1,7 @@
 
 "use strict";
 
-loadHarness("client");
+/*loadHarness("client");*/
 
 /* TODO:
  * Twitch API:

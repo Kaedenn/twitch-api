@@ -540,7 +540,8 @@ describe("Util", function() { /* nofold */
         "at foo.js:12:101",
         "at :0:0",
         "path/to/file.js:100:4",
-        "SomeFunc:0:0"
+        "SomeFunc:0:0",
+        "at new Class (path/to/file.js:1:2)"
       ]);
       assert.equal(frames[0].name, "SomeFunc");
       assert.equal(frames[0].actual_name, "SomeThing");
@@ -565,6 +566,10 @@ describe("Util", function() { /* nofold */
       assert.equal(frames[5].file, window.location.pathname);
       assert.equal(frames[5].line, 0);
       assert.equal(frames[5].column, 0);
+      assert.equal(frames[6].name, "new Class");
+      assert.equal(frames[6].file, "path/to/file.js");
+      assert.equal(frames[6].line, 1);
+      assert.equal(frames[6].column, 2);
     });
     /* TODO: Stack formatting */
     /* TODO: Stack trimming */

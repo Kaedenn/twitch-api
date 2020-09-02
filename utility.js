@@ -222,10 +222,10 @@ Util.EscapeChars = {
 /* Attempt to change the name of the function given */
 Util.SetFunctionName = function _Util_SetFunctionName(func, name, nothrow=false) {
   if (func.name !== name) {
-    try { func.name = name; } catch (e) { /* ignore */ }
-  }
-  if (func.name !== name) {
-    try { func.__defineGetter__("name", () => name); } catch (e) { /* ignore */ }
+    try {
+      func.__defineGetter__("name", () => name);
+    }
+    catch (e) { /* ignore */ }
   }
   if (func.name !== name && !nothrow) {
     throw new Error("Failed to set function name");
@@ -691,6 +691,53 @@ Util.LEVEL_TRACE = Util.LEVEL_DEBUG + 1;
 Util.LEVEL_MAX = Util.LEVEL_TRACE;
 Util.DebugLevel = Util.LEVEL_OFF;
 
+/* Stack handling {{{1 */
+
+/* Stack parser patterns and their group-to-field mappings */
+Util.STACK_PARSERS = [
+  /* Chrome "at (function)\( as \[(function)\]\)? \((file):(line):(column)\)" */
+  [/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/, {
+    "name": 1,
+    "actual_name": 2,
+    "file": 3,
+    "line": 4,
+    "column": 5
+  }],
+  /* Firefox "(function)@(file):(line):(column)" */
+  [/([^@]*)@(.*):(\d+):(\d+)/, {
+    "name": 1,
+    "file": 2,
+    "line": 3,
+    "column": 4
+  }],
+  /* nodejs "at (file):(line):(column)" */
+  [/^[ ]*at (.*):(\d+):(\d+)$/, {
+    "file": 1,
+    "line": 2,
+    "column": 3
+  }],
+  /* nodejs 2 "at (name) \((file):(line):(column)\)" */
+  [/^[ ]*at (\w+(?:\s+\w+)*)\s*\((.*):(\d+):(\d+)\)$/, {
+    "name": 1,
+    "file": 2,
+    "line": 3,
+    "column": 4,
+    "debug": true
+  }],
+  /* Fallback 1 (file with ext):(line):(column) */
+  [/^[ ]*([^:]+\/[^:]+\.\w+):(\d+):(\d+)$/, {
+    "file": 1,
+    "line": 2,
+    "column": 3
+  }],
+  /* Fallback 2 (name):(line):(column) */
+  [/^(.*):(\d+):(\d+)$/, {
+    "name": 1,
+    "line": 2,
+    "column": 3
+  }]
+];
+
 /* Current top-stack trim level */
 Util._stack_trim_level = [0];
 
@@ -749,51 +796,32 @@ Util.GetStack = function _Util_GetStack() {
 Util.ParseStack = function _Util_ParseStack(lines) {
   let frames = [];
   for (let line of lines) {
-    let m = null;
+    /* Default frame values */
     let frame = {
       text: line,
       name: "<unnamed>",
-      file: null,
+      file: "unknown",
       line: NaN,
       column: NaN
     };
-    try {
-      frame.file = window.location.pathname;
-    }
-    catch (e) {
-      frame.file = "unknown";
-    }
-    if ((m = line.match(/^[ ]*at ([^ ]+)(?: \[as (\w+)\])? \((.*):(\d+):(\d+)\)$/)) !== null) {
-      // Chrome: "[ ]+at (function)\( as \[(function)\]\)? \((file):(line):(column)\)"
-      frame.name = m[1];
-      frame.actual_name = m[2];
-      frame.file = m[3];
-      frame.line = Util.ParseNumber(m[4]);
-      frame.column = Util.ParseNumber(m[5]);
-    } else if ((m = line.match(/([^@]*)@(.*):(\d+):(\d+)/)) !== null) {
-      // Firefox "(function)@(file):(line):(column)"
-      frame.name = m[1];
-      frame.file = m[2];
-      frame.line = Util.ParseNumber(m[3]);
-      frame.column = Util.ParseNumber(m[4]);
-    } else if ((m = line.match(/^[ ]*at (.*):(\d+):(\d+)$/)) !== null) {
-      // nodejs?
-      frame.file = m[1];
-      frame.line = Util.ParseNumber(m[2]);
-      frame.column = Util.ParseNumber(m[3]);
-    } else if ((m = line.match(/^[ ]*([^:]+\/[^:]+\.\w+):(\d+):(\d+)$/)) !== null) {
-      /* (file):(line):(column) */
-      frame.file = m[1];
-      frame.line = Util.ParseNumber(m[2]);
-      frame.column = Util.ParseNumber(m[3]);
-    } else if ((m = line.match(/^(.*):(\d+):(\d+)$/)) !== null) {
-      /* (name and/or filename and/or label):(line):(column) */
-      frame.name = m[1];
-      frame.line = Util.ParseNumber(m[2]);
-      frame.column = Util.ParseNumber(m[3]);
-    } else {
-      /* OBS: /^[ ]*at ([^ ]+) \((.*):([0-9]+):([0-9]+)\)/ */
-      /* TODO: OBS, Tesla stacktrace parsing */
+    /* Allow running in non-browser environments without a location */
+    try { frame.file = window.location.pathname; } catch (e) { /* ignored */ }
+    /* Test each of the stack parsers, returning the first successful parse */
+    for (let [pat, map] of Util.STACK_PARSERS) {
+      let m = line.match(pat);
+      if (m) {
+        for (let [field, idx] of Object.entries(map)) {
+          if (typeof(idx) === "number") {
+            frame[field] = m[idx];
+          }
+        }
+        frame.line = Util.ParseNumber(frame.line);
+        frame.column = Util.ParseNumber(frame.column);
+        if (map.debug) {
+          console.log(frame);
+        }
+        break;
+      }
     }
     frames.push(frame);
   }
@@ -811,14 +839,17 @@ Util.FormatStack = function _Util_FormatStack(stack) {
   console.assert(stack.length === paths.length);
   let result = [];
   for (let i = 0; i < paths.length; ++i) {
-    if (stack[i].name === "???") {
-      result.push(stack[i].text);
+    let frame = stack[i];
+    if (frame.name === "???") {
+      result.push(frame.text);
     } else {
-      result.push(`${stack[i].name}@${paths[i]}:${stack[i].line}:${stack[i].column}`);
+      result.push(`${frame.name}@${paths[i]}:${frame.line}:${frame.column}`);
     }
   }
   return result.join("\n");
 };
+
+/* End stack handling 1}}} */
 
 /* Logger object */
 class Logging {

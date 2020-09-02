@@ -813,8 +813,15 @@ class TwitchClient extends CallbackHandler {
         kind: "bttv_channel_emotes"
       }));
     }, (resp) => {
+      /* Received an error */
       if (resp.status === 404) {
         Util.LogOnly(`Channel ${cname}:${cid} has no BTTV emotes`);
+      } else {
+        let rtext = "response: (null)";
+        if (resp.response !== null && `${resp.response}` !== "") {
+          rtext = resp.response;
+        }
+        Util.WarnOnly(`Failed to get BTTV emotes for channel ${cname}:${cid}: ${rtext}`);
       }
     });
   }
@@ -836,6 +843,13 @@ class TwitchClient extends CallbackHandler {
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "bttv_emotes"
       }));
+    }, (resp) => {
+      /* Received an error */
+      if (resp.response !== null && `${resp.response}` !== "") {
+        Util.WarnOnly(`Failed to get global BTTV emotes: ${resp.response}`);
+      } else {
+        Util.WarnOnly(`Failed to get global BTTV emotes: null response (see console)`);
+      }
     });
   }
 
@@ -1017,9 +1031,15 @@ class TwitchClient extends CallbackHandler {
   FFZEnabled() { return this._enable_ffz; }
   get ffzEnabled() { return this.FFZEnabled(); }
 
+  /* Provide API to disable FFZ support entirely */
+  disableFFZ() { this._enable_ffz = false; }
+
   /* Return whether or not BTTV support is enabled */
   BTTVEnabled() { return this._enable_bttv; }
   get bttvEnabled() { return this.BTTVEnabled; }
+
+  /* Provide API to disable BTTV support entirely */
+  disableBTTV() { this._enable_bttv = false; }
 
   /* Return a copy of the client's userstate */
   SelfUserState() {
@@ -1139,11 +1159,11 @@ class TwitchClient extends CallbackHandler {
         this._channels.push(cname);
         /* Determine if the channel to join is a real channel */
         this._api.Get(Twitch.URL.User(user), (r) => {
-          if (!r || !r.data || r.data.length === 0) {
+          if (!r || !r.users || r.users.length === 0) {
             Util.Warn(`${cname} doesn't seem to be a real channel; leaving`);
             this.LeaveChannel(channel);
           }
-        });
+        }, /*headers*/null, /*add_private*/true);
       } else {
         Util.Warn(`JoinChannel: Already in ${cname}`);
       }
@@ -1686,7 +1706,9 @@ class TwitchClient extends CallbackHandler {
         /* Obtain global cheermotes */
         this._getGlobalCheers();
         /* Obtain global BTTV emotes */
-        this._getGlobalBTTVEmotes();
+        if (this._enable_bttv) {
+          this._getGlobalBTTVEmotes();
+        }
         break;
       case "TOPIC":
         /* No special processing needed */
@@ -1939,7 +1961,7 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
-  User: (uname) => `${Twitch.Helix}/users?login=${uname}`,
+  User: (uname) => `${Twitch.Kraken}/users?login=${uname}`,
   Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`,
   Stream: (cid) => `${Twitch.Kraken}/streams?channel=${cid}`,
   Clip: (slug) => `${Twitch.Helix}/clips?id=${slug}`,
@@ -1981,7 +2003,12 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
         } else if (this._onerror) {
           this._onerror(this);
         } else {
-          Util.Warn(this);
+          if (this.response !== null && `${this.response}` !== "") {
+            Util.WarnOnly(`Failed to get "${url}"; response="${this.response}"`);
+          } else {
+            Util.WarnOnly(`Failed to get "${url}"; response=(null)`);
+          }
+          Util.WarnOnly(this);
         }
       }
     };
@@ -2003,7 +2030,11 @@ Twitch.API = function _Twitch_API(global_headers, private_headers, onerror=null)
         } else if (this._onerror) {
           this._onerror(this);
         } else {
-          Util.WarnOnly(`Failed to get "${url}" stack=`, callerStack);
+          if (this.response !== null && `${this.response}` !== "") {
+            Util.WarnOnly(`Failed to get "${url}"; response="${this.response}"; stack=`, callerStack);
+          } else {
+            Util.WarnOnly(`Failed to get "${url}"; response=(null); stack=`, callerStack);
+          }
           Util.WarnOnly(url, this);
         }
       }
