@@ -1866,9 +1866,9 @@ Util.ParseNumber = function _Util_ParseNumber(str, base=10) {
   } else if (str === "true" || str === "false") {
     /* Technically not a number, but parse anyway */
     return str === "true";
-  } else if (str === "Infinity") {
+  } else if (str === "Infinity" || str === "inf") {
     return Infinity;
-  } else if (str === "-Infinity") {
+  } else if (str === "-Infinity" || str === "-inf") {
     return -Infinity;
   } else if (str === "NaN") {
     return Number.NaN;
