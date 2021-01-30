@@ -1,9 +1,15 @@
 "use strict";
 
-/* TODO:
+/* TODO: Color management:
  * Fix misuse of "sRGB" term
  * Maximize contrast via https://stackoverflow.com/questions/1855884
  * Color replacement API (see KapChat)
+ *
+ * TODO: Logging improvements:
+ * Implement logging sessions:
+ *   Util.Logger.session("mysession", Util.LEVEL_WARN);
+ *   Util.SError("mysession", "this will log")
+ *   Util.SDebug("mysession", "this will not")
  */
 
 /** Generic Utility-ish Functions for the Twitch Chat API
@@ -4001,7 +4007,7 @@ Util.StorageFormat = function _Util_StorageFormat(obj) {
   return s;
 };
 
-/* Disables localStorage suppport entirely; cannot be undone */
+/* Disables localStorage support entirely; cannot be undone */
 Util.DisableLocalStorage = function _Util_DisableLocalStorage() {
   Util._ws_enabled = false;
   function wsapiWrap(f) {
