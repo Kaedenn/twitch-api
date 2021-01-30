@@ -21,7 +21,6 @@ for (let name of Object.getOwnPropertyNames(TWClient)) {
  *  ? IsSub, IsVIP, IsMod, IsCaster
  *  ? Timeout, UnTimeout, Ban, UnBan (verify all fail)
  *  x ParseChannel (simple)
- *  ParseChannel (complex)
  *  ? JoinChannel, LeaveChannel, IsInChannel
  *  ? GetJoinedChannels
  *  ? GetChannelInfo, GetChannelById

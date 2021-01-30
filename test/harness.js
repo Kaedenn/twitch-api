@@ -10,8 +10,6 @@
 
 function _init(export_func) {
   const {JSDOM} = require("jsdom");
-  const fs = require("fs");
-  const path = require("path");
 
   /* Define document HTML */
   const dom = new JSDOM(`
