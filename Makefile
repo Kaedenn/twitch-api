@@ -13,13 +13,15 @@ ESLINT := npx eslint
 BABEL := npx babel
 MOCHA := npx mocha
 
-.PHONY: all lint test $(TESTS)
+.PHONY: all lint babel test $(TESTS)
 
-all: lint $(DISTS) $(ASSETS) test
+all: lint babel $(ASSETS) test
 
 lint:
 	$(ESLINT) --env browser --env es6 $(SRCS)
 	$(ESLINT) --env node $(TESTS)
+
+babel: $(DISTS)
 
 $(DIST)/%.js: %.js
 	if [ \! -d "$(DIST)" ]; then $(MKDIR) $(DIST); fi
