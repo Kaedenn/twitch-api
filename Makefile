@@ -32,6 +32,11 @@ MOCHA := npx mocha
 
 .PHONY: all lint babel test
 
+all: lint babel $(ASSETS)
+ifeq ($(NOTEST),)
+all: test
+endif
+
 # Define case rule and add "test_<case>" to $(TESTS) variable
 define TEMPLATE_test =
 .PHONY: test_$(1)
@@ -41,11 +46,6 @@ test_$(1):
 endef
 
 $(foreach case,$(TEST_CASES),$(eval $(call TEMPLATE_test,$(case))))
-
-all: lint babel $(ASSETS)
-ifeq ($(NOTEST),)
-all: test
-endif
 
 lint:
 	$(ESLINT) --env browser --env es6 $(SOURCES)
