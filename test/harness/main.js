@@ -1,12 +1,13 @@
 
 "use strict";
 
-/* Generic test harness for all tests; specific harnesses for individual tests
- * can be found in the test/harness/ directory */
+/* Generic test harness for all tests */
 
 /* TODO/FIXME:
  * CSS: JSDOM doesn't support stylesheets. Migrate to using puppeteer?
  */
+
+const TEST_ROOT = "../..";
 
 function _init(export_func) {
   const {JSDOM} = require("jsdom");
@@ -67,13 +68,13 @@ function _init(export_func) {
 
   /* Specific harness for tests using the TwitchClient */
 
-  var TWUtil = require("../utility.js");
+  var TWUtil = require(`${TEST_ROOT}/utility.js`);
   for (let [k, v] of Object.entries(TWUtil)) {
     global[k] = v;
   }
   global.Util.DebugLevel = Util.LEVEL_INFO;
 
-  var TWClient = require("../client.js");
+  var TWClient = require(`${TEST_ROOT}/client.js`);
   for (let [k, v] of Object.entries(TWClient)) {
     global[k] = v;
   }
