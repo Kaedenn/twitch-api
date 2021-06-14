@@ -12,11 +12,12 @@
 
 /* TODO/FIXME:
  * Remove _getRooms and room support altogether
+ *  Remove ChannelObject.room and ChannelObject.roomuid
  * Change APIs from Kraken to Helix
- *  Twitch.URL.Stream(channelid)
- *    `${Twitch.Helix}/streams?user_id=${channelid}`
+ *  Twitch.URL.Stream(channelId)
+ *    `${Twitch.Helix}/streams?user_id=${channelId}`
  *  Twitch.URL.GlobalCheers()
- *  Twitch.URL.Cheers(channelid)
+ *  Twitch.URL.Cheers(channelId)
  *  Twitch.URL.EmoteSet(emoteset)
  */
 
@@ -173,7 +174,7 @@ class TwitchEvent {
   /* Obtain a "msg-param-" value */
   param(name) { return this.flag("msg-param-" + name); }
 
-  /* Obtain the first non-falsy value of the listed flags */
+  /* Obtain the first non-false-y value of the listed flags */
   firstFlag(...flags) {
     for (let flag of flags) {
       if (this.flags[flag]) {
@@ -595,7 +596,7 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Ensure the given channel is defined in this._rooms */
   _ensureRoom(channel) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     let cname = cobj.channel;
     if (!(cname in this._rooms)) {
       this._rooms[cname] = {
@@ -615,8 +616,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Called when a user joins a channel */
   _onJoin(channel, userName) {
+    let cobj = Twitch.ParseChannel(channel);
     let user = this._ensureUser(userName);
-    let cobj = this.ParseChannel(channel);
     this._ensureRoom(channel);
     if (!this._rooms[cobj.channel].users.includes(user)) {
       if (cobj.room && cobj.roomuid) {
@@ -634,9 +635,9 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Called when a user parts a channel */
   _onPart(channel, userName) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     let user = this._ensureUser(userName);
-    this._ensureRoom(cobj);
+    this._ensureRoom(channel);
     let cname = cobj.channel;
     if (this._rooms[cname].users.includes(user)) {
       let idx = this._rooms[cname].users.indexOf(user);
@@ -646,9 +647,9 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Called when the client receives a MODE +o event */
   _onOp(channel, userName) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     let user = this._ensureUser(userName);
-    this._ensureRoom(cobj);
+    this._ensureRoom(channel);
     let cname = cobj.channel;
     if (!this._rooms[cname].operators.includes(user)) {
       this._rooms[cname].operators.push(user);
@@ -657,9 +658,9 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Called when the client receives a MODE -o event */
   _onDeOp(channel, userName) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     let user = this._ensureUser(userName);
-    this._ensureRoom(cobj);
+    this._ensureRoom(channel);
     let cname = cobj.channel;
     let idx = this._rooms[cname].operators.indexOf(user);
     if (idx > -1) {
@@ -687,8 +688,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Load in the channel badges for a given channel name and ID */
   _getChannelBadges(cname, cid) {
-    let channel = this.ParseChannel(cname);
-    let c = channel.channel;
+    let channel = Twitch.ParseChannel(cname);
+    let c = channel.channel; /* To sanitize channel */
     this._channel_badges[c] = {};
     this._api.Get(Twitch.URL.ChannelBadges(cid), (json) => {
       /* badge_sets
@@ -1100,7 +1101,8 @@ class TwitchClient extends CallbackHandler {
   Timeout(channel, user, duration="600s", reason=null) {
     let msg = reason;
     if (!reason) {
-      let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+      /* Sanitizes channel */
+      let cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
       msg = `Timed out by ${this._username} from ${cname} for ${duration}`;
     }
     this.SendMessage(channel, `/timeout ${user} ${duration} "${msg}"`);
@@ -1115,7 +1117,8 @@ class TwitchClient extends CallbackHandler {
   Ban(channel, user, reason=null) {
     let msg = reason;
     if (!reason) {
-      let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+      /* Sanitizes channel */
+      let cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
       msg = `Banned from ${cname} by ${this._username}`;
     }
     this.SendMessage(channel, `/ban ${user} ${msg}`);
@@ -1130,28 +1133,13 @@ class TwitchClient extends CallbackHandler {
 
   /* Channel functions {{{0 */
 
-  /* Parse a channel into a channel object */
-  ParseChannel(channel) {
-    let chobj = Twitch.ParseChannel(channel);
-    if (chobj.room && chobj.channel !== TwitchClient.CHANNEL_ROOMS) {
-      /* Parse #streamer:roomname strings */
-      let [cname, rname] = [chobj.channel, chobj.room];
-      let roomdef = this._rooms[cname];
-      if (roomdef && roomdef.rooms && roomdef.rooms[rname]) {
-        chobj.channel = TwitchClient.CHANNEL_ROOMS;
-        chobj.room = roomdef.id;
-        chobj.roomuid = roomdef.rooms[rname].uid;
-      } else {
-        Util.Warn(`Unable to parse room for ${JSON.stringify(channel)}`);
-      }
-    }
-    return chobj;
-  }
+  /* Backwards compatibility */
+  ParseChannel(channel) { return Twitch.ParseChannel(channel); }
 
   /* Request the client to join the channel specified */
   JoinChannel(channel) {
-    let chobj = this.ParseChannel(channel);
-    let cname = Twitch.FormatChannel(chobj);
+    let chobj = Twitch.ParseChannel(channel);
+    let cname = Twitch.FormatChannel(chobj); /* Sanitizes channel */
     let user = chobj.channel.replace(/^#/, "");
     if (this._is_open) {
       if (this._channels.indexOf(cname) === -1) {
@@ -1174,7 +1162,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Request the client to leave the channel specified */
   LeaveChannel(channel) {
-    let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+    /* Sanitizes channel */
+    let cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
     if (this._is_open) {
       let idx = this._channels.indexOf(cname);
       if (idx > -1) {
@@ -1189,7 +1178,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Return whether or not the client is in the channel specified */
   IsInChannel(channel) {
-    let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+    /* Sanitizes channel */
+    let cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
     return this._is_open && this._channels.indexOf(cname) > -1;
   }
 
@@ -1201,7 +1191,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Get information regarding the channel specified */
   GetChannelInfo(channel) {
-    let cname = Twitch.FormatChannel(this.ParseChannel(channel));
+    /* Sanitizes channel */
+    let cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
     return this._rooms[cname] || {};
   }
 
@@ -1221,7 +1212,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Return whether or not the given word is a cheer for the given channel */
   IsCheer(channel, word) {
-    let cname = this.ParseChannel(channel).channel;
+    /* Sanitizes channel */
+    let cname = Twitch.ParseChannel(channel).channel;
     if (this._channel_cheers.hasOwnProperty(cname)) {
       for (let name of Object.keys(this._channel_cheers[cname])) {
         if (word.match(this._channel_cheers[cname][name].pattern)) {
@@ -1237,7 +1229,8 @@ class TwitchClient extends CallbackHandler {
     let matches = [];
     let parts = message.split(" ");
     let offset = 0;
-    let cname = this.ParseChannel(channel).channel;
+    /* Sanitizes channel */
+    let cname = Twitch.ParseChannel(channel).channel;
     if (this._channel_cheers.hasOwnProperty(cname)) {
       for (let [name, cheer] of Object.entries(this._channel_cheers[cname])) {
         if (message.search(cheer.pattern) > -1) {
@@ -1472,8 +1465,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Send a message to the channel specified */
   SendMessage(channel, message, bypassFaux=false) {
-    let cobj = this.ParseChannel(channel);
-    let cname = Twitch.FormatChannel(cobj);
+    let cobj = Twitch.ParseChannel(channel);
+    let cname = Twitch.FormatChannel(cobj); /* Sanitizes channel */
     let msg = message.trim();
     if (this._connected && this._authed) {
       this.send(`PRIVMSG ${cobj.channel} :${msg}`);
@@ -1486,7 +1479,7 @@ class TwitchClient extends CallbackHandler {
         }
       }
     } else {
-      Util.Warn(`Unable to send "${msg}" to ${cname}: not connected or not authed`);
+      Util.Warn(`Unable to send "${msg}" to ${cname}: not connected or authed`);
     }
   }
 
@@ -1603,7 +1596,8 @@ class TwitchClient extends CallbackHandler {
 
   /* Return true if the badge specified exists as a channel badge */
   IsChannelBadge(channel, badge_name, badge_num=null) {
-    let c = this.ParseChannel(channel).channel;
+    /* Sanitizes channel */
+    let c = Twitch.ParseChannel(channel).channel;
     if (c in this._channel_badges) {
       if (badge_name in this._channel_badges[c]) {
         let badge = this._channel_badges[c][badge_name];
@@ -1633,7 +1627,7 @@ class TwitchClient extends CallbackHandler {
   /* Get a channel badge by name and number; returns the first badge if
    * badge_num is null */
   GetChannelBadge(channel, badge_name, badge_num=null) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     if (this.IsChannelBadge(cobj, badge_name, badge_num)) {
       let b = this._channel_badges[cobj.channel][badge_name];
       let idxs = Object.keys(b).sort();
@@ -1653,7 +1647,7 @@ class TwitchClient extends CallbackHandler {
 
   /* Obtain all of the channel badges for the specified channel */
   GetChannelBadges(channel) {
-    let cobj = this.ParseChannel(channel);
+    let cobj = Twitch.ParseChannel(channel);
     if (this._channel_badges.hasOwnProperty(cobj.channel)) {
       return Util.JSONClone(this._channel_badges[cobj.channel]);
     }
@@ -2078,7 +2072,10 @@ Twitch.ParseUser = function _Twitch_ParseUser(user) {
   return user.replace(/^:/, "").split("!")[0];
 };
 
-/* Parse channel to {channel, room, roomuid} */
+/* Parse channel to {channel, room, roomuid}; overloads:
+ *   Twitch.ParseChannel("#channel") (string)
+ *   Twitch.ParseChannel({channel: "#channel"}) (object)
+ */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   if (typeof(channel) === "string") {
     let chobj = {
@@ -2103,10 +2100,8 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       Util.Warn(`ParseChannel: ${channel} not in expected format`);
       chobj.channel = parts[0];
     }
-    if (chobj.channel !== "GLOBAL") {
-      if (chobj.channel.indexOf("#") !== 0) {
-        chobj.channel = "#" + chobj.channel;
-      }
+    if (chobj.channel.indexOf("#") !== 0 && chobj.channel !== "GLOBAL") {
+      chobj.channel = "#" + chobj.channel;
     }
     return chobj;
   } else if (channel && channel.channel) {
@@ -2144,11 +2139,13 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   }
 };
 
+/* TODO: REMOVE */
 /* Return whether or not the channel object given is a #chatrooms room */
 Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
   return cobj.channel === TwitchClient.CHANNEL_ROOMS && cobj.room && cobj.roomuid;
 };
 
+/* TODO: REMOVE */
 /* Format a room with the channel and room IDs given */
 Twitch.FormatRoom = function _Twitch_FormatRoom(cid, rid) {
   return `#chatrooms:${cid}:${rid}`;
@@ -2245,7 +2242,7 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
 
 /* Convert an emote name to a regex */
 Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
-  /* NOTE: Emotes from Twitch are already regexes; dont escape them */
+  /* NOTE: Emotes from Twitch are already regexes; don't escape them */
   return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
 };
 

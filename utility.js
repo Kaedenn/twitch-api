@@ -50,7 +50,7 @@ let Util = {
 };
 
 /* Used to split a string across multiple lines */
-Util.T = function _Util_T(...args) {
+Util.J = function _Util_J(...args) {
   return args.join(" ");
 };
 

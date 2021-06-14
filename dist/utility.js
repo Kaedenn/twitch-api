@@ -58,7 +58,7 @@ function _defineProperty(obj, key, value) { if (key in obj) { Object.definePrope
 var Util = (_Util = {}, _defineProperty(_Util, Symbol.toStringTag, "Util"), _defineProperty(_Util, "__wskey", null), _defineProperty(_Util, "__wscfg", "kae-twapi-local-key"), _defineProperty(_Util, "_deferred", []), _Util);
 
 /* Used to split a string across multiple lines */
-Util.T = function _Util_T() {
+Util.J = function _Util_J() {
   for (var _len = arguments.length, args = Array(_len), _key = 0; _key < _len; _key++) {
     args[_key] = arguments[_key];
   }

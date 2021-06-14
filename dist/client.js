@@ -12,11 +12,12 @@
 
 /* TODO/FIXME:
  * Remove _getRooms and room support altogether
+ *  Remove ChannelObject.room and ChannelObject.roomuid
  * Change APIs from Kraken to Helix
- *  Twitch.URL.Stream(channelid)
- *    `${Twitch.Helix}/streams?user_id=${channelid}`
+ *  Twitch.URL.Stream(channelId)
+ *    `${Twitch.Helix}/streams?user_id=${channelId}`
  *  Twitch.URL.GlobalCheers()
- *  Twitch.URL.Cheers(channelid)
+ *  Twitch.URL.Cheers(channelId)
  *  Twitch.URL.EmoteSet(emoteset)
  */
 
@@ -127,7 +128,7 @@ var TwitchEvent = function () {
       return this.flag("msg-param-" + name);
     }
 
-    /* Obtain the first non-falsy value of the listed flags */
+    /* Obtain the first non-false-y value of the listed flags */
 
   }, {
     key: 'firstFlag',
@@ -1085,7 +1086,7 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: '_ensureRoom',
     value: function _ensureRoom(channel) {
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       var cname = cobj.channel;
       if (!(cname in this._rooms)) {
         this._rooms[cname] = {
@@ -1108,8 +1109,8 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: '_onJoin',
     value: function _onJoin(channel, userName) {
+      var cobj = Twitch.ParseChannel(channel);
       var user = this._ensureUser(userName);
-      var cobj = this.ParseChannel(channel);
       this._ensureRoom(channel);
       if (!this._rooms[cobj.channel].users.includes(user)) {
         if (cobj.room && cobj.roomuid) {
@@ -1130,9 +1131,9 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: '_onPart',
     value: function _onPart(channel, userName) {
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       var user = this._ensureUser(userName);
-      this._ensureRoom(cobj);
+      this._ensureRoom(channel);
       var cname = cobj.channel;
       if (this._rooms[cname].users.includes(user)) {
         var idx = this._rooms[cname].users.indexOf(user);
@@ -1145,9 +1146,9 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: '_onOp',
     value: function _onOp(channel, userName) {
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       var user = this._ensureUser(userName);
-      this._ensureRoom(cobj);
+      this._ensureRoom(channel);
       var cname = cobj.channel;
       if (!this._rooms[cname].operators.includes(user)) {
         this._rooms[cname].operators.push(user);
@@ -1159,9 +1160,9 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: '_onDeOp',
     value: function _onDeOp(channel, userName) {
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       var user = this._ensureUser(userName);
-      this._ensureRoom(cobj);
+      this._ensureRoom(channel);
       var cname = cobj.channel;
       var idx = this._rooms[cname].operators.indexOf(user);
       if (idx > -1) {
@@ -1221,8 +1222,8 @@ var TwitchClient = function (_CallbackHandler) {
     value: function _getChannelBadges(cname, cid) {
       var _this6 = this;
 
-      var channel = this.ParseChannel(cname);
-      var c = channel.channel;
+      var channel = Twitch.ParseChannel(cname);
+      var c = channel.channel; /* To sanitize channel */
       this._channel_badges[c] = {};
       this._api.Get(Twitch.URL.ChannelBadges(cid), function (json) {
         /* badge_sets
@@ -2044,7 +2045,8 @@ var TwitchClient = function (_CallbackHandler) {
 
       var msg = reason;
       if (!reason) {
-        var cname = Twitch.FormatChannel(this.ParseChannel(channel));
+        /* Sanitizes channel */
+        var cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
         msg = 'Timed out by ' + this._username + ' from ' + cname + ' for ' + duration;
       }
       this.SendMessage(channel, '/timeout ' + user + ' ' + duration + ' "' + msg + '"');
@@ -2067,7 +2069,8 @@ var TwitchClient = function (_CallbackHandler) {
 
       var msg = reason;
       if (!reason) {
-        var cname = Twitch.FormatChannel(this.ParseChannel(channel));
+        /* Sanitizes channel */
+        var cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
         msg = 'Banned from ' + cname + ' by ' + this._username;
       }
       this.SendMessage(channel, '/ban ' + user + ' ' + msg);
@@ -2085,28 +2088,12 @@ var TwitchClient = function (_CallbackHandler) {
 
     /* Channel functions {{{0 */
 
-    /* Parse a channel into a channel object */
+    /* Backwards compatibility */
 
   }, {
     key: 'ParseChannel',
     value: function ParseChannel(channel) {
-      var chobj = Twitch.ParseChannel(channel);
-      if (chobj.room && chobj.channel !== TwitchClient.CHANNEL_ROOMS) {
-        /* Parse #streamer:roomname strings */
-        var _ref15 = [chobj.channel, chobj.room],
-            cname = _ref15[0],
-            rname = _ref15[1];
-
-        var roomdef = this._rooms[cname];
-        if (roomdef && roomdef.rooms && roomdef.rooms[rname]) {
-          chobj.channel = TwitchClient.CHANNEL_ROOMS;
-          chobj.room = roomdef.id;
-          chobj.roomuid = roomdef.rooms[rname].uid;
-        } else {
-          Util.Warn('Unable to parse room for ' + JSON.stringify(channel));
-        }
-      }
-      return chobj;
+      return Twitch.ParseChannel(channel);
     }
 
     /* Request the client to join the channel specified */
@@ -2116,8 +2103,8 @@ var TwitchClient = function (_CallbackHandler) {
     value: function JoinChannel(channel) {
       var _this13 = this;
 
-      var chobj = this.ParseChannel(channel);
-      var cname = Twitch.FormatChannel(chobj);
+      var chobj = Twitch.ParseChannel(channel);
+      var cname = Twitch.FormatChannel(chobj); /* Sanitizes channel */
       var user = chobj.channel.replace(/^#/, "");
       if (this._is_open) {
         if (this._channels.indexOf(cname) === -1) {
@@ -2143,7 +2130,8 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: 'LeaveChannel',
     value: function LeaveChannel(channel) {
-      var cname = Twitch.FormatChannel(this.ParseChannel(channel));
+      /* Sanitizes channel */
+      var cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
       if (this._is_open) {
         var idx = this._channels.indexOf(cname);
         if (idx > -1) {
@@ -2161,7 +2149,8 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: 'IsInChannel',
     value: function IsInChannel(channel) {
-      var cname = Twitch.FormatChannel(this.ParseChannel(channel));
+      /* Sanitizes channel */
+      var cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
       return this._is_open && this._channels.indexOf(cname) > -1;
     }
 
@@ -2178,7 +2167,8 @@ var TwitchClient = function (_CallbackHandler) {
 
     /* Get information regarding the channel specified */
     value: function GetChannelInfo(channel) {
-      var cname = Twitch.FormatChannel(this.ParseChannel(channel));
+      /* Sanitizes channel */
+      var cname = Twitch.FormatChannel(Twitch.ParseChannel(channel));
       return this._rooms[cname] || {};
     }
 
@@ -2226,7 +2216,8 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: 'IsCheer',
     value: function IsCheer(channel, word) {
-      var cname = this.ParseChannel(channel).channel;
+      /* Sanitizes channel */
+      var cname = Twitch.ParseChannel(channel).channel;
       if (this._channel_cheers.hasOwnProperty(cname)) {
         var _iteratorNormalCompletion22 = true;
         var _didIteratorError22 = false;
@@ -2266,7 +2257,8 @@ var TwitchClient = function (_CallbackHandler) {
       var matches = [];
       var parts = message.split(" ");
       var offset = 0;
-      var cname = this.ParseChannel(channel).channel;
+      /* Sanitizes channel */
+      var cname = Twitch.ParseChannel(channel).channel;
       if (this._channel_cheers.hasOwnProperty(cname)) {
         var _iteratorNormalCompletion23 = true;
         var _didIteratorError23 = false;
@@ -2274,12 +2266,12 @@ var TwitchClient = function (_CallbackHandler) {
 
         try {
           for (var _iterator23 = Object.entries(this._channel_cheers[cname])[Symbol.iterator](), _step23; !(_iteratorNormalCompletion23 = (_step23 = _iterator23.next()).done); _iteratorNormalCompletion23 = true) {
-            var _ref16 = _step23.value;
+            var _ref15 = _step23.value;
 
-            var _ref17 = _slicedToArray(_ref16, 2);
+            var _ref16 = _slicedToArray(_ref15, 2);
 
-            var name = _ref17[0];
-            var cheer = _ref17[1];
+            var name = _ref16[0];
+            var cheer = _ref16[1];
 
             if (message.search(cheer.pattern) > -1) {
               /* Remove the "g" flag */
@@ -2368,9 +2360,9 @@ var TwitchClient = function (_CallbackHandler) {
       }
 
       if (args.length === 1) {
-        var _ref18 = ["GLOBAL", args[0]];
-        cname = _ref18[0];
-        name = _ref18[1];
+        var _ref17 = ["GLOBAL", args[0]];
+        cname = _ref17[0];
+        name = _ref17[1];
       } else if (args.length === 2) {
         cname = args[0];
         name = args[1];
@@ -2412,12 +2404,12 @@ var TwitchClient = function (_CallbackHandler) {
 
       try {
         for (var _iterator25 = Object.entries(this._channel_cheers)[Symbol.iterator](), _step25; !(_iteratorNormalCompletion25 = (_step25 = _iterator25.next()).done); _iteratorNormalCompletion25 = true) {
-          var _ref19 = _step25.value;
+          var _ref18 = _step25.value;
 
-          var _ref20 = _slicedToArray(_ref19, 2);
+          var _ref19 = _slicedToArray(_ref18, 2);
 
-          var cname = _ref20[0];
-          var ccheers = _ref20[1];
+          var cname = _ref19[0];
+          var ccheers = _ref19[1];
 
           cheers[cname] = ccheers;
         }
@@ -2453,12 +2445,12 @@ var TwitchClient = function (_CallbackHandler) {
 
       try {
         for (var _iterator26 = Object.entries(this._self_emotes)[Symbol.iterator](), _step26; !(_iteratorNormalCompletion26 = (_step26 = _iterator26.next()).done); _iteratorNormalCompletion26 = true) {
-          var _ref21 = _step26.value;
+          var _ref20 = _step26.value;
 
-          var _ref22 = _slicedToArray(_ref21, 2);
+          var _ref21 = _slicedToArray(_ref20, 2);
 
-          var k = _ref22[0];
-          var v = _ref22[1];
+          var k = _ref21[0];
+          var v = _ref21[1];
 
           emotes[v] = this.GetEmote(k, size);
         }
@@ -2587,12 +2579,12 @@ var TwitchClient = function (_CallbackHandler) {
 
           try {
             for (var _iterator29 = Object.entries(json["emoticon_sets"])[Symbol.iterator](), _step29; !(_iteratorNormalCompletion29 = (_step29 = _iterator29.next()).done); _iteratorNormalCompletion29 = true) {
-              var _ref23 = _step29.value;
+              var _ref22 = _step29.value;
 
-              var _ref24 = _slicedToArray(_ref23, 2);
+              var _ref23 = _slicedToArray(_ref22, 2);
 
-              var setnr = _ref24[0];
-              var edefs = _ref24[1];
+              var setnr = _ref23[0];
+              var edefs = _ref23[1];
 
               if (!_this14._self_emote_sets[setnr]) {
                 _this14._self_emote_sets[setnr] = [];
@@ -2705,12 +2697,12 @@ var TwitchClient = function (_CallbackHandler) {
 
       try {
         for (var _iterator31 = Object.entries(this._self_emotes)[Symbol.iterator](), _step31; !(_iteratorNormalCompletion31 = (_step31 = _iterator31.next()).done); _iteratorNormalCompletion31 = true) {
-          var _ref25 = _step31.value;
+          var _ref24 = _step31.value;
 
-          var _ref26 = _slicedToArray(_ref25, 2);
+          var _ref25 = _slicedToArray(_ref24, 2);
 
-          var k = _ref26[0];
-          var v = _ref26[1];
+          var k = _ref25[0];
+          var v = _ref25[1];
 
           if (k === emote_name) {
             return v;
@@ -2750,12 +2742,12 @@ var TwitchClient = function (_CallbackHandler) {
 
         try {
           for (var _iterator32 = Object.entries(this._self_emotes)[Symbol.iterator](), _step32; !(_iteratorNormalCompletion32 = (_step32 = _iterator32.next()).done); _iteratorNormalCompletion32 = true) {
-            var _ref27 = _step32.value;
+            var _ref26 = _step32.value;
 
-            var _ref28 = _slicedToArray(_ref27, 2);
+            var _ref27 = _slicedToArray(_ref26, 2);
 
-            var k = _ref28[0];
-            var v = _ref28[1];
+            var k = _ref27[0];
+            var v = _ref27[1];
 
             if (v === emote_id) {
               return Twitch.URL.Emote(k, size);
@@ -2820,8 +2812,8 @@ var TwitchClient = function (_CallbackHandler) {
     value: function SendMessage(channel, message) {
       var bypassFaux = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
 
-      var cobj = this.ParseChannel(channel);
-      var cname = Twitch.FormatChannel(cobj);
+      var cobj = Twitch.ParseChannel(channel);
+      var cname = Twitch.FormatChannel(cobj); /* Sanitizes channel */
       var msg = message.trim();
       if (this._connected && this._authed) {
         this.send('PRIVMSG ' + cobj.channel + ' :' + msg);
@@ -2834,7 +2826,7 @@ var TwitchClient = function (_CallbackHandler) {
           }
         }
       } else {
-        Util.Warn('Unable to send "' + msg + '" to ' + cname + ': not connected or not authed');
+        Util.Warn('Unable to send "' + msg + '" to ' + cname + ': not connected or authed');
       }
     }
 
@@ -3018,7 +3010,8 @@ var TwitchClient = function (_CallbackHandler) {
     value: function IsChannelBadge(channel, badge_name) {
       var badge_num = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var c = this.ParseChannel(channel).channel;
+      /* Sanitizes channel */
+      var c = Twitch.ParseChannel(channel).channel;
       if (c in this._channel_badges) {
         if (badge_name in this._channel_badges[c]) {
           var badge = this._channel_badges[c][badge_name];
@@ -3058,7 +3051,7 @@ var TwitchClient = function (_CallbackHandler) {
     value: function GetChannelBadge(channel, badge_name) {
       var badge_num = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : null;
 
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       if (this.IsChannelBadge(cobj, badge_name, badge_num)) {
         var b = this._channel_badges[cobj.channel][badge_name];
         var idxs = Object.keys(b).sort();
@@ -3084,7 +3077,7 @@ var TwitchClient = function (_CallbackHandler) {
   }, {
     key: 'GetChannelBadges',
     value: function GetChannelBadges(channel) {
-      var cobj = this.ParseChannel(channel);
+      var cobj = Twitch.ParseChannel(channel);
       if (this._channel_badges.hasOwnProperty(cobj.channel)) {
         return Util.JSONClone(this._channel_badges[cobj.channel]);
       }
@@ -3215,12 +3208,12 @@ var TwitchClient = function (_CallbackHandler) {
 
               try {
                 for (var _iterator35 = Object.entries(this._ffz_badge_users)[Symbol.iterator](), _step35; !(_iteratorNormalCompletion35 = (_step35 = _iterator35.next()).done); _iteratorNormalCompletion35 = true) {
-                  var _ref29 = _step35.value;
+                  var _ref28 = _step35.value;
 
-                  var _ref30 = _slicedToArray(_ref29, 2);
+                  var _ref29 = _slicedToArray(_ref28, 2);
 
-                  var badge_nr = _ref30[0];
-                  var users = _ref30[1];
+                  var badge_nr = _ref29[0];
+                  var users = _ref29[1];
 
                   if (users.indexOf(result.user) > -1) {
                     var ffz_badges = event.flags["ffz-badges"];
@@ -3266,12 +3259,12 @@ var TwitchClient = function (_CallbackHandler) {
 
           try {
             for (var _iterator36 = Object.entries(result.flags)[Symbol.iterator](), _step36; !(_iteratorNormalCompletion36 = (_step36 = _iterator36.next()).done); _iteratorNormalCompletion36 = true) {
-              var _ref31 = _step36.value;
+              var _ref30 = _step36.value;
 
-              var _ref32 = _slicedToArray(_ref31, 2);
+              var _ref31 = _slicedToArray(_ref30, 2);
 
-              var key = _ref32[0];
-              var val = _ref32[1];
+              var key = _ref31[0];
+              var val = _ref31[1];
 
               this._self_userstate[cstr][key] = val;
             }
@@ -3476,12 +3469,12 @@ var TwitchClient = function (_CallbackHandler) {
 
         try {
           for (var _iterator39 = Object.entries(lines)[Symbol.iterator](), _step39; !(_iteratorNormalCompletion39 = (_step39 = _iterator39.next()).done); _iteratorNormalCompletion39 = true) {
-            var _ref33 = _step39.value;
+            var _ref32 = _step39.value;
 
-            var _ref34 = _slicedToArray(_ref33, 2);
+            var _ref33 = _slicedToArray(_ref32, 2);
 
-            var i = _ref34[0];
-            var l = _ref34[1];
+            var i = _ref33[0];
+            var l = _ref33[1];
 
             var n = Number.parseInt(i) + 1;
             if (l.trim().length > 0) Util.DebugOnly('ws recv/' + n + '> "' + l + '"');
@@ -3911,7 +3904,10 @@ Twitch.ParseUser = function _Twitch_ParseUser(user) {
   return user.replace(/^:/, "").split("!")[0];
 };
 
-/* Parse channel to {channel, room, roomuid} */
+/* Parse channel to {channel, room, roomuid}; overloads:
+ *   Twitch.ParseChannel("#channel") (string)
+ *   Twitch.ParseChannel({channel: "#channel"}) (object)
+ */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   if (typeof channel === "string") {
     var chobj = {
@@ -3936,10 +3932,8 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
       Util.Warn('ParseChannel: ' + channel + ' not in expected format');
       chobj.channel = parts[0];
     }
-    if (chobj.channel !== "GLOBAL") {
-      if (chobj.channel.indexOf("#") !== 0) {
-        chobj.channel = "#" + chobj.channel;
-      }
+    if (chobj.channel.indexOf("#") !== 0 && chobj.channel !== "GLOBAL") {
+      chobj.channel = "#" + chobj.channel;
     }
     return chobj;
   } else if (channel && channel.channel) {
@@ -3977,11 +3971,13 @@ Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
   }
 };
 
+/* TODO: REMOVE */
 /* Return whether or not the channel object given is a #chatrooms room */
 Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
   return cobj.channel === TwitchClient.CHANNEL_ROOMS && cobj.room && cobj.roomuid;
 };
 
+/* TODO: REMOVE */
 /* Format a room with the channel and room IDs given */
 Twitch.FormatRoom = function _Twitch_FormatRoom(cid, rid) {
   return '#chatrooms:' + cid + ':' + rid;
@@ -4245,7 +4241,7 @@ Twitch.FormatEmoteFlag = function _Twitch_FormatEmoteFlag(emotes) {
 
 /* Convert an emote name to a regex */
 Twitch.EmoteToRegex = function _Twitch_EmoteToRegex(emote) {
-  /* NOTE: Emotes from Twitch are already regexes; dont escape them */
+  /* NOTE: Emotes from Twitch are already regexes; don't escape them */
   return new RegExp("(?:\\b|[\\s]|^)(" + emote + ")(?:\\b|[\\s]|$)", "g");
 };
 
@@ -4516,12 +4512,12 @@ Twitch.StripCredentials = function _Twitch_StripCredentials(msg) {
 
   try {
     for (var _iterator54 = pats[Symbol.iterator](), _step54; !(_iteratorNormalCompletion54 = (_step54 = _iterator54.next()).done); _iteratorNormalCompletion54 = true) {
-      var _ref35 = _step54.value;
+      var _ref34 = _step54.value;
 
-      var _ref36 = _slicedToArray(_ref35, 2);
+      var _ref35 = _slicedToArray(_ref34, 2);
 
-      var name = _ref36[0];
-      var pat = _ref36[1];
+      var name = _ref35[0];
+      var pat = _ref35[1];
 
       if (result.match(pat)) {
         result = result.replace(pat, name + '<removed>');
