@@ -1521,25 +1521,25 @@ var TwitchClient = function (_CallbackHandler) {
     value: function _getBTTVEmotes(cname, cid) {
       var _this10 = this;
 
-      var url = Twitch.URL.BTTVEmotes(cname.replace(/^#/, ""));
+      var url = Twitch.URL.BTTVEmotes(cid);
       this._bttv_channel_emotes[cname] = {};
       this._api.GetSimple(url, function (json) {
-        var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
         var bttv = _this10._bttv_channel_emotes[cname];
         var _iteratorNormalCompletion15 = true;
         var _didIteratorError15 = false;
         var _iteratorError15 = undefined;
 
         try {
-          for (var _iterator15 = json.emotes[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
+          for (var _iterator15 = json.sharedEmotes[Symbol.iterator](), _step15; !(_iteratorNormalCompletion15 = (_step15 = _iterator15.next()).done); _iteratorNormalCompletion15 = true) {
             var emote = _step15.value;
 
+            /* code, id, imageType, user */
             bttv[emote.code] = {
               "id": emote.id,
               "code": emote.code,
               "channel": emote.channel,
               "image-type": emote.imageType,
-              "url": Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
+              "url": Twitch.URL.BTTVEmote(emote.id)
             };
           }
         } catch (err) {
@@ -1583,13 +1583,12 @@ var TwitchClient = function (_CallbackHandler) {
 
       this._bttv_global_emotes = {};
       this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), function (json) {
-        var url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
         var _iteratorNormalCompletion16 = true;
         var _didIteratorError16 = false;
         var _iteratorError16 = undefined;
 
         try {
-          for (var _iterator16 = json.emotes[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
+          for (var _iterator16 = json[Symbol.iterator](), _step16; !(_iteratorNormalCompletion16 = (_step16 = _iterator16.next()).done); _iteratorNormalCompletion16 = true) {
             var emote = _step16.value;
 
             _this11._bttv_global_emotes[emote.code] = {
@@ -1597,7 +1596,7 @@ var TwitchClient = function (_CallbackHandler) {
               "code": emote.code,
               "channel": emote.channel,
               "image-type": emote.imageType,
-              "url": Util.URL(url_base.replace("{{id}}", emote.id))
+              "url": Twitch.URL.BTTVEmote(emote.id)
             };
           }
         } catch (err) {
@@ -3663,7 +3662,8 @@ Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.V5 = "https://api.twitch.tv/v5";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
-Twitch.BTTV = "https://api.betterttv.net/2";
+Twitch.BTTV = "https://api.betterttv.net/3";
+Twitch.BTTVCDN = "https://cdn.betterttv.net/";
 Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
@@ -3721,13 +3721,17 @@ Twitch.URL = {
   },
 
   BTTVAllEmotes: function BTTVAllEmotes() {
-    return Twitch.BTTV + '/emotes';
+    return Twitch.BTTV + '/cached/emotes/global';
   },
-  BTTVEmotes: function BTTVEmotes(cname) {
-    return Twitch.BTTV + '/channels/' + cname;
+  BTTVBadges: function BTTVBadges() {
+    return Twitch.BTTV + '/cached/badges';
+  },
+  BTTVEmotes: function BTTVEmotes(cid) {
+    return Twitch.BTTV + '/cached/users/twitch/' + cid;
   },
   BTTVEmote: function BTTVEmote(eid) {
-    return Twitch.BTTV + '/emote/' + eid + '/1x';
+    var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1x";
+    return Twitch.BTTVCDN + '/emote/' + eid + '/' + size;
   }
 };
 

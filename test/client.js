@@ -81,9 +81,6 @@ const NewClient = (opts=null) => {
   let o = opts ? Util.JSONClone(opts) : {};
   o.ClientID = TestClientID;
 
-  /* FIXME: Disable BTTV for the time being */
-  o.NoBTTV = true;
-
   /* Construct, track, and return */
   let client = new TwitchClient(o);
   allClients.push(client);
@@ -216,7 +213,7 @@ describe("Client", function() { /* nofold */
     });
     makeTest("should support global emotes", {
       "twitch-assetloaded": function(c, done, e) {
-        /* TODO: GetFFZEmotes, GetBTTVEmotes */
+        /* TODO: GetFFZEmotes */
         if (e.values.kind === "emote_set"
             && e.values.eset === TwitchClient.ESET_GLOBAL) {
           assert.ok(c.GetEmotes());
@@ -230,8 +227,7 @@ describe("Client", function() { /* nofold */
         }
       }
     });
-    /* FIXME: BTTV is broken
-    makeTest("should support BTTV emotes", {
+    makeTest("should support global BTTV emotes", {
       level: "LEVEL_DEBUG",
       "twitch-assetloaded": function(c, done, e) {
         if (e.values.kind === "bttv_emotes") {
@@ -243,7 +239,7 @@ describe("Client", function() { /* nofold */
           done();
         }
       }
-    }); */
+    });
     makeTest("should be granted base capabilities", {
       "twitch-ack": function(c, done, e) {
         let caps = c.status.capabilities;

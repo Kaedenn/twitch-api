@@ -796,18 +796,18 @@ class TwitchClient extends CallbackHandler {
 
   /* Private: Load in the per-channel BTTV emotes */
   _getBTTVEmotes(cname, cid) {
-    let url = Twitch.URL.BTTVEmotes(cname.replace(/^#/, ""));
+    let url = Twitch.URL.BTTVEmotes(cid);
     this._bttv_channel_emotes[cname] = {};
     this._api.GetSimple(url, (json) => {
-      let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
       let bttv = this._bttv_channel_emotes[cname];
-      for (let emote of json.emotes) {
+      for (let emote of json.sharedEmotes) {
+        /* code, id, imageType, user */
         bttv[emote.code] = {
           "id": emote.id,
           "code": emote.code,
           "channel": emote.channel,
           "image-type": emote.imageType,
-          "url": Util.URL(url_base.replace(/\{\{id\}\}/g, emote.id))
+          "url": Twitch.URL.BTTVEmote(emote.id)
         };
       }
       this._fire(new TwitchEvent("ASSETLOADED", "", {
@@ -831,14 +831,13 @@ class TwitchClient extends CallbackHandler {
   _getGlobalBTTVEmotes() {
     this._bttv_global_emotes = {};
     this._api.GetSimple(Twitch.URL.BTTVAllEmotes(), (json) => {
-      let url_base = json.urlTemplate.replace(/\{\{image\}\}/g, "1x");
-      for (let emote of json.emotes) {
+      for (let emote of json) {
         this._bttv_global_emotes[emote.code] = {
           "id": emote.id,
           "code": emote.code,
           "channel": emote.channel,
           "image-type": emote.imageType,
-          "url": Util.URL(url_base.replace("{{id}}", emote.id))
+          "url": Twitch.URL.BTTVEmote(emote.id)
         };
       }
       this._fire(new TwitchEvent("ASSETLOADED", "", {
@@ -1950,7 +1949,8 @@ Twitch.Kraken = "https://api.twitch.tv/kraken";
 Twitch.Helix = "https://api.twitch.tv/helix";
 Twitch.V5 = "https://api.twitch.tv/v5";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
-Twitch.BTTV = "https://api.betterttv.net/2";
+Twitch.BTTV = "https://api.betterttv.net/3";
+Twitch.BTTVCDN = "https://cdn.betterttv.net/";
 Twitch.Badges = "https://badges.twitch.tv/v1/badges";
 
 /* Store URLs to specific asset APIs */
@@ -1974,9 +1974,10 @@ Twitch.URL = {
   FFZBadges: () => `${Twitch.FFZ}/_badges`,
   FFZBadgeUsers: () => `${Twitch.FFZ}/badges`,
 
-  BTTVAllEmotes: () => `${Twitch.BTTV}/emotes`,
-  BTTVEmotes: (cname) => `${Twitch.BTTV}/channels/${cname}`,
-  BTTVEmote: (eid) => `${Twitch.BTTV}/emote/${eid}/1x`
+  BTTVAllEmotes: () => `${Twitch.BTTV}/cached/emotes/global`,
+  BTTVBadges: () => `${Twitch.BTTV}/cached/badges`,
+  BTTVEmotes: (cid) => `${Twitch.BTTV}/cached/users/twitch/${cid}`,
+  BTTVEmote: (eid, size="1x") => `${Twitch.BTTVCDN}/emote/${eid}/${size}`
 };
 
 /* End API URL definitions 0}}} */
