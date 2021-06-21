@@ -741,12 +741,20 @@ var TwitchClient = function (_CallbackHandler) {
       return 19194;
     }
 
-    /* Default emote size */
+    /* Default emote size; 1.0 is standard for chat messages */
 
   }, {
     key: 'DEFAULT_EMOTE_SIZE',
     get: function get() {
       return "1.0";
+    }
+
+    /* Default emote light/dark mode; tfc prefers dark over light */
+
+  }, {
+    key: 'DEFAULT_EMOTE_DARK',
+    get: function get() {
+      return "dark";
     }
 
     /* "Rooms" channel */
@@ -2731,9 +2739,12 @@ var TwitchClient = function (_CallbackHandler) {
     key: 'GetEmote',
     value: function GetEmote(emote_id) {
       var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : TwitchClient.DEFAULT_EMOTE_SIZE;
+      var dark = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : TwitchClient.DEFAULT_EMOTE_DARK;
 
-      if (typeof emote_id === "number" || ('' + emote_id).match(/^[0-9]+$/)) {
-        return Twitch.URL.Emote(emote_id, size);
+      if (typeof emote_id === "number" || emote_id > 0) {
+        return Twitch.URL.EmoteV1(emote_id, size);
+      } else if (('' + emote_id).startsWith("emotesv2_")) {
+        return Twitch.URL.EmoteV2(emote_id, size, "dark");
       } else {
         var _iteratorNormalCompletion32 = true;
         var _didIteratorError32 = false;
@@ -3696,9 +3707,24 @@ Twitch.URL = {
   Cheers: function Cheers(cid) {
     return Twitch.Kraken + '/bits/actions?channel_id=' + cid;
   },
-  Emote: function Emote(eid) {
+  EmoteV1: function EmoteV1(eid) {
     var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
     return Twitch.JTVNW + '/emoticons/v1/' + eid + '/' + size;
+  },
+  EmoteV2: function EmoteV2(eid) {
+    var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
+    var dark = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "dark";
+    return Twitch.JTVNW + '/emoticons/v2/' + eid + '/default/' + dark + '/' + size;
+  },
+  Emote: function _Twitch_URL_Emote(eid) {
+    var size = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "1.0";
+    var dark = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : "dark";
+
+    if (eid.startsWith("emotesv2_")) {
+      return Twitch.URL.EmoteV2(eid, size, dark);
+    } else {
+      return Twitch.URL.EmoteV1(eid, size);
+    }
   },
   EmoteSet: function EmoteSet(eset) {
     return Twitch.Kraken + '/chat/emoticon_images?emotesets=' + eset;
@@ -4156,7 +4182,7 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
       var emote_def = _step49.value;
 
       var sep_pos = emote_def.indexOf(":");
-      var emote_id = Number.parseInt(emote_def.substr(0, sep_pos));
+      var emote_id = emote_def.substr(0, sep_pos);
       var _iteratorNormalCompletion50 = true;
       var _didIteratorError50 = false;
       var _iteratorError50 = undefined;

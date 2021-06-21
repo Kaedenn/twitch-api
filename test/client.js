@@ -12,6 +12,10 @@ for (let name of Object.getOwnPropertyNames(TWClient)) {
   global[name] = TWClient[name];
 }*/
 
+/* TODO 2021:
+ * Animated emotes
+ */
+
 /* TODO:
  * x = done
  * ? = problem

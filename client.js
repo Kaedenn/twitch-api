@@ -346,8 +346,11 @@ class TwitchClient extends CallbackHandler {
   /* Emote set number for Twitch Prime emotes */
   static get ESET_PRIME() { return 19194; }
 
-  /* Default emote size */
+  /* Default emote size; 1.0 is standard for chat messages */
   static get DEFAULT_EMOTE_SIZE() { return "1.0"; }
+
+  /* Default emote light/dark mode; tfc prefers dark over light */
+  static get DEFAULT_EMOTE_DARK() { return "dark"; }
 
   /* "Rooms" channel */
   static get CHANNEL_ROOMS() { return "#chatrooms"; }
@@ -1424,9 +1427,11 @@ class TwitchClient extends CallbackHandler {
   }
 
   /* Return the URL to the image for the emote and size specified (id or name) */
-  GetEmote(emote_id, size=TwitchClient.DEFAULT_EMOTE_SIZE) {
-    if (typeof(emote_id) === "number" || `${emote_id}`.match(/^[0-9]+$/)) {
-      return Twitch.URL.Emote(emote_id, size);
+  GetEmote(emote_id, size=TwitchClient.DEFAULT_EMOTE_SIZE, dark=TwitchClient.DEFAULT_EMOTE_DARK) {
+    if (typeof(emote_id) === "number" || emote_id > 0) {
+      return Twitch.URL.EmoteV1(emote_id, size);
+    } else if (`${emote_id}`.startsWith("emotesv2_")) {
+      return Twitch.URL.EmoteV2(emote_id, size, "dark");
     } else {
       for (let [k, v] of Object.entries(this._self_emotes)) {
         if (v === emote_id) {
@@ -1965,7 +1970,15 @@ Twitch.URL = {
   AllBadges: () => `${Twitch.Badges}/global/display`,
   GlobalCheers: () => `${Twitch.Kraken}/bits/actions`,
   Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
-  Emote: (eid, size="1.0") => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
+  EmoteV1: (eid, size="1.0") => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
+  EmoteV2: (eid, size="1.0", dark="dark") => `${Twitch.JTVNW}/emoticons/v2/${eid}/default/${dark}/${size}`,
+  Emote: function _Twitch_URL_Emote(eid, size="1.0", dark="dark") {
+    if (eid.startsWith("emotesv2_")) {
+      return Twitch.URL.EmoteV2(eid, size, dark);
+    } else {
+      return Twitch.URL.EmoteV1(eid, size);
+    }
+  },
   EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
 
   FFZAllEmotes: () => `${Twitch.FFZ}/emoticons`,
@@ -2216,7 +2229,7 @@ Twitch.ParseEmote = function _Twitch_ParseEmote(value) {
   let result = [];
   for (let emote_def of value.split("/")) {
     let sep_pos = emote_def.indexOf(":");
-    let emote_id = Number.parseInt(emote_def.substr(0, sep_pos));
+    let emote_id = emote_def.substr(0, sep_pos);
     for (let range of emote_def.substr(sep_pos+1).split(",")) {
       let [start, end] = range.split("-");
       result.push({
