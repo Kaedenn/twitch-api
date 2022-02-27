@@ -695,22 +695,20 @@ class TwitchClient extends CallbackHandler {
     let c = channel.channel; /* To sanitize channel */
     this._channel_badges[c] = {};
     this._api.Get(Twitch.URL.ChannelBadges(cid), (json) => {
-      /* badge_sets
-       *  subscriber
-       *   versions
-       *    <number of months>
+      /* data[]
+       *  set_id = subscriber
+       *   versions[]
+       *    id = <number of months>
        *     image_url_1x: url
        *     image_url_2x: url
        *     image_url_4x: url
-       *     description: string
-       *     title: string
        */
-      for (let [badge_name, bdef] of Object.entries(json.badge_sets)) {
+      for (let json_badge of json.data) {
         let badge = {};
-        for (let [months, urls] of Object.entries(bdef.versions)) {
-          badge[months] = urls;
+        for (let version of json_badge.versions) {
+          badge[version.id] = version; // Has a redundant id in there, but makes it easier.
         }
-        this._channel_badges[c][badge_name] = badge;
+        this._channel_badges[c][json_badge.set_id] = badge;
       }
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "channel_badges"
@@ -738,7 +736,7 @@ class TwitchClient extends CallbackHandler {
   /* Private: Load the global cheermotes */
   _getGlobalCheers() {
     this._api.Get(Twitch.URL.GlobalCheers(), (json) => {
-      for (let cdef of json.actions) {
+      for (let cdef of json.data) {
         /* Simplify things later by adding the regex here */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._global_cheers[cdef.prefix] = cdef;
@@ -861,8 +859,8 @@ class TwitchClient extends CallbackHandler {
     this._global_badges = {};
     if (this._no_assets) return;
     this._api.Get(Twitch.URL.AllBadges(), (json) => {
-      for (let badge_name of Object.keys(json["badge_sets"])) {
-        this._global_badges[badge_name] = json["badge_sets"][badge_name];
+      for (let badge of json.data) {
+        this._global_badges[badge.set_id] = badge;
       }
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "global_badges"
@@ -1148,8 +1146,9 @@ class TwitchClient extends CallbackHandler {
         this.send(`JOIN ${cname}`);
         this._channels.push(cname);
         /* Determine if the channel to join is a real channel */
-        this._api.Get(Twitch.URL.User(user), (r) => {
-          if (!r || !r.users || r.users.length === 0) {
+        this._api.Get(Twitch.URL.User(user), (response) => {
+          let r = response.data; /* v5 Migration compatibility */
+          if (!r || r.length === 0 || r[0].login !== user) {
             Util.Warn(`${cname} doesn't seem to be a real channel; leaving`);
             this.LeaveChannel(channel);
           }
@@ -1364,17 +1363,15 @@ class TwitchClient extends CallbackHandler {
     }
     if (load) {
       let eset_url = Twitch.URL.EmoteSet(eset);
+      if (!this._self_emote_sets[eset]) {
+        this._self_emote_sets[eset] = [];
+      }
       this._api.Get(eset_url, (json) => {
-        for (let [setnr, edefs] of Object.entries(json["emoticon_sets"])) {
-          if (!this._self_emote_sets[setnr]) {
-            this._self_emote_sets[setnr] = [];
-          }
-          for (let edef of edefs) {
-            if (!this._self_emote_sets[setnr].includes(edef.id)) {
-              this._self_emote_sets[setnr].push(edef.id);
-              this._self_emotes[edef.id] = edef.code;
+        for (let emote of json.data) {
+            if (!this._self_emote_sets[eset].includes(emote.id)) {
+              this._self_emote_sets[eset].push(emote.id);
+              this._self_emotes[emote.id] = emote.name;
             }
-          }
         }
         this._fire(new TwitchEvent("ASSETLOADED", "", {
           kind: "emote_set",
@@ -1588,10 +1585,12 @@ class TwitchClient extends CallbackHandler {
   IsGlobalBadge(badge_name, badge_version=null) {
     if (badge_name in this._global_badges) {
       if (badge_version === null) {
-        return Object.keys(this._global_badges[badge_name].versions).length > 0;
-      } else if (badge_version in this._global_badges[badge_name].versions) {
-        if (this._global_badges[badge_name].versions[badge_version]) {
-          return true;
+        return this._global_badges[badge_name].versions.length > 0;
+      } else {
+        for (let version of this._global_badges[badge_name].versions) {
+          if (badge_version.toString() === version.id.toString()) {
+            return true;
+          }
         }
       }
     }
@@ -1619,10 +1618,12 @@ class TwitchClient extends CallbackHandler {
     if (this._global_badges.hasOwnProperty(badge_name)) {
       let bver = badge_version;
       if (badge_version === null) {
-        bver = Object.keys(this._global_badges[badge_name].versions).min();
+        bver = this._global_badges[badge_name].versions[0].id;
       }
-      if (this._global_badges[badge_name].versions.hasOwnProperty(bver)) {
-        return this._global_badges[badge_name].versions[bver];
+      for (let version of this._global_badges[badge_name].versions) {
+        if (bver.toString() === version.id.toString()) { // ids / versions are always a string, but may represent a number.
+          return version;
+        }
       }
     }
     return {};
@@ -1795,9 +1796,9 @@ class TwitchClient extends CallbackHandler {
         }
         if (!Twitch.IsRoom(result.channel)) {
           this._api.Get(Twitch.URL.Stream(roomid), (resp) => {
-            if (resp.streams && resp.streams.length > 0) {
-              room.stream = resp.streams[0];
-              room.streams = resp.streams;
+            if (resp.data && resp.data.length > 0) {
+              room.stream = resp.data[0];
+              room.streams = resp.data;
               room.online = true;
             } else {
               room.stream = {};
@@ -1956,20 +1957,20 @@ Twitch.V5 = "https://api.twitch.tv/v5";
 Twitch.FFZ = "https://api.frankerfacez.com/v1";
 Twitch.BTTV = "https://api.betterttv.net/3";
 Twitch.BTTVCDN = "https://cdn.betterttv.net/";
-Twitch.Badges = "https://badges.twitch.tv/v1/badges";
+Twitch.Badges = "https://badges.twitch.tv/v1/badges"; // Undocumented Endpoint, should not be used as a replacement exists in Helix.
 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
-  User: (uname) => `${Twitch.Kraken}/users?login=${uname}`,
-  Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`,
-  Stream: (cid) => `${Twitch.Kraken}/streams?channel=${cid}`,
+  User: (uname) => `${Twitch.Helix}/users?login=${uname}`,
+  Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`, // No longer supported, must be removed.
+  Stream: (cid) => `${Twitch.Helix}/streams?user_id=${cid}`,
   Clip: (slug) => `${Twitch.Helix}/clips?id=${slug}`,
   Game: (id) => `${Twitch.Helix}/games?id=${id}`,
 
-  ChannelBadges: (cid) => `${Twitch.Badges}/channels/${cid}/display?language=en`,
-  AllBadges: () => `${Twitch.Badges}/global/display`,
-  GlobalCheers: () => `${Twitch.Kraken}/bits/actions`,
-  Cheers: (cid) => `${Twitch.Kraken}/bits/actions?channel_id=${cid}`,
+  ChannelBadges: (cid) => `${Twitch.Helix}/chat/badges?broadcaster_id=${cid}`,
+  AllBadges: () => `${Twitch.Helix}/chat/badges/global`,
+  GlobalCheers: () => `${Twitch.Helix}/bits/cheermotes`,
+  Cheers: (cid) => `${Twitch.Helix}/bits/cheermotes?broadcaster_id=${cid}`,
   EmoteV1: (eid, size="1.0") => `${Twitch.JTVNW}/emoticons/v1/${eid}/${size}`,
   EmoteV2: (eid, size="1.0", dark="dark") => `${Twitch.JTVNW}/emoticons/v2/${eid}/default/${dark}/${size}`,
   Emote: function _Twitch_URL_Emote(eid, size="1.0", dark="dark") {
@@ -1979,7 +1980,7 @@ Twitch.URL = {
       return Twitch.URL.EmoteV1(eid, size);
     }
   },
-  EmoteSet: (eset) => `${Twitch.Kraken}/chat/emoticon_images?emotesets=${eset}`,
+  EmoteSet: (eset) => `${Twitch.Helix}/chat/emotes/set?emote_set_id=${eset}`,
 
   FFZAllEmotes: () => `${Twitch.FFZ}/emoticons`,
   FFZEmotes: (cid) => `${Twitch.FFZ}/room/id/${cid}`,
