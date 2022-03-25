@@ -11,8 +11,6 @@
  */
 
 /* TODO/FIXME:
- * Remove _getRooms and room support altogether
- *  Remove ChannelObject.room and ChannelObject.roomuid
  * Change APIs from Kraken to Helix
  *  Twitch.URL.Stream(channelId)
  *    `${Twitch.Helix}/streams?user_id=${channelId}`
@@ -87,7 +85,7 @@ class TwitchEvent {
       this._parsed.flags = {};
     }
     if (!this._parsed.channel) {
-      this._parsed.channel = {channel: "GLOBAL", room: null, roomuid: null};
+      this._parsed.channel = {channel: "GLOBAL"};
     }
   }
 
@@ -448,6 +446,7 @@ class TwitchClient extends CallbackHandler {
     }
     if (this._authed) {
       priv_headers["Authorization"] = oauth_header;
+      priv_headers["OAuth"] = oauth_header;
     }
     this._api = new Twitch.API(pub_headers, priv_headers);
 
@@ -623,13 +622,8 @@ class TwitchClient extends CallbackHandler {
     let user = this._ensureUser(userName);
     this._ensureRoom(channel);
     if (!this._rooms[cobj.channel].users.includes(user)) {
-      if (cobj.room && cobj.roomuid) {
-        /* User joined a channel room */
-        this._rooms[cobj.channel].users.push(user);
-      } else {
-        /* User joined a channel's main room */
-        this._rooms[cobj.channel].users.push(user);
-      }
+      /* User joined a channel's main room */
+      this._rooms[cobj.channel].users.push(user);
     }
     if (!this._rooms[cobj.channel].userInfo.hasOwnProperty(user)) {
       this._rooms[cobj.channel].userInfo[user] = {};
@@ -671,24 +665,6 @@ class TwitchClient extends CallbackHandler {
     }
   }
 
-  /* Private: Load in the extra chatrooms a streamer may or may not have */
-  _getRooms(cname, cid) {
-    if (this._no_assets) return;
-    this._api.Get(Twitch.URL.Rooms(cid), (json) => {
-      for (let room_def of json["rooms"]) {
-        let room_name = room_def["name"];
-        if (!this._rooms[cname].rooms) {
-          this._rooms[cname].rooms = {};
-        }
-        this._rooms[cname].rooms[room_name] = room_def;
-        this._rooms[cname].rooms[room_name].uid = room_def._id;
-      }
-      this._fire(new TwitchEvent("ASSETLOADED", "", {
-        kind: "rooms"
-      }));
-    }, {}, true);
-  }
-
   /* Private: Load in the channel badges for a given channel name and ID */
   _getChannelBadges(cname, cid) {
     let channel = Twitch.ParseChannel(cname);
@@ -713,15 +689,16 @@ class TwitchClient extends CallbackHandler {
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "channel_badges"
       }));
-    }, {}, false);
+    }, null, true);
   }
 
   /* Private: Load in the channel cheermotes for a given channel name and ID */
   _getChannelCheers(cname, cid) {
     this._channel_cheers[cname] = {};
+    /* TODO: This API no longer exists. Use an API equivalent if available */
+    /*
     this._api.Get(Twitch.URL.Cheers(cid), (json) => {
       for (let cdef of json.actions) {
-        /* Simplify things later by adding the regex here */
         cdef.pattern = Twitch.CheerToRegex(cdef.prefix);
         this._channel_cheers[cname][cdef.prefix] = cdef;
       }
@@ -731,6 +708,7 @@ class TwitchClient extends CallbackHandler {
         channelId: cid
       }));
     }, {}, false);
+    */
   }
 
   /* Private: Load the global cheermotes */
@@ -744,7 +722,7 @@ class TwitchClient extends CallbackHandler {
       this._fire(new TwitchEvent("ASSETLOADED", "", {
         kind: "global_cheers"
       }));
-    }, {}, false);
+    }, null, true);
   }
 
   /* Private: Load in the global and per-channel FFZ emotes */
@@ -1344,9 +1322,8 @@ class TwitchClient extends CallbackHandler {
   }
 
   /* Load the specified emote set(s); eset can be either a number or a
-   * comma-separated sequence of numbers
-   * FIXME: Duplicates emotes present in more than one emote set.
-   * Emotes in higher emote set take precedence over lower emote sets? */
+   * comma-separated sequence of numbers.
+   */
   AddEmoteSet(eset) {
     /* Don't Get() if all emote set IDs are already loaded */
     let load = false;
@@ -1377,7 +1354,7 @@ class TwitchClient extends CallbackHandler {
           kind: "emote_set",
           eset: eset
         }));
-      });
+      }, null, true);
     } else {
       Util.DebugOnly("Not loading emote sets " + eset + "; already loaded");
     }
@@ -1781,9 +1758,6 @@ class TwitchClient extends CallbackHandler {
       case "ROOMSTATE":
         room.id = roomid;
         room.channel = result.channel;
-        if (this._authed) {
-          this._getRooms(cname, roomid);
-        }
         if (!this._no_assets) {
           this._getChannelBadges(cname, roomid);
           this._getChannelCheers(cname, roomid);
@@ -1794,20 +1768,18 @@ class TwitchClient extends CallbackHandler {
             this._getBTTVEmotes(cname, roomid);
           }
         }
-        if (!Twitch.IsRoom(result.channel)) {
-          this._api.Get(Twitch.URL.Stream(roomid), (resp) => {
-            if (resp.data && resp.data.length > 0) {
-              room.stream = resp.data[0];
-              room.streams = resp.data;
-              room.online = true;
-            } else {
-              room.stream = {};
-              room.streams = [];
-              room.online = false;
-            }
-            this._fire(new TwitchEvent("STREAMINFO", line, result));
-          });
-        }
+        this._api.Get(Twitch.URL.Stream(roomid), (resp) => {
+          if (resp.data && resp.data.length > 0) {
+            room.stream = resp.data[0];
+            room.streams = resp.data;
+            room.online = true;
+          } else {
+            room.stream = {};
+            room.streams = [];
+            room.online = false;
+          }
+          this._fire(new TwitchEvent("STREAMINFO", line, result));
+        }, null, true);
         break;
       case "USERNOTICE":
         if (TwitchSubEvent.IsKind(result.sub_kind)) {
@@ -1962,7 +1934,6 @@ Twitch.Badges = "https://badges.twitch.tv/v1/badges"; // Undocumented Endpoint, 
 /* Store URLs to specific asset APIs */
 Twitch.URL = {
   User: (uname) => `${Twitch.Helix}/users?login=${uname}`,
-  Rooms: (cid) => `${Twitch.Kraken}/chat/${cid}/rooms`, // No longer supported, must be removed.
   Stream: (cid) => `${Twitch.Helix}/streams?user_id=${cid}`,
   Clip: (slug) => `${Twitch.Helix}/clips?id=${slug}`,
   Game: (id) => `${Twitch.Helix}/games?id=${id}`,
@@ -2087,30 +2058,19 @@ Twitch.ParseUser = function _Twitch_ParseUser(user) {
   return user.replace(/^:/, "").split("!")[0];
 };
 
-/* Parse channel to {channel, room, roomuid}; overloads:
+/* Parse channel to {channel}; overloads:
  *   Twitch.ParseChannel("#channel") (string)
  *   Twitch.ParseChannel({channel: "#channel"}) (object)
  */
 Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   if (typeof(channel) === "string") {
     let chobj = {
-      channel: "",
-      room: null,
-      roomuid: null
+      channel: ""
     };
     let parts = channel.split(":");
     if (parts.length === 1) {
       /* #channel */
       chobj.channel = parts[0];
-    } else if (parts.length === 2) {
-      /* #channel:room-name */
-      chobj.channel = parts[0];
-      chobj.room = parts[1];
-    } else if (parts.length === 3) {
-      /* #chatrooms:channel-id:room-uuid */
-      chobj.channel = parts[0];
-      chobj.room = parts[1];
-      chobj.roomuid = parts[2];
     } else {
       Util.Warn(`ParseChannel: ${channel} not in expected format`);
       chobj.channel = parts[0];
@@ -2120,50 +2080,32 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
     }
     return chobj;
   } else if (channel && channel.channel) {
-    return Twitch.ParseChannel(channel.channel, channel.room, channel.roomuid);
+    return Twitch.ParseChannel(channel.channel);
   } else {
     Util.Warn("ParseChannel: don't know how to parse", channel);
-    return {channel: "GLOBAL", room: null, roomuid: null};
+    return {channel: "GLOBAL"};
   }
 };
 
 /* Format a channel name, room name, or channel object */
-Twitch.FormatChannel = function _Twitch_FormatChannel(channel, room, roomuid) {
+Twitch.FormatChannel = function _Twitch_FormatChannel(channel) {
   if (typeof(channel) === "string") {
     let cname = channel.toLowerCase();
     if (cname === "*") {
       /* Sent from GLOBAL */
       return "GLOBAL";
     } else {
-      if (room) {
-        cname += ":" + room;
-      }
-      if (roomuid) {
-        cname += ":" + roomuid;
-      }
       if (cname.indexOf("#") !== 0) {
         cname = "#" + cname;
       }
       return cname;
     }
   } else if (channel && typeof(channel.channel) === "string") {
-    return Twitch.FormatChannel(channel.channel, channel.room, channel.roomuid);
+    return Twitch.FormatChannel(channel.channel);
   } else {
-    Util.Warn("FormatChannel: don't know how to format", channel, room, roomuid);
+    Util.Warn("FormatChannel: don't know how to format", channel);
     return `${channel}`;
   }
-};
-
-/* TODO: REMOVE */
-/* Return whether or not the channel object given is a #chatrooms room */
-Twitch.IsRoom = function _Twitch_IsRoom(cobj) {
-  return cobj.channel === TwitchClient.CHANNEL_ROOMS && cobj.room && cobj.roomuid;
-};
-
-/* TODO: REMOVE */
-/* Format a room with the channel and room IDs given */
-Twitch.FormatRoom = function _Twitch_FormatRoom(cid, rid) {
-  return `#chatrooms:${cid}:${rid}`;
 };
 
 /* Parse Twitch flag escape sequences */
