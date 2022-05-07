@@ -755,14 +755,6 @@ var TwitchClient = function (_CallbackHandler) {
       return "dark";
     }
 
-    /* "Rooms" channel */
-
-  }, {
-    key: 'CHANNEL_ROOMS',
-    get: function get() {
-      return "#chatrooms";
-    }
-
     /* Requested capabilities */
 
   }, {
@@ -790,11 +782,11 @@ var TwitchClient = function (_CallbackHandler) {
 
     /* WebSocket endpoint */
     _this3._endpoint = opts.WSURI || "wss://irc-ws.chat.twitch.tv";
-    /* List of channels/rooms presently joined */
+    /* List of channels presently joined */
     _this3._channels = [];
-    /* List of channels/rooms about to join once connected to Twitch */
+    /* List of channels about to join once connected to Twitch */
     _this3._pending_channels = opts.Channels || [];
-    /* Channel and room information */
+    /* Channel information */
     _this3._rooms = {};
     _this3._rooms_byid = {};
     /* History of sent chat messages (recent = first) */
@@ -1102,7 +1094,6 @@ var TwitchClient = function (_CallbackHandler) {
           operators: [], /* Operators */
           channel: cobj, /* Channel object */
           cname: cname, /* Channel name */
-          rooms: {}, /* Known rooms */
           id: null, /* Channel ID */
           online: false, /* Currently streaming */
           stream: {}, /* Stream status */
@@ -1120,7 +1111,6 @@ var TwitchClient = function (_CallbackHandler) {
       var user = this._ensureUser(userName);
       this._ensureRoom(channel);
       if (!this._rooms[cobj.channel].users.includes(user)) {
-        /* User joined a channel's main room */
         this._rooms[cobj.channel].users.push(user);
       }
       if (!this._rooms[cobj.channel].userInfo.hasOwnProperty(user)) {
@@ -3889,7 +3879,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   }
 };
 
-/* Format a channel name, room name, or channel object */
+/* Format a channel name or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel) {
   if (typeof channel === "string") {
     var cname = channel.toLowerCase();

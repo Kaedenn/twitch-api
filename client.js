@@ -350,9 +350,6 @@ class TwitchClient extends CallbackHandler {
   /* Default emote light/dark mode; tfc prefers dark over light */
   static get DEFAULT_EMOTE_DARK() { return "dark"; }
 
-  /* "Rooms" channel */
-  static get CHANNEL_ROOMS() { return "#chatrooms"; }
-
   /* Requested capabilities */
   static get CAPABILITIES() {
     return ["twitch.tv/tags", "twitch.tv/commands", "twitch.tv/membership"];
@@ -373,11 +370,11 @@ class TwitchClient extends CallbackHandler {
 
     /* WebSocket endpoint */
     this._endpoint = opts.WSURI || "wss://irc-ws.chat.twitch.tv";
-    /* List of channels/rooms presently joined */
+    /* List of channels presently joined */
     this._channels = [];
-    /* List of channels/rooms about to join once connected to Twitch */
+    /* List of channels about to join once connected to Twitch */
     this._pending_channels = opts.Channels || [];
-    /* Channel and room information */
+    /* Channel information */
     this._rooms = {};
     this._rooms_byid = {};
     /* History of sent chat messages (recent = first) */
@@ -607,7 +604,6 @@ class TwitchClient extends CallbackHandler {
         operators: [], /* Operators */
         channel: cobj, /* Channel object */
         cname: cname,  /* Channel name */
-        rooms: {},     /* Known rooms */
         id: null,      /* Channel ID */
         online: false, /* Currently streaming */
         stream: {},    /* Stream status */
@@ -622,7 +618,6 @@ class TwitchClient extends CallbackHandler {
     let user = this._ensureUser(userName);
     this._ensureRoom(channel);
     if (!this._rooms[cobj.channel].users.includes(user)) {
-      /* User joined a channel's main room */
       this._rooms[cobj.channel].users.push(user);
     }
     if (!this._rooms[cobj.channel].userInfo.hasOwnProperty(user)) {
@@ -2087,7 +2082,7 @@ Twitch.ParseChannel = function _Twitch_ParseChannel(channel) {
   }
 };
 
-/* Format a channel name, room name, or channel object */
+/* Format a channel name or channel object */
 Twitch.FormatChannel = function _Twitch_FormatChannel(channel) {
   if (typeof(channel) === "string") {
     let cname = channel.toLowerCase();
