@@ -45,6 +45,9 @@
  *    {e_name: {id: e_id, pattern: emote_pattern, ...}}
  */
 
+/* Change this to the local badge provider service host */
+const LOCAL_BADGE_URI = "http://localhost:8081";
+
 /* Container for Twitch utilities */
 let Twitch = {};
 
@@ -392,6 +395,13 @@ class TwitchClient extends CallbackHandler {
     /* Mapping of emote set to emotes */
     this._self_emote_sets = {}; /* {sid: [eid, eid, ...]} */
 
+    this._use_local_badge_service = opts.LocalBadgeService;
+    if (opts.LocalBadgeURI) {
+      this._use_local_badge_service = true;
+      this._local_badge_uri = opts.LocalBadgeURI;
+    }
+    Twitch.Local.URI = this._local_badge_uri;
+
     /* Extension support */
     this._enable_ffz = !opts.NoFFZ || opts.NoAssets;
     this._enable_bttv = !opts.NoBTTV || opts.NoAssets;
@@ -665,7 +675,11 @@ class TwitchClient extends CallbackHandler {
     let channel = Twitch.ParseChannel(cname);
     let c = channel.channel; /* To sanitize channel */
     this._channel_badges[c] = {};
-    this._api.Get(Twitch.URL.ChannelBadges(cid), (json) => {
+    let endpoint = Twitch.URL.ChannelBadges(cid);
+    if (this._use_local_badge_service) {
+      endpoint = Twitch.Local.UserBadges(c.replace(/^#/, ''));
+    }
+    this._api.Get(endpoint, (json) => {
       /* data[]
        *  set_id = subscriber
        *   versions[]
@@ -831,7 +845,11 @@ class TwitchClient extends CallbackHandler {
   _getGlobalBadges() {
     this._global_badges = {};
     if (this._no_assets) return;
-    this._api.Get(Twitch.URL.AllBadges(), (json) => {
+    let endpoint = Twitch.URL.AllBadges();
+    if (this._use_local_badge_service) {
+      endpoint = Twitch.Local.GlobalBadges();
+    }
+    this._api.Get(endpoint, (json) => {
       for (let badge of json.data) {
         this._global_badges[badge.set_id] = badge;
       }
@@ -1916,6 +1934,11 @@ Twitch.FLAG_ESCAPE_RULES = [
 ];
 
 /* API URL definitions {{{0 */
+
+Twitch.Local = {}; /* non-Twitch endpoints */
+Twitch.Local.URI = `${LOCAL_BADGE_URI}`;
+Twitch.Local.UserBadges = (user) => `${Twitch.Local.URI}/user/badge/${encodeURIComponent(user)}`;
+Twitch.Local.GlobalBadges = () => `${Twitch.Local.URI}/badges`;
 
 Twitch.JTVNW = "https://static-cdn.jtvnw.net";
 Twitch.Kraken = "https://api.twitch.tv/kraken";
